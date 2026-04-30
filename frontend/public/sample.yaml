@@ -1,40 +1,116 @@
 # Sample task graph demonstrating the Taskman data model
 #
 # Graph structure:
-#   [1] Build Taskman App (Root - full Task with all fields)
-#   ├── [2] Implement Rust Core (Subtask of 1, also a Task with its own children)
-#   │   └── [3] Compile to WASM (Leaf Subtask - minimal fields only)
-#   └── [4] Design Frontend UI (Leaf Subtask - minimal fields only)
+#   [1] Rebuild Taskman Repo (Root)
+#   ├── [2] Scaffold Monorepo          → parallel with [3], [4]
+#   │   └── [5] Configure CI & Linting  → depends on scaffold
+#   ├── [3] Build Rust Ichor Core      → parallel with [2], [4]
+#   │   ├── [6] Implement YAML Parser    → must finish before [7]
+#   │   └── [7] Build Graph Engine       → depends on [6]
+#   ├── [4] Set Up React Frontend      → parallel with [2], [3]
+#   │   ├── [8] Create Graph Renderer    → depends on frontend scaffold
+#   │   │   └── [14] Implement Pan & Zoom  → depth-3 leaf subtask
+#   │   └── [9] Implement Layout Engine  → depends on renderer
+#   ├── [10] Wire WASM Bridge          → depends on [3] AND [4] finishing
+#   │   └── [11] Build Node Editor UI    → depends on bridge + renderer
+#   ├── [12] Write Integration Tests   → depends on all above, also a Task
+#   │   └── [13] Deploy to GitHub Pages  → final step, child of tests
 #
 # Key concepts illustrated:
 #   - Roots: nodes NOT referenced in any other node's subtask_ids ([1])
 #   - Tasks: nodes with details, important flag, and subtask_ids adjacency list
 #   - Subtasks: leaf nodes with only id, name, deadline
-#   - Nesting: a subtask can itself be a parent (node [2] is both child of [1] and parent of [3])
+#   - Nesting: a subtask can itself be a parent (e.g. [2]→[5], [3]→[6,7])
+#   - Parallelism: siblings ([2],[3],[4]) can run simultaneously
 
 nodes:
-  # Root Task — demonstrates all available fields on the Task schema
+  # ── Root Task — the entire project ──────────────────────────────
   - id: 1
-    name: "Build Taskman App"
-    details: "End-to-end project to build our local-first graph engine with Rust WASM core and React frontend"
-    deadline: "2026-05-15T23:59:59Z"
+    name: "Rebuild Taskman Repo"
+    details: "End-to-end rebuild of our local-first graph engine with Rust WASM core and React frontend"
+    deadline: "2026-05-30T23:59:59Z"
     important: true
-    subtask_ids: [2, 4]
+    subtask_ids: [2, 3, 4, 10]
 
-  # Subtask of [1], but also a Task with its own children — demonstrates nesting in the DAG
+  # ── Parallel track A — Repo scaffolding ─────────────────────────
   - id: 2
-    name: "Implement Rust Core"
-    details: "Build the ichor WASM module for graph computations and YAML parsing"
-    deadline: "2026-04-30T23:59:59Z"
+    name: "Scaffold Monorepo"
+    details: "Initialize git repo, create ichor/ and frontend/ directories, add LICENSE and README"
+    deadline: "2026-04-15T23:59:59Z"
     important: true
-    subtask_ids: [3]
+    subtask_ids: [5]
 
-  # Leaf Subtask — minimal schema: id, name, deadline only
+  - id: 5
+    name: "Configure CI & Linting"
+    details: "Add GitHub Actions for wasm-pack build, clippy, and pnpm lint/typecheck on PR"
+    deadline: "2026-04-18T23:59:59Z"
+
+  # ── Parallel track B — Rust core ────────────────────────────────
   - id: 3
-    name: "Compile to WASM"
-    deadline: "2026-04-28T23:59:59Z"
-
-  # Sibling of [2], leaf Subtask — minimal schema
-  - id: 4
-    name: "Design Frontend UI"
+    name: "Build Rust Ichor Core"
+    details: "Implement YAML parsing, graph builder, and adjacency list computation in Rust"
     deadline: "2026-05-10T23:59:59Z"
+    important: true
+    subtask_ids: [6, 7]
+
+  - id: 6
+    name: "Implement YAML Parser"
+    details: "Parse tasks.yaml into TaskDocument with Node enum (Task | Subtask) using serde_yaml"
+    deadline: "2026-05-01T23:59:59Z"
+
+  - id: 7
+    name: "Build Graph Engine"
+    details: "Construct adjacency lists, reverse-index, and root identification from parsed nodes"
+    deadline: "2026-05-10T23:59:59Z"
+
+  # ── Parallel track C — Frontend ─────────────────────────────────
+  - id: 4
+    name: "Set Up React Frontend"
+    details: "Scaffold Vite + TypeScript app, install Tailwind CSS and Shadcn/UI dependencies"
+    deadline: "2026-05-05T23:59:59Z"
+    important: true
+    subtask_ids: [8, 9]
+
+  - id: 8
+    name: "Create Graph Renderer"
+    details: "Build SVG-based graph canvas with pan/zoom, node rendering, and edge drawing"
+    deadline: "2026-05-15T23:59:59Z"
+    important: false
+    subtask_ids: [14]
+
+  - id: 14
+    name: "Implement Pan & Zoom"
+    details: "Mouse-driven viewport transform with smooth zoom-to-cursor and drag-to-pan"
+    deadline: "2026-05-12T23:59:59Z"
+    important: false
+    subtask_ids: [12]
+
+  - id: 9
+    name: "Implement Layout Engine"
+    details: "Hierarchical tree layout algorithm with variable-height nodes and subtree centering"
+    deadline: "2026-05-20T23:59:59Z"
+
+  # ── Integration (depends on B + C) ──────────────────────────────
+  - id: 10
+    name: "Wire WASM Bridge"
+    details: "Connect wasm-pack output to frontend via wasm-bindgen, expose buildGraphFromYaml API"
+    deadline: "2026-05-22T23:59:59Z"
+    important: true
+    subtask_ids: [11]
+
+  - id: 11
+    name: "Build Node Editor UI"
+    details: "Render task fields (details, deadline, important) in graph nodes with editable support"
+    deadline: "2026-05-25T23:59:59Z"
+
+  # ── Sequential — must wait for all tracks, also a Task with child [13] ──
+  - id: 12
+    name: "Write Integration Tests"
+    details: "E2E tests for YAML load → graph render → node toggle → layout recompute cycle"
+    deadline: "2026-05-27T23:59:59Z"
+    subtask_ids: [13]
+
+  - id: 13
+    name: "Deploy to GitHub Pages"
+    details: "Configure GitHub Actions static deployment with wasm-pack build step in CI pipeline"
+    deadline: "2026-05-30T23:59:59Z"

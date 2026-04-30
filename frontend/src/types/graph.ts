@@ -242,8 +242,8 @@ export interface LayoutConfig {
  * Default layout configuration for the graph renderer.
  */
 export const DEFAULT_LAYOUT: LayoutConfig = {
-  horizontalSpacing: 200,
-  verticalSpacing: 60,
+  horizontalSpacing: 280,
+  verticalSpacing: 40,
   maxWidth: 1200,
   animationDuration: 200,
 };

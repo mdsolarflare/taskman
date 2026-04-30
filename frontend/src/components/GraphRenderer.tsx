@@ -6,8 +6,7 @@ import { LayoutEngine, getLayoutBounds } from "../engine/layout";
 // Constants
 // ---------------------------------------------------------------------------
 
-const NODE_WIDTH = 160;
-const NODE_HEIGHT = 36;
+const NODE_WIDTH = 200;
 const NODE_RADIUS = 6;
 const PADDING_X = 240;
 const PADDING_Y = 80;
@@ -62,8 +61,33 @@ interface Viewport {
 // Helper: compute layout for current graph state
 // ---------------------------------------------------------------------------
 
+function truncateText(
+  text: string,
+  maxWidthPixels: number,
+  fontSize: number,
+): string {
+  // Rough estimate: ~0.6 * fontSize per character for system-ui font
+  const maxChars = Math.floor(maxWidthPixels / (fontSize * 0.6));
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars - 1) + "…";
+}
+
+function formatDeadline(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const month = d.toLocaleString("en", { month: "short" });
+    const day = d.getDate();
+    const hour = d.getHours().toString().padStart(2, "0");
+    const minute = d.getMinutes().toString().padStart(2, "0");
+    return `📅 ${month} ${day} ${hour}:${minute}`;
+  } catch {
+    return iso;
+  }
+}
+
 function computeLayout(graph: Graph): {
-  nodes: Map<number, { x: number; y: number }>;
+  nodes: Map<number, { x: number; y: number; height: number }>;
   edges: Array<{ from: number; to: number }>;
   bounds: { w: number; h: number };
 } {
@@ -72,9 +96,9 @@ function computeLayout(graph: Graph): {
   const result = engine.computeLayout();
   const bounds = getLayoutBounds(result);
 
-  const nodes = new Map<number, { x: number; y: number }>();
+  const nodes = new Map<number, { x: number; y: number; height: number }>();
   for (const [id, node] of result.nodes) {
-    nodes.set(id, { x: node.x, y: node.y });
+    nodes.set(id, { x: node.x, y: node.y, height: node.height });
   }
 
   return { nodes, edges: result.edges, bounds };
@@ -575,9 +599,9 @@ export default function GraphRenderer({
             if (!fromPos || !toPos) return null;
 
             const x1 = fromPos.x + NODE_WIDTH;
-            const y1 = fromPos.y + NODE_HEIGHT / 2;
+            const y1 = fromPos.y + fromPos.height / 2;
             const x2 = toPos.x;
-            const y2 = toPos.y + NODE_HEIGHT / 2;
+            const y2 = toPos.y + toPos.height / 2;
             const midX = (x1 + x2) / 2;
 
             return (
@@ -601,6 +625,32 @@ export default function GraphRenderer({
             const style = getNodeStyle(node);
             const isCollapsed = node.collapsed ?? true;
             const hasChildren = node.subtask_ids && node.subtask_ids.length > 0;
+            const height = nodePos.height;
+
+            // Compute Y positions for each field
+            let currentY = 14;
+            const nameY = currentY;
+            currentY += 20;
+
+            let detailsY: number | null = null;
+            if (node.details) {
+              detailsY = currentY;
+              currentY += 22;
+            }
+
+            let deadlineY: number | null = null;
+            if (node.deadline) {
+              deadlineY = currentY;
+              currentY += 18;
+            }
+
+            // Collapse button position (bottom-right area)
+            const collapseY = Math.max(nameY, height - 24);
+
+            // Truncate details to fit width
+            const truncatedDetails = node.details
+              ? truncateText(node.details, NODE_WIDTH - 24, 10)
+              : null;
 
             return (
               <g
@@ -618,7 +668,7 @@ export default function GraphRenderer({
                   x={0}
                   y={0}
                   width={NODE_WIDTH}
-                  height={NODE_HEIGHT}
+                  height={height}
                   rx={NODE_RADIUS}
                   ry={NODE_RADIUS}
                   style={style}
@@ -628,7 +678,7 @@ export default function GraphRenderer({
                 {/* Collapse indicator */}
                 {hasChildren && (
                   <g
-                    transform={`translate(${NODE_WIDTH - 14}, ${NODE_HEIGHT / 2 - 7})`}
+                    transform={`translate(${NODE_WIDTH - 16}, ${collapseY})`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCollapseToggle(nodeId);
@@ -661,20 +711,52 @@ export default function GraphRenderer({
                 {/* Node name */}
                 <text
                   x={12}
-                  y={NODE_HEIGHT / 2 + 1}
+                  y={nameY}
                   dominantBaseline="middle"
                   fontSize={13}
-                  fontWeight={500}
+                  fontWeight={600}
                   fill={COLORS.text}
                   style={{ userSelect: "none", pointerEvents: "none" }}
                 >
-                  {node.name}
+                  {truncateText(
+                    node.name,
+                    NODE_WIDTH - (hasChildren ? 40 : 24),
+                    13,
+                  )}
                 </text>
+
+                {/* Details */}
+                {node.details && detailsY !== null && (
+                  <text
+                    x={12}
+                    y={detailsY}
+                    dominantBaseline="middle"
+                    fontSize={10}
+                    fill={COLORS.textSubtle}
+                    style={{ userSelect: "none", pointerEvents: "none" }}
+                  >
+                    {truncatedDetails}
+                  </text>
+                )}
+
+                {/* Deadline */}
+                {node.deadline && deadlineY !== null && (
+                  <text
+                    x={12}
+                    y={deadlineY}
+                    dominantBaseline="middle"
+                    fontSize={10}
+                    fill={COLORS.textSubtle}
+                    style={{ userSelect: "none", pointerEvents: "none" }}
+                  >
+                    {formatDeadline(node.deadline)}
+                  </text>
+                )}
 
                 {/* Important indicator */}
                 {node.important && (
-                  <g transform={`translate(${NODE_WIDTH - 30}, 4)`}>
-                    <circle cx={6} cy={6} r={4} fill="#ffb300" opacity={0.8} />
+                  <g transform={`translate(${NODE_WIDTH - 26}, ${nameY - 4})`}>
+                    <circle cx={5} cy={5} r={4} fill="#ffb300" opacity={0.8} />
                   </g>
                 )}
               </g>

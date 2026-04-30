@@ -9,6 +9,14 @@ import type { Graph, GraphNode, LayoutConfig } from "../types/graph";
 import { DEFAULT_LAYOUT } from "../types/graph";
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const BASE_NODE_HEIGHT = 40;
+const FIELD_HEIGHT_DETAILS = 28;
+const FIELD_HEIGHT_DEADLINE = 24;
+
+// ---------------------------------------------------------------------------
 // Layout State
 // ---------------------------------------------------------------------------
 
@@ -118,7 +126,7 @@ export class LayoutEngine {
 
     // Compute node dimensions (estimated)
     const nodeWidth = this.estimateNodeWidth(node);
-    const nodeHeight = 40; // Fixed height for consistency
+    const nodeHeight = this.estimateNodeHeight(node);
 
     // Create the layout node
     const layoutNode: LayoutNode = {
@@ -138,22 +146,14 @@ export class LayoutEngine {
     };
 
     if (!isCollapsed && children.length > 0) {
-      // Compute total height of children to center them vertically
+      // Pre-compute subtree heights for vertical centering
+      const subtreeHeights = this.computeSubtreeHeights();
+
       let totalChildHeight = 0;
-      const childHeights: number[] = [];
-
       for (const child of children) {
-        const childResult = this.layoutSubtree(
-          child.id,
-          startX + this.config.horizontalSpacing,
-          0,
-        );
         totalChildHeight +=
-          childResult.nodes.size * nodeHeight + this.config.verticalSpacing;
-        childHeights.push(childResult.nodes.size);
+          subtreeHeights.get(child.id)! + this.config.verticalSpacing;
       }
-
-      // Remove extra spacing at the end
       totalChildHeight = Math.max(
         0,
         totalChildHeight - this.config.verticalSpacing,
@@ -162,7 +162,7 @@ export class LayoutEngine {
       // Start Y position for children (centered relative to parent)
       let currentY = startY - totalChildHeight / 2 + nodeHeight / 2;
 
-      // Layout each child
+      // Layout each child at its correct Y position
       for (let i = 0; i < children.length; i++) {
         const child = children[i];
         const childResult = this.layoutSubtree(
@@ -181,7 +181,7 @@ export class LayoutEngine {
         result.edges.push(...childResult.edges);
 
         // Move to next child position
-        currentY += childHeights[i] * nodeHeight + this.config.verticalSpacing;
+        currentY += subtreeHeights.get(child.id)! + this.config.verticalSpacing;
       }
     }
 
@@ -201,12 +201,68 @@ export class LayoutEngine {
   }
 
   /**
+   * Memoized map for subtree height computation (avoids double traversal).
+   */
+  private subtreeHeightCache: Map<number, number> | null = null;
+
+  /**
+   * Compute the total rendered height of every node's visible subtree.
+   * Result is cached so layoutSubtree can consume it without re-traversing.
+   */
+  private computeSubtreeHeights(): Map<number, number> {
+    if (this.subtreeHeightCache) return this.subtreeHeightCache;
+    const cache = new Map<number, number>();
+
+    const compute = (nodeId: number): number => {
+      if (cache.has(nodeId)) return cache.get(nodeId)!;
+      const node = this.nodeMap.get(nodeId);
+      if (!node) return 0;
+
+      const selfHeight = this.estimateNodeHeight(node);
+      const isCollapsed = node.collapsed ?? true;
+      const children = this.getVisibleChildren(node);
+
+      if (isCollapsed || children.length === 0) {
+        cache.set(nodeId, selfHeight);
+        return selfHeight;
+      }
+
+      let total = selfHeight;
+      for (const child of children) {
+        total += compute(child.id) + this.config.verticalSpacing;
+      }
+      // Remove trailing spacing
+      total -= this.config.verticalSpacing;
+
+      cache.set(nodeId, total);
+      return total;
+    };
+
+    for (const rootId of this.rootIds) {
+      compute(rootId);
+    }
+
+    this.subtreeHeightCache = cache;
+    return cache;
+  }
+
+  /**
    * Estimate the width of a node based on its name length.
    */
   private estimateNodeWidth(node: GraphNode): number {
-    // Approximate: 8px per character + padding
+    // Approximate: 8px per character + padding, minimum matches NODE_WIDTH
     const nameWidth = node.name.length * 8;
-    return Math.max(120, nameWidth + 32); // Minimum 120px width
+    return Math.max(200, nameWidth + 32); // Minimum 200px width (NODE_WIDTH)
+  }
+
+  /**
+   * Estimate the height of a node based on which fields are present.
+   */
+  private estimateNodeHeight(node: GraphNode): number {
+    let height = BASE_NODE_HEIGHT;
+    if (node.details) height += FIELD_HEIGHT_DETAILS;
+    if (node.deadline) height += FIELD_HEIGHT_DEADLINE;
+    return height;
   }
 
   /**
@@ -225,6 +281,7 @@ export class LayoutEngine {
    */
   private invalidateCache(): void {
     this.layoutCache.clear();
+    this.subtreeHeightCache = null;
   }
 
   /**
