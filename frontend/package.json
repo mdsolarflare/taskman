@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "ichor": "link:../ichor/pkg",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

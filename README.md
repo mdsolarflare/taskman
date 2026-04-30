@@ -1,12 +1,12 @@
-# 🚀 Local-First Graph Engine
+# 🚀 Taskman — Local-First Graph Engine
 
-A high-performance, privacy-focused graph application built with a **Local-First** architecture. By leveraging Rust compiled to WebAssembly (WASM), this project moves heavy computational logic from the server to the client's browser, ensuring near-native performance and total data ownership.
+A high-performance, privacy-focused task graph application built with a **Local-First** architecture. By leveraging Rust compiled to WebAssembly (WASM), this project moves heavy computational logic from the server to the client's browser, ensuring near-native performance and total data ownership.
 
 ## 🏗️ Architecture Overview
 
 This project follows a monorepo structure, separating the "Brain" (computation) from the "Face" (interface).
 
-- **The Brain (`/ichor`):** Written in **Rust**. Handles graph theory calculations, parsing, and heavy data processing. Compiled to WASM for browser execution.
+- **The Brain (`/ichor`):** Written in **Rust**. Handles YAML parsing, graph theory calculations, and heavy data processing. Compiled to WASM for browser execution.
 - **The Face (`/frontend`):** Built with **React**, **TypeScript**, and **Vite**. Provides a modern UI using **Tailwind CSS** and **Shadcn/UI**.
 - **The Bridge:** `wasm-bindgen` and `wasm-pack` facilitate the communication between Rust logic and the TypeScript frontend.
 
@@ -14,7 +14,8 @@ This project follows a monorepo structure, separating the "Brain" (computation) 
 
 - 🔒 **Privacy by Design:** Data stays on the user's machine; no backend required for core logic.
 - ⚡ **Near-Native Speed:** WASM allows complex graph algorithms to run at speeds impossible with pure JavaScript.
-- 📱 **PWA Ready:** Installable as a Progressive Web App for an offline-capable, native-app experience.
+- 💾 **Persistent Workspace:** Your YAML workspace is saved to `localStorage` and restored automatically on return visits.
+- 📋 **Sample Data:** First-time users get a 4-node sample graph demonstrating the full data model hierarchy (tasks, subtasks, nesting).
 - 🎨 **Modern UI:** A clean, responsive interface powered by Tailwind CSS and Shadcn/UI.
 
 ## 🛠️ Development Setup
@@ -100,18 +101,39 @@ cd frontend
 pnpm dev
 ```
 
+On first load, the app automatically serves a sample graph from `/sample.yaml` (see [Sample Data](#-sample-data)). Subsequent visits restore your last workspace from `localStorage`.
+
 ## 📁 Project Structure
 
 ```text
 .
-├── ichor/               # Rust WASM project
-│   ├── src/            # Logic, algorithms, and data structures
-│   └── Cargo.toml      # Rust dependencies & WASM configuration
-└── frontend/           # React + Vite project
-    ├── src/            # UI components and WASM integration glue
-    ├── public/         # Static assets and PWA icons
-    └── package.json    # Frontend dependencies
+├── Sample.yaml              # Reference copy of the 4-node sample graph (project root)
+├── DATA_MODEL.md            # Full schema spec for Tasks, Subtasks, and DAG mapping
+├── ichor/                   # Rust WASM project
+│   ├── src/                 # YAML parsing, graph builder, layout algorithms
+│   └── Cargo.toml           # Rust dependencies & WASM configuration
+└── frontend/                # React + Vite project
+    ├── src/                 # UI components and WASM integration glue
+    ├── public/              # Static assets served by the dev server
+    │   └── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
+    └── package.json         # Frontend dependencies
 ```
+
+## 📋 Sample Data
+
+The app ships with a 4-node sample graph demonstrating the full data model:
+
+- **Location:** `frontend/public/sample.yaml` (served at `/sample.yaml`) and `Sample.yaml` (project root reference)
+- **Structure:**
+  ```
+  [1] Build Taskman App          → Root Task (all fields: details, important, subtask_ids)
+  ├── [2] Implement Rust Core    → Subtask of [1], also a Task with child [3] (nesting demo)
+  │   └── [3] Compile to WASM    → Leaf Subtask (minimal: id, name, deadline only)
+  └── [4] Design Frontend UI     → Leaf Subtask (minimal)
+  ```
+- **Key concepts illustrated:** Roots vs subtasks, Tasks with children, leaf Subtasks, and DAG nesting
+
+See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
 
 ## 🔄 Development Workflow
 

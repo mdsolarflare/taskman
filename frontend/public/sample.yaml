@@ -1,0 +1,40 @@
+# Sample task graph demonstrating the Taskman data model
+#
+# Graph structure:
+#   [1] Build Taskman App (Root - full Task with all fields)
+#   ├── [2] Implement Rust Core (Subtask of 1, also a Task with its own children)
+#   │   └── [3] Compile to WASM (Leaf Subtask - minimal fields only)
+#   └── [4] Design Frontend UI (Leaf Subtask - minimal fields only)
+#
+# Key concepts illustrated:
+#   - Roots: nodes NOT referenced in any other node's subtask_ids ([1])
+#   - Tasks: nodes with details, important flag, and subtask_ids adjacency list
+#   - Subtasks: leaf nodes with only id, name, deadline
+#   - Nesting: a subtask can itself be a parent (node [2] is both child of [1] and parent of [3])
+
+nodes:
+  # Root Task — demonstrates all available fields on the Task schema
+  - id: 1
+    name: "Build Taskman App"
+    details: "End-to-end project to build our local-first graph engine with Rust WASM core and React frontend"
+    deadline: "2026-05-15T23:59:59Z"
+    important: true
+    subtask_ids: [2, 4]
+
+  # Subtask of [1], but also a Task with its own children — demonstrates nesting in the DAG
+  - id: 2
+    name: "Implement Rust Core"
+    details: "Build the ichor WASM module for graph computations and YAML parsing"
+    deadline: "2026-04-30T23:59:59Z"
+    important: true
+    subtask_ids: [3]
+
+  # Leaf Subtask — minimal schema: id, name, deadline only
+  - id: 3
+    name: "Compile to WASM"
+    deadline: "2026-04-28T23:59:59Z"
+
+  # Sibling of [2], leaf Subtask — minimal schema
+  - id: 4
+    name: "Design Frontend UI"
+    deadline: "2026-05-10T23:59:59Z"
