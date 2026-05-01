@@ -225,10 +225,10 @@ export interface YamlLoadEvent {
  * Layout algorithm configuration for the graph renderer.
  */
 export interface LayoutConfig {
-  /** Horizontal spacing between parent and child columns (pixels) */
+  /** Horizontal spacing between parent and child columns (pixels) — static so bezier curves have predictable room */
   horizontalSpacing: number;
 
-  /** Vertical spacing between sibling nodes (pixels) */
+  /** Base vertical gap between siblings (pixels) — actual gap scales with subtree height at each level */
   verticalSpacing: number;
 
   /** Maximum width of the graph before forcing vertical layout */
@@ -243,7 +243,7 @@ export interface LayoutConfig {
  */
 export const DEFAULT_LAYOUT: LayoutConfig = {
   horizontalSpacing: 280,
-  verticalSpacing: 40,
+  verticalSpacing: 32,
   maxWidth: 1200,
   animationDuration: 200,
 };

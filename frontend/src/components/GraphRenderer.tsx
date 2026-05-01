@@ -57,6 +57,12 @@ interface Viewport {
   zoom: number;
 }
 
+// Default viewport that centers the root node in view
+function computeRootViewport(svgEl: SVGSVGElement): Viewport {
+  const height = svgEl.getBoundingClientRect().height;
+  return { x: 35, y: height / 2 - 40, zoom: 1 };
+}
+
 // ---------------------------------------------------------------------------
 // Helper: compute layout for current graph state
 // ---------------------------------------------------------------------------
@@ -118,7 +124,6 @@ export default function GraphRenderer({
   const [isDragging, setIsDragging] = useState(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [viewportStart, setViewportStart] = useState({ x: 0, y: 0 });
 
@@ -128,14 +133,10 @@ export default function GraphRenderer({
     return computeLayout(graph);
   }, [graph]);
 
-  // Center viewport on first load
+  // Center viewport on root node at first load
   useEffect(() => {
     if (layout && svgRef.current) {
-      const { width: svgWidth } = svgRef.current.getBoundingClientRect();
-      const { width: graphWidth, minX } = layout.bounds;
-      const x =
-        (svgWidth - graphWidth * viewport.zoom) / 2 - minX * viewport.zoom;
-      setViewport((v) => ({ ...v, x, y: PADDING_Y }));
+      setViewport(computeRootViewport(svgRef.current));
     }
   }, [layout]);
 
@@ -219,18 +220,8 @@ export default function GraphRenderer({
   );
 
   // -----------------------------------------------------------------------
-  // Menu actions
+  // View actions
   // -----------------------------------------------------------------------
-
-  const handleFileNew = useCallback(() => {
-    setMenuOpen(false);
-    // TODO: Clear current graph
-  }, []);
-
-  const handleFileOpen = useCallback(() => {
-    setMenuOpen(false);
-    // TODO: Trigger file picker
-  }, []);
 
   const handleZoomIn = useCallback(() => {
     setViewport((v) => ({ ...v, zoom: Math.min(3, v.zoom * 1.2) }));
@@ -241,7 +232,7 @@ export default function GraphRenderer({
   }, []);
 
   const handleResetView = useCallback(() => {
-    setViewport({ x: 0, y: 0, zoom: 1 });
+    if (svgRef.current) setViewport(computeRootViewport(svgRef.current));
   }, []);
 
   // -----------------------------------------------------------------------
@@ -338,104 +329,6 @@ export default function GraphRenderer({
           gap: 4,
         }}
       >
-        {/* File menu */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setMenuOpen((o) => !o)}
-            style={{
-              padding: "6px 12px",
-              fontSize: 13,
-              fontFamily: "system-ui, sans-serif",
-              color: COLORS.toolbarText,
-              background: "transparent",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = COLORS.toolbarHover)
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
-          >
-            File
-          </button>
-
-          {menuOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                zIndex: 20,
-                minWidth: 180,
-                background: COLORS.menuBg,
-                border: `1px solid ${COLORS.menuBorder}`,
-                borderRadius: 6,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                onClick={handleFileNew}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "8px 12px",
-                  fontSize: 13,
-                  fontFamily: "system-ui, sans-serif",
-                  color: COLORS.menuText,
-                  background: "transparent",
-                  border: "none",
-                  textAlign: "left",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = COLORS.menuHover)
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                New
-              </button>
-              <button
-                onClick={handleFileOpen}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "8px 12px",
-                  fontSize: 13,
-                  fontFamily: "system-ui, sans-serif",
-                  color: COLORS.menuText,
-                  background: "transparent",
-                  border: "none",
-                  textAlign: "left",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = COLORS.menuHover)
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                Open YAML
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            width: 1,
-            height: 20,
-            background: COLORS.toolbarBorder,
-            margin: "0 4px",
-          }}
-        />
-
         {/* Zoom controls */}
         <button
           onClick={handleZoomIn}

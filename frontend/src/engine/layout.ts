@@ -1,8 +1,12 @@
 /**
- * Graph Layout Engine
+ * Graph Layout Engine — two-pass hierarchical tree layout.
  *
- * Computes positions for graph nodes using a hierarchical tree layout algorithm.
- * Optimized for performance with memoization and batched calculations.
+ * Pass 1 (bottom-up): compute subtree height for every node.
+ * Pass 2 (top-down): place nodes using dynamic vertical spacing per level.
+ *
+ * Horizontal spacing is static so bezier curves have predictable room.
+ * Vertical spacing scales with the tallest sibling at each depth level,
+ * preventing both collisions and wasted gaps.
  */
 
 import type { Graph, GraphNode, LayoutConfig } from "../types/graph";
@@ -16,8 +20,14 @@ const BASE_NODE_HEIGHT = 40;
 const FIELD_HEIGHT_DETAILS = 28;
 const FIELD_HEIGHT_DEADLINE = 24;
 
+/** Minimum vertical gap between siblings (pixels) */
+const MIN_V_GAP = 16;
+
+/** Multiplier for dynamic spacing — fraction of max subtree height at a level */
+const V_SPACING_FACTOR = 0.15;
+
 // ---------------------------------------------------------------------------
-// Layout State
+// Types
 // ---------------------------------------------------------------------------
 
 interface LayoutNode {
@@ -26,300 +36,240 @@ interface LayoutNode {
   y: number;
   width: number;
   height: number;
-  depth: number;
-  isCollapsed: boolean;
 }
 
 interface LayoutResult {
   nodes: Map<number, LayoutNode>;
   edges: Array<{ from: number; to: number }>;
-  config: LayoutConfig;
 }
 
 // ---------------------------------------------------------------------------
-// Layout Engine
+// Engine
 // ---------------------------------------------------------------------------
 
 export class LayoutEngine {
   private config: LayoutConfig;
-  private nodeMap: Map<number, GraphNode>;
+  private nodeMap: Map<number, GraphNode> = new Map();
   private rootIds: number[] = [];
-  private layoutCache: Map<number, LayoutResult> = new Map();
-  private cacheKey: string = "";
+
+  // Per-layout caches (invalidated on setGraph / setConfig)
+  private subtreeHeights: Map<number, number> | null = null;
 
   constructor(config: LayoutConfig = DEFAULT_LAYOUT) {
     this.config = config;
-    this.nodeMap = new Map();
   }
 
-  /**
-   * Update the graph data and invalidate the cache.
-   */
   setGraph(graph: Graph): void {
     this.nodeMap.clear();
     for (const node of graph.nodes) {
       this.nodeMap.set(node.id, node);
     }
     this.rootIds = graph.root_ids || [];
-    this.invalidateCache();
+    this.subtreeHeights = null;
   }
 
-  /**
-   * Update the layout configuration.
-   */
   setConfig(config: Partial<LayoutConfig>): void {
     this.config = { ...this.config, ...config };
-    this.invalidateCache();
+    this.subtreeHeights = null;
   }
 
-  /**
-   * Compute the layout for the current graph.
-   * Returns a map of node positions and edge connections.
-   */
-  computeLayout(): LayoutResult {
-    const cacheKey = this.generateCacheKey();
-    if (this.layoutCache.has(cacheKey)) {
-      return this.layoutCache.get(cacheKey)!;
-    }
+  // -----------------------------------------------------------------------
+  // Public entry point
+  // -----------------------------------------------------------------------
 
-    const layoutNodes = new Map<number, LayoutNode>();
+  computeLayout(): LayoutResult {
+    const heights = this.computeSubtreeHeights();
+    const nodes = new Map<number, LayoutNode>();
     const edges: Array<{ from: number; to: number }> = [];
 
-    // Process each root node and its subtree
+    let rootY = 0;
     for (const rootId of this.rootIds) {
       const root = this.nodeMap.get(rootId);
       if (!root) continue;
 
-      const subtree = this.layoutSubtree(rootId, 0, 0);
-      for (const [id, node] of subtree.nodes) {
-        layoutNodes.set(id, node);
-      }
-      edges.push(...subtree.edges);
+      this.placeSubtree(rootId, 0, rootY, heights, nodes, edges);
+
+      // Next root starts below this one's full subtree extent
+      const placedRoot = nodes.get(rootId);
+      const subtreeMaxY = this.findSubtreeMaxY(rootId, nodes);
+      rootY = subtreeMaxY + this.config.verticalSpacing;
     }
 
-    const result: LayoutResult = {
-      nodes: layoutNodes,
-      edges,
-      config: this.config,
-    };
-
-    this.layoutCache.set(cacheKey, result);
-    return result;
+    return { nodes, edges };
   }
 
+  // -----------------------------------------------------------------------
+  // Pass 1 — bottom-up subtree heights
+  // -----------------------------------------------------------------------
+
   /**
-   * Layout a subtree rooted at the given node.
-   * Uses a recursive approach to compute positions.
+   * Returns a map of nodeId → total rendered height of that node's visible
+   * subtree (including all descendants and the gaps between them).
    */
-  private layoutSubtree(
+  private computeSubtreeHeights(): Map<number, number> {
+    if (this.subtreeHeights) return this.subtreeHeights;
+
+    const cache = new Map<number, number>();
+    const visited = new Set<number>();
+
+    const visit = (id: number): number => {
+      if (cache.has(id)) return cache.get(id)!;
+      if (visited.has(id)) return 0; // guard against cycles
+      visited.add(id);
+
+      const node = this.nodeMap.get(id);
+      if (!node) return 0;
+
+      const selfH = this.estimateNodeHeight(node);
+      const children = this.getChildren(node);
+
+      if (children.length === 0) {
+        cache.set(id, selfH);
+        return selfH;
+      }
+
+      // Sum of all child subtree heights + gaps between them
+      let total = selfH;
+      for (const ch of children) {
+        total += visit(ch.id);
+      }
+      // Add gap after each child except the last
+      total += Math.max(0, children.length - 1) * this.config.verticalSpacing;
+
+      cache.set(id, total);
+      return total;
+    };
+
+    for (const rid of this.rootIds) visit(rid);
+    this.subtreeHeights = cache;
+    return cache;
+  }
+
+  // -----------------------------------------------------------------------
+  // Pass 2 — top-down placement with dynamic vertical spacing
+  // -----------------------------------------------------------------------
+
+  /**
+   * Place a subtree rooted at `nodeId` at `(x, y)`.
+   *
+   * Children are placed to the right (static horizontalSpacing).
+   * Vertical positions use dynamic spacing: we first collect all children's
+   * subtree heights, then distribute them evenly around the parent using
+   * a gap derived from the maximum child height.
+   */
+  private placeSubtree(
     nodeId: number,
-    startX: number,
-    startY: number,
-  ): LayoutResult {
+    x: number,
+    y: number,
+    heights: Map<number, number>,
+    nodes: Map<number, LayoutNode>,
+    edges: Array<{ from: number; to: number }>,
+  ): void {
     const node = this.nodeMap.get(nodeId);
-    if (!node) {
-      return { nodes: new Map(), edges: [], config: this.config };
+    if (!node) return;
+
+    const selfH = this.estimateNodeHeight(node);
+    const selfW = this.estimateNodeWidth(node);
+
+    nodes.set(nodeId, { id: nodeId, x, y, width: selfW, height: selfH });
+
+    const children = this.getChildren(node);
+    if (children.length === 0) return;
+
+    // Collect child subtree heights
+    const childHeights: number[] = [];
+    for (const ch of children) {
+      childHeights.push(heights.get(ch.id) ?? selfH);
     }
 
-    const isCollapsed = node.collapsed ?? true;
-    const children = this.getVisibleChildren(node);
+    // Dynamic vertical gap — scales with the tallest sibling at this level
+    const maxChildHeight = Math.max(...childHeights);
+    const vGap = Math.max(MIN_V_GAP, maxChildHeight * V_SPACING_FACTOR);
 
-    // Compute node dimensions (estimated)
-    const nodeWidth = this.estimateNodeWidth(node);
-    const nodeHeight = this.estimateNodeHeight(node);
+    // Total band occupied by children + gaps
+    let totalBand = childHeights.reduce((a, b) => a + b, 0);
+    totalBand += Math.max(0, childHeights.length - 1) * vGap;
 
-    // Create the layout node
-    const layoutNode: LayoutNode = {
-      id: nodeId,
-      x: startX,
-      y: startY,
-      width: nodeWidth,
-      height: nodeHeight,
-      depth: 0,
-      isCollapsed,
-    };
+    // Start Y so the child band is centered on the parent's midpoint
+    const childStartY = y + selfH / 2 - totalBand / 2;
 
-    const result: LayoutResult = {
-      nodes: new Map([[nodeId, layoutNode]]),
-      edges: [],
-      config: this.config,
-    };
-
-    if (!isCollapsed && children.length > 0) {
-      // Pre-compute subtree heights for vertical centering
-      const subtreeHeights = this.computeSubtreeHeights();
-
-      let totalChildHeight = 0;
-      for (const child of children) {
-        totalChildHeight +=
-          subtreeHeights.get(child.id)! + this.config.verticalSpacing;
-      }
-      totalChildHeight = Math.max(
-        0,
-        totalChildHeight - this.config.verticalSpacing,
+    let curY = childStartY;
+    for (let i = 0; i < children.length; i++) {
+      const ch = children[i];
+      edges.push({ from: nodeId, to: ch.id });
+      this.placeSubtree(
+        ch.id,
+        x + this.config.horizontalSpacing,
+        curY,
+        heights,
+        nodes,
+        edges,
       );
-
-      // Start Y position for children (centered relative to parent)
-      let currentY = startY - totalChildHeight / 2 + nodeHeight / 2;
-
-      // Layout each child at its correct Y position
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        const childResult = this.layoutSubtree(
-          child.id,
-          startX + this.config.horizontalSpacing,
-          currentY,
-        );
-
-        // Add edge from parent to direct child only
-        result.edges.push({ from: nodeId, to: child.id });
-
-        // Merge child subtree nodes and internal edges into result
-        for (const [id, layoutNode] of childResult.nodes) {
-          result.nodes.set(id, layoutNode);
-        }
-        result.edges.push(...childResult.edges);
-
-        // Move to next child position
-        currentY += subtreeHeights.get(child.id)! + this.config.verticalSpacing;
-      }
+      curY += childHeights[i] + vGap;
     }
-
-    return result;
   }
 
-  /**
-   * Get visible children of a node (respecting collapse state).
-   */
-  private getVisibleChildren(node: GraphNode): GraphNode[] {
-    if (!node.subtask_ids || node.subtask_ids.length === 0) {
-      return [];
-    }
+  // -----------------------------------------------------------------------
+  // Helpers
+  // -----------------------------------------------------------------------
+
+  private getChildren(node: GraphNode): GraphNode[] {
+    // If collapsed (default true), hide children from layout
+    if (node.collapsed === true || node.collapsed === undefined) return [];
+    if (!node.subtask_ids || node.subtask_ids.length === 0) return [];
     return node.subtask_ids
       .map((id) => this.nodeMap.get(id))
       .filter((n): n is GraphNode => n !== undefined);
   }
 
-  /**
-   * Memoized map for subtree height computation (avoids double traversal).
-   */
-  private subtreeHeightCache: Map<number, number> | null = null;
-
-  /**
-   * Compute the total rendered height of every node's visible subtree.
-   * Result is cached so layoutSubtree can consume it without re-traversing.
-   */
-  private computeSubtreeHeights(): Map<number, number> {
-    if (this.subtreeHeightCache) return this.subtreeHeightCache;
-    const cache = new Map<number, number>();
-
-    const compute = (nodeId: number): number => {
-      if (cache.has(nodeId)) return cache.get(nodeId)!;
-      const node = this.nodeMap.get(nodeId);
-      if (!node) return 0;
-
-      const selfHeight = this.estimateNodeHeight(node);
-      const isCollapsed = node.collapsed ?? true;
-      const children = this.getVisibleChildren(node);
-
-      if (isCollapsed || children.length === 0) {
-        cache.set(nodeId, selfHeight);
-        return selfHeight;
-      }
-
-      let total = selfHeight;
-      for (const child of children) {
-        total += compute(child.id) + this.config.verticalSpacing;
-      }
-      // Remove trailing spacing
-      total -= this.config.verticalSpacing;
-
-      cache.set(nodeId, total);
-      return total;
-    };
-
-    for (const rootId of this.rootIds) {
-      compute(rootId);
-    }
-
-    this.subtreeHeightCache = cache;
-    return cache;
-  }
-
-  /**
-   * Estimate the width of a node based on its name length.
-   */
   private estimateNodeWidth(node: GraphNode): number {
-    // Approximate: 8px per character + padding, minimum matches NODE_WIDTH
-    const nameWidth = node.name.length * 8;
-    return Math.max(200, nameWidth + 32); // Minimum 200px width (NODE_WIDTH)
+    const nameW = node.name.length * 8;
+    return Math.max(200, nameW + 32);
   }
 
-  /**
-   * Estimate the height of a node based on which fields are present.
-   */
   private estimateNodeHeight(node: GraphNode): number {
-    let height = BASE_NODE_HEIGHT;
-    if (node.details) height += FIELD_HEIGHT_DETAILS;
-    if (node.deadline) height += FIELD_HEIGHT_DEADLINE;
-    return height;
+    let h = BASE_NODE_HEIGHT;
+    if (node.details) h += FIELD_HEIGHT_DETAILS;
+    if (node.deadline) h += FIELD_HEIGHT_DEADLINE;
+    return h;
   }
 
-  /**
-   * Generate a cache key based on current state.
-   */
-  private generateCacheKey(): string {
-    const nodeIds = Array.from(this.nodeMap.keys()).sort().join(",");
-    const collapseState = Array.from(this.nodeMap.values())
-      .map((n) => `${n.id}:${n.collapsed ? 1 : 0}`)
-      .join("|");
-    return `${nodeIds}|${collapseState}|${this.config.horizontalSpacing}:${this.config.verticalSpacing}`;
+  /** Walk placed nodes to find the maximum Y+height in a subtree */
+  private findSubtreeMaxY(
+    rootId: number,
+    nodes: Map<number, LayoutNode>,
+  ): number {
+    let maxY = -Infinity;
+    const queue: number[] = [rootId];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      const ln = nodes.get(id);
+      if (ln) maxY = Math.max(maxY, ln.y + ln.height);
+      const gn = this.nodeMap.get(id);
+      if (gn) {
+        for (const cid of gn.subtask_ids || []) {
+          if (nodes.has(cid)) queue.push(cid);
+        }
+      }
+    }
+    return maxY;
   }
 
-  /**
-   * Invalidate the layout cache.
-   */
-  private invalidateCache(): void {
-    this.layoutCache.clear();
-    this.subtreeHeightCache = null;
-  }
-
-  /**
-   * Get the position of a node by its ID.
-   */
-  getNodePosition(
-    layout: LayoutResult,
-    nodeId: number,
-  ): { x: number; y: number } | null {
-    const node = layout.nodes.get(nodeId);
-    if (!node) return null;
-    return { x: node.x, y: node.y };
-  }
-
-  /**
-   * Clear the layout cache.
-   */
   clearCache(): void {
-    this.layoutCache.clear();
+    this.subtreeHeights = null;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Utility Functions
+// Utilities
 // ---------------------------------------------------------------------------
 
-/**
- * Create a new layout engine with default configuration.
- */
 export function createLayoutEngine(
   config?: Partial<LayoutConfig>,
 ): LayoutEngine {
-  return new LayoutEngine(config || DEFAULT_LAYOUT);
+  return new LayoutEngine(config ?? DEFAULT_LAYOUT);
 }
 
-/**
- * Compute the bounding box of a layout.
- */
 export function getLayoutBounds(layout: LayoutResult): {
   minX: number;
   minY: number;
@@ -337,19 +287,12 @@ export function getLayoutBounds(layout: LayoutResult): {
     maxX = -Infinity,
     maxY = -Infinity;
 
-  for (const node of layout.nodes.values()) {
-    minX = Math.min(minX, node.x);
-    minY = Math.min(minY, node.y);
-    maxX = Math.max(maxX, node.x + node.width);
-    maxY = Math.max(maxY, node.y + node.height);
+  for (const n of layout.nodes.values()) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + n.width);
+    maxY = Math.max(maxY, n.y + n.height);
   }
 
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: maxX - minX,
-    height: maxY - minY,
-  };
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 }

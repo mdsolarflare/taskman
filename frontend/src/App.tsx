@@ -361,7 +361,7 @@ function App() {
             letterSpacing: -0.3,
           }}
         >
-          TaskGraph
+          Taskman
         </span>
 
         <div
@@ -499,7 +499,7 @@ function App() {
           >
             <div style={{ fontSize: 64 }}>📊</div>
             <h2 style={{ fontSize: 20, fontWeight: 600, color: "#1a1a2e" }}>
-              Welcome to TaskGraph
+              Welcome to Taskman
             </h2>
             <p
               style={{
@@ -689,7 +689,7 @@ function App() {
                 color: "#1a1a2e",
               }}
             >
-              About TaskGraph
+              About Taskman
             </h2>
             <p
               style={{
