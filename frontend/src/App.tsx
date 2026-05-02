@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import GraphRenderer from "./components/GraphRenderer";
+import EditNodeModal from "./components/EditNodeModal";
 import type { Graph, GraphNode } from "./types/graph";
-import { buildGraphFromYaml } from "./wasm";
+import { buildGraphFromYaml, saveGraphToYaml } from "./wasm";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,6 +56,7 @@ function App() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState<number | null>(null);
 
   // Stabilize loadYaml across renders so it's safe to call from useEffect
   const loadYamlRef = useRef<
@@ -171,6 +173,87 @@ function App() {
 
   const handleDismissHelp = () => {
     setShowHelp(false);
+  };
+
+  const handleNodeEdit = useCallback((nodeId: number) => {
+    setEditingNodeId(nodeId);
+  }, []);
+
+  const handleNodeSave = useCallback((updated: GraphNode) => {
+    setState((s) => {
+      if (!s.graph) return s;
+      const nodes = s.graph.nodes.map((n) =>
+        n.id === updated.id ? updated : n,
+      );
+      const newGraph = { ...s.graph, nodes };
+      // Auto-save to localStorage
+      // We regenerate YAML from the mutated graph via WASM
+      (async () => {
+        try {
+          const yaml = await saveGraphToYaml(newGraph);
+          saveWorkspace(yaml);
+        } catch {
+          /* silent — wasm may not handle mid-edit graphs */
+        }
+      })();
+      return { ...s, graph: newGraph, yaml: s.yaml };
+    });
+    setEditingNodeId(null);
+  }, []);
+
+  const handleNodeCancelEdit = useCallback(() => {
+    setEditingNodeId(null);
+  }, []);
+
+  // Download a YAML string to disk via File System Access API (with fallback)
+  const downloadYamlFile = async (yaml: string, suggestedName?: string) => {
+    try {
+      // Modern browsers: use showSaveFilePicker for native save dialog
+      if ("showSaveFilePicker" in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: suggestedName || "tasks.yaml",
+          types: [
+            {
+              description: "YAML File",
+              accept: { "text/yaml": [".yaml", ".yml"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(yaml);
+        await writable.close();
+      } else {
+        // Fallback: create a blob and trigger download via <a> element
+        const blob = new Blob([yaml], { type: "text/yaml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = suggestedName || "tasks.yaml";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      // User likely cancelled the dialog — silently ignore
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Failed to save file:", err);
+    }
+  };
+
+  const handleFileSaveAs = async () => {
+    setMenuOpen(false);
+    if (!state.graph) return;
+    try {
+      const yaml = await saveGraphToYaml(state.graph);
+      // Also persist to localStorage
+      saveWorkspace(yaml);
+      setState((s) => ({ ...s, yaml }));
+      await downloadYamlFile(yaml, undefined);
+    } catch (err) {
+      setState((s) => ({
+        ...s,
+        error: err instanceof Error ? err.message : "Failed to serialize graph",
+      }));
+    }
   };
 
   // -----------------------------------------------------------------------
@@ -304,6 +387,26 @@ function App() {
                   <span style={{ marginRight: 10, opacity: 0.6 }}>📂</span>
                   Open YAML…
                 </button>
+                <button
+                  onClick={handleFileSaveAs}
+                  style={menuItemStyle}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "#f9fafb")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <span style={{ marginRight: 10, opacity: 0.6 }}>💾</span>
+                  Save As…
+                </button>
+                <div
+                  style={{
+                    height: 1,
+                    background: "#e5e7eb",
+                    margin: "4px 0",
+                  }}
+                />
                 <button
                   onClick={handleLoadSample}
                   style={menuItemStyle}
@@ -484,6 +587,7 @@ function App() {
             graph={state.graph}
             yaml={state.yaml}
             onNodeToggle={handleNodeToggle}
+            onNodeEdit={handleNodeEdit}
           />
         ) : (
           // Empty state
@@ -728,6 +832,19 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Edit Node Modal ─── */}
+      {editingNodeId !== null && state.graph && (
+        <EditNodeModal
+          node={
+            state.graph.nodes.find((n) => n.id === editingNodeId) ??
+            state.graph.nodes[0]
+          }
+          allNodes={state.graph.nodes}
+          onSave={handleNodeSave}
+          onCancel={handleNodeCancelEdit}
+        />
       )}
 
       {/* Spinner animation */}

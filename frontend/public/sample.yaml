@@ -9,18 +9,18 @@
 #   │   └── [7] Build Graph Engine       → depends on [6]
 #   ├── [4] Set Up React Frontend      → parallel with [2], [3]
 #   │   ├── [8] Create Graph Renderer    → depends on frontend scaffold
-#   │   │   └── [14] Implement Pan & Zoom  → depth-3 leaf subtask
+#   │   │   └── [14] Implement Pan & Zoom  → depth-3 leaf node
 #   │   └── [9] Implement Layout Engine  → depends on renderer
 #   ├── [10] Wire WASM Bridge          → depends on [3] AND [4] finishing
 #   │   └── [11] Build Node Editor UI    → depends on bridge + renderer
-#   ├── [12] Write Integration Tests   → depends on all above, also a Task
+#   ├── [12] Write Integration Tests   → depends on all above, also a parent node
 #   │   └── [13] Deploy to GitHub Pages  → final step, child of tests
 #
 # Key concepts illustrated:
 #   - Roots: nodes NOT referenced in any other node's subtask_ids ([1])
-#   - Tasks: nodes with details, important flag, and subtask_ids adjacency list
-#   - Subtasks: leaf nodes with only id, name, deadline
-#   - Nesting: a subtask can itself be a parent (e.g. [2]→[5], [3]→[6,7])
+#   - Parent nodes: nodes with details, important flag, and subtask_ids adjacency list
+#   - Leaf nodes: nodes with only id, name, deadline (no children)
+#   - Nesting: a leaf can itself be a parent (e.g. [2]→[5], [3]→[6,7])
 #   - Parallelism: siblings ([2],[3],[4]) can run simultaneously
 
 nodes:

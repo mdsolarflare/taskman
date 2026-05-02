@@ -18,7 +18,7 @@ All task data is stored in a single file (e.g., `tasks.yaml`) to ensure atomicit
 
 ```yaml
 nodes:
-  # Tasks and Subtasks are stored in a single flat list
+  # All nodes use the same schema — leaf nodes simply omit optional fields
   - id: 1
     name: "Main Task"
     details: "Description of the main task"
@@ -26,33 +26,25 @@ nodes:
     important: true
     subtask_ids: [2, 3]
   - id: 2
-    name: "Subtask A"
+    name: "Child A"
     deadline: 2023-10-26T10:00:00Z
   - id: 3
-    name: "Subtask B"
+    name: "Child B"
     deadline: 2023-10-26T12:00:00Z
 ```
 
 ## Schema Definitions
 
-### Node Base
-All nodes share a common identifier:
+### Node
+Every node in the graph uses the same schema. Fields beyond `id` and `name` are
+optional — a "leaf" node simply omits `details`, `important`, and `subtask_ids`.
+
 *   `id` (int): Unique identifier.
-
-### Task
-Represents a full task unit.
-*   `id` (int): Unique ID.
 *   `name` (string, max 128 chars): Display name.
-*   `details` (string, max 1024 chars): Detailed description.
-*   `deadline` (datetime): ISO 8601 date/time.
-*   `important` (bool): Flag for highlighting.
-*   `subtask_ids` (list[int]): IDs of child nodes.
-
-### Subtask
-A minimal task unit.
-*   `id` (int): Unique ID.
-*   `name` (string, max 128 chars): Display name.
-*   `deadline` (datetime): ISO 8601 date/time.
+*   `details` (string, max 1024 chars, optional): Detailed description.
+*   `deadline` (datetime, optional): ISO 8601 date/time.
+*   `important` (bool, optional): Flag for highlighting.
+*   `subtask_ids` (list[int], optional): IDs of child nodes. Empty or absent on leaf nodes.
 
 ## Directed Graph Mapping
 

@@ -10,10 +10,11 @@
 // ---------------------------------------------------------------------------
 
 /**
- * A node in the task graph. Can represent either a Task or a Subtask.
+ * A node in the task graph with computed fields for rendering.
  *
- * Tasks have additional fields like details, important flag, and subtask_ids.
- * Subtasks are minimal units with just id, name, and optional deadline.
+ * All fields except `id` and `name` are optional. A "leaf" node simply omits
+ * `details`, `important`, and `subtask_ids`. The `parent_ids` and `collapsed`
+ * fields are computed at graph build time / by the UI.
  */
 export interface GraphNode {
   /** Unique identifier for the node */
@@ -31,7 +32,7 @@ export interface GraphNode {
   /** Flag for highlighting important nodes (optional) */
   important?: boolean;
 
-  /** IDs of child nodes (subtasks), optional for subtasks */
+  /** IDs of child nodes (optional — absent on leaf nodes) */
   subtask_ids?: number[];
 
   /** IDs of parent nodes, computed at graph build time */
@@ -74,19 +75,17 @@ export interface Graph {
  * Mirrors the TaskDocument struct from the Rust yaml module.
  */
 export interface TaskDocument {
-  /** List of all nodes (tasks and subtasks) in the graph */
-  nodes: TaskNode[];
+  /** List of all nodes in the graph — every node uses the same schema */
+  nodes: Node[];
 }
 
 /**
- * A node in the YAML document. Can be either a Task or a Subtask.
+ * A node in the task graph.
+ *
+ * All fields except `id` and `name` are optional. A "leaf" node simply omits
+ * `details`, `important`, and `subtask_ids`. There is no separate Subtask type.
  */
-export type TaskNode = Task | Subtask;
-
-/**
- * A full task unit with details and subtasks.
- */
-export interface Task {
+export interface Node {
   /** Unique ID */
   id: number;
 
@@ -102,23 +101,21 @@ export interface Task {
   /** Flag for highlighting important tasks */
   important?: boolean;
 
-  /** IDs of child subtasks */
+  /** IDs of child nodes */
   subtask_ids?: number[];
 }
 
 /**
- * A minimal subtask unit.
+ * Legacy alias — kept for import compatibility.
+ * @deprecated Use `Node` instead.
  */
-export interface Subtask {
-  /** Unique ID */
-  id: number;
+export type Task = Node;
 
-  /** Display name (max 128 chars) */
-  name: string;
-
-  /** ISO 8601 deadline date/time */
-  deadline?: string;
-}
+/**
+ * Legacy alias — kept for import compatibility.
+ * @deprecated Use `Node` instead.
+ */
+export type TaskNode = Node;
 
 // ---------------------------------------------------------------------------
 // UI State Types

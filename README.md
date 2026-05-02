@@ -15,7 +15,7 @@ This project follows a monorepo structure, separating the "Brain" (computation) 
 - 🔒 **Privacy by Design:** Data stays on the user's machine; no backend required for core logic.
 - ⚡ **Near-Native Speed:** WASM allows complex graph algorithms to run at speeds impossible with pure JavaScript.
 - 💾 **Persistent Workspace:** Your YAML workspace is saved to `localStorage` and restored automatically on return visits.
-- 📋 **Sample Data:** First-time users get a 4-node sample graph demonstrating the full data model hierarchy (tasks, subtasks, nesting).
+- 📋 **Sample Data:** First-time users get a 4-node sample graph demonstrating the full data model hierarchy (parent nodes, leaf nodes, nesting).
 - 🎨 **Modern UI:** A clean, responsive interface powered by Tailwind CSS and Shadcn/UI.
 
 ## 🛠️ Development Setup
@@ -108,7 +108,7 @@ On first load, the app automatically serves a sample graph from `/sample.yaml` (
 ```text
 .
 ├── Sample.yaml              # Reference copy of the 4-node sample graph (project root)
-├── DATA_MODEL.md            # Full schema spec for Tasks, Subtasks, and DAG mapping
+├── DATA_MODEL.md            # Full schema spec for Nodes and DAG mapping
 ├── ichor/                   # Rust WASM project
 │   ├── src/                 # YAML parsing, graph builder, layout algorithms
 │   └── Cargo.toml           # Rust dependencies & WASM configuration
@@ -126,12 +126,12 @@ The app ships with a 4-node sample graph demonstrating the full data model:
 - **Location:** `frontend/public/sample.yaml` (served at `/sample.yaml`) and `Sample.yaml` (project root reference)
 - **Structure:**
   ```
-  [1] Build Taskman App          → Root Task (all fields: details, important, subtask_ids)
-  ├── [2] Implement Rust Core    → Subtask of [1], also a Task with child [3] (nesting demo)
-  │   └── [3] Compile to WASM    → Leaf Subtask (minimal: id, name, deadline only)
-  └── [4] Design Frontend UI     → Leaf Subtask (minimal)
+  [1] Build Taskman App          → Root Node (all fields: details, important, subtask_ids)
+  ├── [2] Implement Rust Core    → Child of [1], also a parent with child [3] (nesting demo)
+  │   └── [3] Compile to WASM    → Leaf Node (minimal: id, name, deadline only)
+  └── [4] Design Frontend UI     → Leaf Node (minimal)
   ```
-- **Key concepts illustrated:** Roots vs subtasks, Tasks with children, leaf Subtasks, and DAG nesting
+- **Key concepts illustrated:** Roots vs children, parents with subtask_ids, leaf nodes, and DAG nesting
 
 See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
 

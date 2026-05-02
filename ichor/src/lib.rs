@@ -16,6 +16,7 @@ pub use yaml::root_names;
 pub use graph::build_graph_from_yaml;
 pub use graph::get_node_count;
 pub use graph::get_root_names;
+pub use graph::graph_to_yaml;
 
 #[wasm_bindgen]
 pub fn add(left: u64, right: u64) -> u64 {

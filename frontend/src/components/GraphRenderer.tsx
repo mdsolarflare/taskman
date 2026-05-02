@@ -49,6 +49,7 @@ interface GraphRendererProps {
   graph: Graph | null;
   yaml: string | null;
   onNodeToggle: (nodeId: number, collapsed: boolean) => void;
+  onNodeEdit?: (nodeId: number) => void;
 }
 
 interface Viewport {
@@ -118,6 +119,7 @@ export default function GraphRenderer({
   graph,
   yaml,
   onNodeToggle,
+  onNodeEdit,
 }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
@@ -207,6 +209,13 @@ export default function GraphRenderer({
       }
     },
     [selectedNodeId],
+  );
+
+  const handleNodeDoubleClick = useCallback(
+    (nodeId: number) => {
+      onNodeEdit?.(nodeId);
+    },
+    [onNodeEdit],
   );
 
   const handleCollapseToggle = useCallback(
@@ -553,6 +562,10 @@ export default function GraphRenderer({
                   e.stopPropagation();
                   handleNodeClick(nodeId);
                 }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  handleNodeDoubleClick(nodeId);
+                }}
                 onMouseEnter={() => setHoveredNodeId(nodeId)}
                 onMouseLeave={() => setHoveredNodeId(null)}
               >
@@ -684,6 +697,28 @@ export default function GraphRenderer({
           <span style={{ color: COLORS.menuTextActive, fontWeight: 500 }}>
             Selected: {graph.nodes.find((n) => n.id === selectedNodeId)?.name}
           </span>
+        )}
+        {selectedNodeId !== null && onNodeEdit && (
+          <button
+            onClick={() => onNodeEdit(selectedNodeId!)}
+            title="Edit node"
+            style={{
+              marginLeft: "auto",
+              padding: "2px 10px",
+              fontSize: 12,
+              fontWeight: 500,
+              fontFamily: "system-ui, sans-serif",
+              background: "#6366f1",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#4f46e5")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#6366f1")}
+          >
+            ✎ Edit
+          </button>
         )}
       </div>
     </div>

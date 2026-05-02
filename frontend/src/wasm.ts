@@ -18,6 +18,7 @@ interface WasmExports {
   build_graph_from_yaml: (yaml: string) => string;
   get_node_count: (yaml: string) => number;
   get_root_names: (yaml: string) => string;
+  graph_to_yaml: (graphJson: string) => string;
   __wbindgen_malloc: (size: number, alignment: number) => number;
   __wbindgen_free: (ptr: number, size: number) => void;
 }
@@ -115,4 +116,15 @@ export async function getYamlJson(yaml: string): Promise<string> {
 export async function getGraphJson(yaml: string): Promise<string> {
   const wasm = await initWasm();
   return wasm.build_graph_from_yaml(yaml);
+}
+
+/**
+ * Convert a Graph JSON object back to the YAML data schema format.
+ * Strips computed fields (adjacency, reverse_adjacency, root_ids, parent_ids, collapsed)
+ * and returns a clean TaskDocument as a YAML string suitable for file save.
+ */
+export async function saveGraphToYaml(graph: unknown): Promise<string> {
+  const wasm = await initWasm();
+  const graphJson = JSON.stringify(graph);
+  return wasm.graph_to_yaml(graphJson);
 }

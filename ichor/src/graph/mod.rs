@@ -143,35 +143,23 @@ impl Graph {
 pub struct GraphBuilder;
 
 impl GraphBuilder {
-    /// Convert a list of Node enum variants into GraphNode structs.
+    /// Convert a list of Node structs into GraphNode structs.
     pub fn nodes_from_yaml(nodes: Vec<crate::yaml::Node>) -> Vec<GraphNode> {
         nodes
             .into_iter()
-            .map(|node| match node {
-                crate::yaml::Node::Task(task) => GraphNode {
-                    id: task.id,
-                    name: task.name,
-                    details: task.details,
-                    deadline: task.deadline,
-                    important: task.important,
-                    subtask_ids: if task.subtask_ids.is_empty() {
-                        None
-                    } else {
-                        Some(task.subtask_ids)
-                    },
-                    parent_ids: None, // Will be filled by Graph::from_nodes
-                    collapsed: Some(false),
+            .map(|node| GraphNode {
+                id: node.id,
+                name: node.name,
+                details: node.details,
+                deadline: node.deadline,
+                important: node.important,
+                subtask_ids: if node.subtask_ids.is_empty() {
+                    None
+                } else {
+                    Some(node.subtask_ids)
                 },
-                crate::yaml::Node::Subtask(subtask) => GraphNode {
-                    id: subtask.id,
-                    name: subtask.name,
-                    details: None,
-                    deadline: subtask.deadline,
-                    important: None,
-                    subtask_ids: None,
-                    parent_ids: None, // Will be filled by Graph::from_nodes
-                    collapsed: Some(false),
-                },
+                parent_ids: None, // Will be filled by Graph::from_nodes
+                collapsed: Some(false),
             })
             .collect()
     }
@@ -220,4 +208,30 @@ pub fn get_root_names(yaml: &str) -> Result<JsValue, JsValue> {
         .collect();
     let json = serde_json::to_string(&names).map_err(|e| JsValue::from_str(&e.to_string()))?;
     Ok(JsValue::from_str(&json))
+}
+
+/// Convert a Graph JSON back to the YAML data schema format.
+///
+/// Takes the full Graph JSON (with computed fields like adjacency, root_ids),
+/// strips those computed fields, and serializes only the node data as a clean
+/// TaskDocument in YAML format suitable for file save.
+#[wasm_bindgen]
+pub fn graph_to_yaml(graph_json: &str) -> Result<String, String> {
+    let graph = Graph::from_json(graph_json)?;
+
+    let nodes: Vec<crate::yaml::Node> = graph
+        .nodes
+        .iter()
+        .map(|node| crate::yaml::Node {
+            id: node.id,
+            name: node.name.clone(),
+            details: node.details.clone(),
+            deadline: node.deadline.clone(),
+            important: node.important,
+            subtask_ids: node.subtask_ids.clone().unwrap_or_default(),
+        })
+        .collect();
+
+    let doc = crate::yaml::TaskDocument { nodes };
+    serde_yaml::to_string(&doc).map_err(|e| format!("YAML serialization error: {}", e))
 }

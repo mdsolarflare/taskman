@@ -9,22 +9,13 @@ use wasm_bindgen::prelude::*;
 // Data Model
 // ---------------------------------------------------------------------------
 
-/// A node in the task graph. Can be either a Task or a Subtask.
+/// A node in the task graph.
 ///
-/// Uses untagged deserialization so `serde` tries each variant in order:
-/// `Task` first (has optional `subtask_ids`, `details`, `important`), then
-/// `Subtask` (only `id`, `name`, `deadline`). This matches the DATA_MODEL.md
-/// spec which has no explicit `type` discriminator field.
+/// All fields except `id` and `name` are optional — a "leaf" node simply
+/// omits `details`, `important`, and `subtask_ids`. There is no separate
+/// Subtask type; every node is a Task with varying levels of detail.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Node {
-    Task(Task),
-    Subtask(Subtask),
-}
-
-/// A full task unit with details and subtasks.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Task {
+pub struct Node {
     pub id: i64,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,14 +28,8 @@ pub struct Task {
     pub subtask_ids: Vec<i64>,
 }
 
-/// A minimal subtask unit.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Subtask {
-    pub id: i64,
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub deadline: Option<String>,
-}
+/// Legacy alias — kept for import compatibility.
+pub type Task = Node;
 
 /// The root document structure for tasks.yaml.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,49 +76,20 @@ pub fn root_names(json: &str) -> Result<JsValue, JsValue> {
         serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
     let mut referenced_ids = std::collections::HashSet::new();
     for node in &doc.nodes {
-        match node {
-            Node::Task(task) => {
-                for id in &task.subtask_ids {
-                    referenced_ids.insert(*id);
-                }
-            }
-            Node::Subtask(_) => {}
+        for id in &node.subtask_ids {
+            referenced_ids.insert(*id);
         }
     }
     let roots: Vec<String> = doc
         .nodes
         .iter()
-        .filter(|n| {
-            let id = match n {
-                Node::Task(t) => t.id,
-                Node::Subtask(s) => s.id,
-            };
-            !referenced_ids.contains(&id)
-        })
-        .map(|n| n.name())
+        .filter(|n| !referenced_ids.contains(&n.id))
+        .map(|n| n.name.clone())
         .collect();
     let json = serde_json::to_string(&roots).map_err(|e| JsValue::from_str(&e.to_string()))?;
     Ok(JsValue::from_str(&json))
 }
 
 // ---------------------------------------------------------------------------
-// Node helper trait
+// Deprecated helpers — direct field access replaces these.
 // ---------------------------------------------------------------------------
-
-impl Node {
-    /// Get the name of the node.
-    pub fn name(&self) -> String {
-        match self {
-            Node::Task(t) => t.name.clone(),
-            Node::Subtask(s) => s.name.clone(),
-        }
-    }
-
-    /// Get the id of the node.
-    pub fn id(&self) -> i64 {
-        match self {
-            Node::Task(t) => t.id,
-            Node::Subtask(s) => s.id,
-        }
-    }
-}
