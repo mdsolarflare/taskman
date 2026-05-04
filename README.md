@@ -7,7 +7,7 @@ A high-performance, privacy-focused task graph application built with a **Local-
 This project follows a monorepo structure, separating the "Brain" (computation) from the "Face" (interface).
 
 - **The Brain (`/ichor`):** Written in **Rust**. Handles YAML parsing, graph theory calculations, and heavy data processing. Compiled to WASM for browser execution.
-- **The Face (`/frontend`):** Built with **React**, **TypeScript**, and **Vite**. Provides a modern UI using **Tailwind CSS** and **Shadcn/UI**.
+- **The Face (`/frontend`):** Built with **React**, **TypeScript**, and **Vite**. Styled with inline JavaScript style objects for a lightweight, dependency-free approach.
 - **The Bridge:** `wasm-bindgen` and `wasm-pack` facilitate the communication between Rust logic and the TypeScript frontend.
 
 ## ✨ Key Features
@@ -16,7 +16,7 @@ This project follows a monorepo structure, separating the "Brain" (computation) 
 - ⚡ **Near-Native Speed:** WASM allows complex graph algorithms to run at speeds impossible with pure JavaScript.
 - 💾 **Persistent Workspace:** Your YAML workspace is saved to `localStorage` and restored automatically on return visits.
 - 📋 **Sample Data:** First-time users get a 4-node sample graph demonstrating the full data model hierarchy (parent nodes, leaf nodes, nesting).
-- 🎨 **Modern UI:** A clean, responsive interface powered by Tailwind CSS and Shadcn/UI.
+- 🎨 **Modern UI:** A clean, responsive interface using inline styles for a lightweight, zero-dependency frontend.
 
 ## 🛠️ Development Setup
 
