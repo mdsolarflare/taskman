@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import GraphRenderer from "./components/GraphRenderer";
 import EditNodeModal from "./components/EditNodeModal";
+import ThemeModal from "./components/ThemeModal";
 import type { Graph, GraphNode } from "./types/graph";
 import { buildGraphFromYaml, saveGraphToYaml } from "./wasm";
+import { useTheme } from "./hooks/useTheme";
+import "./themes.css";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,6 +60,9 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<number | null>(null);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+
+  const theme = useTheme();
 
   // Stabilize loadYaml across renders so it's safe to call from useEffect
   const loadYamlRef = useRef<
@@ -260,6 +266,26 @@ function App() {
   // Render
   // -----------------------------------------------------------------------
 
+  /* Shorthand for theme colors */
+  const c = theme.currentColors;
+
+  /* MenuItem style - uses theme colors */
+  const menuItemStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    padding: "7px 12px",
+    fontSize: 13,
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    color: c["--text-primary"],
+    background: "transparent",
+    border: "none",
+    textAlign: "left",
+    cursor: "pointer",
+    borderRadius: 0,
+    transition: "background 0.1s",
+  };
+
   return (
     <div
       style={{
@@ -268,7 +294,7 @@ function App() {
         height: "100svh",
         width: "100vw",
         overflow: "hidden",
-        background: "#fafafa",
+        background: c["--bg-primary"],
         fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
@@ -279,8 +305,8 @@ function App() {
           display: "flex",
           alignItems: "center",
           padding: "0 12px",
-          background: "#ffffff",
-          borderBottom: "1px solid #e5e7eb",
+          background: c["--bg-secondary"],
+          borderBottom: `1px solid ${c["--border-color"]}`,
           zIndex: 50,
           flexShrink: 0,
           gap: 8,
@@ -297,16 +323,17 @@ function App() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: menuOpen ? "#f3f4f6" : "transparent",
+              background: menuOpen ? c["--bg-primary"] : "transparent",
               border: "none",
               borderRadius: 6,
               cursor: "pointer",
               fontSize: 18,
-              color: "#374151",
+              color: c["--text-primary"],
               transition: "background 0.15s",
             }}
             onMouseEnter={(e) => {
-              if (!menuOpen) e.currentTarget.style.background = "#f9fafb";
+              if (!menuOpen)
+                e.currentTarget.style.background = c["--bg-primary"];
             }}
             onMouseLeave={(e) => {
               if (!menuOpen) e.currentTarget.style.background = "transparent";
@@ -336,8 +363,8 @@ function App() {
                 left: 0,
                 zIndex: 100,
                 minWidth: 200,
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
+                background: c["--bg-secondary"],
+                border: `1px solid ${c["--border-color"]}`,
                 borderRadius: 8,
                 boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
                 overflow: "hidden",
@@ -346,7 +373,7 @@ function App() {
               <div
                 style={{
                   padding: "8px 0",
-                  borderBottom: "1px solid #e5e7eb",
+                  borderBottom: `1px solid ${c["--border-color"]}`,
                 }}
               >
                 <div
@@ -354,7 +381,7 @@ function App() {
                     padding: "4px 12px 6px",
                     fontSize: 11,
                     fontWeight: 600,
-                    color: "#9ca3af",
+                    color: c["--text-secondary"],
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
                   }}
@@ -365,7 +392,7 @@ function App() {
                   onClick={handleFileNew}
                   style={menuItemStyle}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f9fafb")
+                    (e.currentTarget.style.background = c["--bg-primary"])
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -378,7 +405,7 @@ function App() {
                   onClick={handleFileOpen}
                   style={menuItemStyle}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f9fafb")
+                    (e.currentTarget.style.background = c["--bg-primary"])
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -391,7 +418,7 @@ function App() {
                   onClick={handleFileSaveAs}
                   style={menuItemStyle}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f9fafb")
+                    (e.currentTarget.style.background = c["--bg-primary"])
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -403,7 +430,7 @@ function App() {
                 <div
                   style={{
                     height: 1,
-                    background: "#e5e7eb",
+                    background: c["--border-color"],
                     margin: "4px 0",
                   }}
                 />
@@ -411,7 +438,7 @@ function App() {
                   onClick={handleLoadSample}
                   style={menuItemStyle}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f9fafb")
+                    (e.currentTarget.style.background = c["--bg-primary"])
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -427,7 +454,37 @@ function App() {
                     padding: "4px 12px 6px",
                     fontSize: 11,
                     fontWeight: 600,
-                    color: "#9ca3af",
+                    color: c["--text-secondary"],
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Theme
+                </div>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowThemeModal(true);
+                  }}
+                  style={menuItemStyle}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <span style={{ marginRight: 10, opacity: 0.6 }}>🎨</span>
+                  {theme.activeThemeLabel}
+                </button>
+              </div>
+              <div style={{ padding: "8px 0" }}>
+                <div
+                  style={{
+                    padding: "4px 12px 6px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: c["--text-secondary"],
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
                   }}
@@ -441,7 +498,7 @@ function App() {
                   }}
                   style={menuItemStyle}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "#f9fafb")
+                    (e.currentTarget.style.background = c["--bg-primary"])
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -460,7 +517,7 @@ function App() {
           style={{
             fontSize: 15,
             fontWeight: 600,
-            color: "#1a1a2e",
+            color: c["--text-primary"],
             letterSpacing: -0.3,
           }}
         >
@@ -471,7 +528,7 @@ function App() {
           style={{
             width: 1,
             height: 20,
-            background: "#e5e7eb",
+            background: c["--border-color"],
             margin: "0 4px",
           }}
         />
@@ -480,7 +537,7 @@ function App() {
         <span
           style={{
             fontSize: 12,
-            color: "#6b7280",
+            color: c["--text-secondary"],
             flex: 1,
           }}
         >
@@ -489,7 +546,9 @@ function App() {
           ) : state.graph ? (
             `${state.graph.nodes.length} nodes loaded`
           ) : state.error ? (
-            <span style={{ color: "#ef4444" }}>Error: {state.error}</span>
+            <span style={{ color: c["--semantic-overdue"] }}>
+              Error: {state.error}
+            </span>
           ) : (
             "Ready"
           )}
@@ -522,10 +581,22 @@ function App() {
             }}
           >
             <div style={{ fontSize: 48 }}>⚠️</div>
-            <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a2e" }}>
+            <h2
+              style={{
+                fontSize: 18,
+                fontWeight: 600,
+                color: c["--text-primary"],
+              }}
+            >
               Something went wrong
             </h2>
-            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
+            <p
+              style={{
+                fontSize: 14,
+                color: c["--text-secondary"],
+                lineHeight: 1.6,
+              }}
+            >
               {state.error}
             </p>
             <div
@@ -542,7 +613,7 @@ function App() {
                   padding: "10px 20px",
                   fontSize: 14,
                   fontWeight: 500,
-                  background: "#6366f1",
+                  background: c["--accent"],
                   color: "#ffffff",
                   border: "none",
                   borderRadius: 6,
@@ -550,11 +621,9 @@ function App() {
                   transition: "background 0.2s",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#4f46e5")
+                  (e.currentTarget.style.filter = "brightness(0.85)")
                 }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#6366f1")
-                }
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
               >
                 Try Loading Sample
               </button>
@@ -564,18 +633,18 @@ function App() {
                   padding: "10px 20px",
                   fontSize: 14,
                   fontWeight: 500,
-                  background: "#e5e7eb",
-                  color: "#374151",
-                  border: "none",
+                  background: c["--bg-primary"],
+                  color: c["--text-primary"],
+                  border: `1px solid ${c["--border-color"]}`,
                   borderRadius: 6,
                   cursor: "pointer",
                   transition: "background 0.2s",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#d1d5db")
+                  (e.currentTarget.style.background = c["--border-color"])
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#e5e7eb")
+                  (e.currentTarget.style.background = c["--bg-primary"])
                 }
               >
                 Open Your File
@@ -602,13 +671,19 @@ function App() {
             }}
           >
             <div style={{ fontSize: 64 }}>📊</div>
-            <h2 style={{ fontSize: 20, fontWeight: 600, color: "#1a1a2e" }}>
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 600,
+                color: c["--text-primary"],
+              }}
+            >
               Welcome to Taskman
             </h2>
             <p
               style={{
                 fontSize: 14,
-                color: "#6b7280",
+                color: c["--text-secondary"],
                 lineHeight: 1.6,
                 maxWidth: 380,
               }}
@@ -632,7 +707,7 @@ function App() {
                   padding: "12px 24px",
                   fontSize: 14,
                   fontWeight: 500,
-                  background: "#6366f1",
+                  background: c["--accent"],
                   color: "#ffffff",
                   border: "none",
                   borderRadius: 6,
@@ -640,11 +715,9 @@ function App() {
                   transition: "background 0.2s",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#4f46e5")
+                  (e.currentTarget.style.filter = "brightness(0.85)")
                 }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#6366f1")
-                }
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
               >
                 📋 Load Sample
               </button>
@@ -654,20 +727,20 @@ function App() {
                   padding: "12px 24px",
                   fontSize: 14,
                   fontWeight: 500,
-                  background: "#ffffff",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
+                  background: c["--bg-secondary"],
+                  color: c["--text-primary"],
+                  border: `1px solid ${c["--border-color"]}`,
                   borderRadius: 6,
                   cursor: "pointer",
                   transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f9fafb";
-                  e.currentTarget.style.borderColor = "#9ca3af";
+                  e.currentTarget.style.background = c["--bg-primary"];
+                  e.currentTarget.style.borderColor = c["--accent"];
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#ffffff";
-                  e.currentTarget.style.borderColor = "#d1d5db";
+                  e.currentTarget.style.background = c["--bg-secondary"];
+                  e.currentTarget.style.borderColor = c["--border-color"];
                 }}
               >
                 📂 Open YAML File
@@ -678,20 +751,20 @@ function App() {
                   padding: "12px 24px",
                   fontSize: 14,
                   fontWeight: 500,
-                  background: "#ffffff",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
+                  background: c["--bg-secondary"],
+                  color: c["--text-primary"],
+                  border: `1px solid ${c["--border-color"]}`,
                   borderRadius: 6,
                   cursor: "pointer",
                   transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f9fafb";
-                  e.currentTarget.style.borderColor = "#9ca3af";
+                  e.currentTarget.style.background = c["--bg-primary"];
+                  e.currentTarget.style.borderColor = c["--accent"];
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#ffffff";
-                  e.currentTarget.style.borderColor = "#d1d5db";
+                  e.currentTarget.style.background = c["--bg-secondary"];
+                  e.currentTarget.style.borderColor = c["--border-color"];
                 }}
               >
                 📄 Start Fresh
@@ -701,7 +774,7 @@ function App() {
               style={{
                 marginTop: 16,
                 fontSize: 12,
-                color: "#9ca3af",
+                color: c["--text-secondary"],
               }}
             >
               <button
@@ -709,7 +782,7 @@ function App() {
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#6366f1",
+                  color: c["--accent"],
                   cursor: "pointer",
                   textDecoration: "underline",
                   fontSize: 12,
@@ -730,7 +803,7 @@ function App() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(250,250,250,0.8)",
+              background: c["--backdrop"],
               zIndex: 30,
             }}
           >
@@ -746,13 +819,13 @@ function App() {
                 style={{
                   width: 32,
                   height: 32,
-                  border: "3px solid #e5e7eb",
-                  borderTopColor: "#6366f1",
+                  border: `3px solid ${c["--border-color"]}`,
+                  borderTopColor: c["--accent"],
                   borderRadius: "50%",
                   animation: "spin 0.8s linear infinite",
                 }}
               />
-              <span style={{ fontSize: 13, color: "#6b7280" }}>
+              <span style={{ fontSize: 13, color: c["--text-secondary"] }}>
                 Parsing YAML…
               </span>
             </div>
@@ -770,13 +843,13 @@ function App() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(0,0,0,0.3)",
+            background: c["--backdrop"],
           }}
           onClick={handleDismissHelp}
         >
           <div
             style={{
-              background: "#ffffff",
+              background: c["--bg-secondary"],
               borderRadius: 12,
               padding: "28px 32px",
               maxWidth: 420,
@@ -790,7 +863,7 @@ function App() {
                 margin: "0 0 8px",
                 fontSize: 20,
                 fontWeight: 600,
-                color: "#1a1a2e",
+                color: c["--text-primary"],
               }}
             >
               About Taskman
@@ -800,7 +873,7 @@ function App() {
                 margin: "0 0 16px",
                 fontSize: 14,
                 lineHeight: 1.6,
-                color: "#6b7280",
+                color: c["--text-secondary"],
               }}
             >
               A local-first task graph engine built with Rust/WASM. Data is
@@ -820,7 +893,7 @@ function App() {
                   padding: "8px 20px",
                   fontSize: 13,
                   fontWeight: 500,
-                  background: "#6366f1",
+                  background: c["--accent"],
                   color: "#ffffff",
                   border: "none",
                   borderRadius: 6,
@@ -847,6 +920,17 @@ function App() {
         />
       )}
 
+      {/* ─── Theme Modal ─── */}
+      <ThemeModal
+        isOpen={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+        onSaveCustom={theme.saveDraft}
+        onSwitchTheme={theme.switchTheme}
+        activeTheme={theme.activeTheme}
+        hasCustom={theme.hasCustom}
+        readCurrentColors={() => theme.currentColors}
+      />
+
       {/* Spinner animation */}
       <style>{`
         @keyframes spin {
@@ -856,25 +940,5 @@ function App() {
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Shared styles
-// ---------------------------------------------------------------------------
-
-const menuItemStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  width: "100%",
-  padding: "7px 12px",
-  fontSize: 13,
-  fontFamily: "system-ui, -apple-system, sans-serif",
-  color: "#374151",
-  background: "transparent",
-  border: "none",
-  textAlign: "left",
-  cursor: "pointer",
-  borderRadius: 0,
-  transition: "background 0.1s",
-};
 
 export default App;
