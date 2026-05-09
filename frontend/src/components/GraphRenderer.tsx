@@ -653,7 +653,10 @@ export default function GraphRenderer({
                                             e.stopPropagation();
                                             handleCollapseToggle(nodeId);
                                         }}
-                                        style={{ cursor: "pointer" }}
+                                        style={{
+                                            cursor: "pointer",
+                                            userSelect: "none",
+                                        }}
                                     >
                                         <rect
                                             x={0}
@@ -672,6 +675,7 @@ export default function GraphRenderer({
                                             fill={colors.collapseIcon}
                                             fontWeight={600}
                                             pointerEvents="none"
+                                            style={{ userSelect: "none" }}
                                         >
                                             {isCollapsed ? "+" : "−"}
                                         </text>
