@@ -2,6 +2,38 @@ import { useEffect, useMemo, useState } from "react";
 import type { GraphNode } from "../types/graph";
 
 // ---------------------------------------------------------------------------
+// Theme colors — read from CSS variables at runtime
+// ---------------------------------------------------------------------------
+
+interface ModalColors {
+  bg: string;
+  surface: string;
+  text: string;
+  textMuted: string;
+  border: string;
+  accent: string;
+  accentDark: string;
+  hover: string;
+  backdrop: string;
+}
+
+function readModalColors(): ModalColors {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (v: string) => cs.getPropertyValue(v).trim();
+  return {
+    bg: g("--bg-primary") || "#fafafa",
+    surface: g("--bg-secondary") || "#ffffff",
+    text: g("--text-primary") || "#1a1a2e",
+    textMuted: g("--text-secondary") || "#6b7280",
+    border: g("--border-color") || "#d1d5db",
+    accent: g("--accent") || "#6366f1",
+    accentDark: g("--accent") || "#4338ca",
+    hover: g("--bg-primary") || "#f3f4f6",
+    backdrop: g("--backdrop") || "rgba(0,0,0,0.35)",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -93,6 +125,18 @@ export default function EditNodeModal({
 
   const [addDropdownOpen, setAddDropdownOpen] = useState(false);
 
+  // Theme-aware colors — re-read on theme switch via MutationObserver
+  const [colors, setColors] = useState(readModalColors);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => setColors(readModalColors()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   // Reset form when the edited node changes
   useEffect(() => {
     setForm({
@@ -172,7 +216,7 @@ export default function EditNodeModal({
     padding: "8px 10px",
     fontSize: 13,
     fontFamily: "system-ui, -apple-system, sans-serif",
-    border: "1px solid #d1d5db",
+    border: `1px solid ${colors.border}`,
     borderRadius: 6,
     outline: "none",
     boxSizing: "border-box",
@@ -183,7 +227,7 @@ export default function EditNodeModal({
     display: "block",
     fontSize: 12,
     fontWeight: 600,
-    color: "#6b7280",
+    color: colors.textMuted,
     marginBottom: 4,
   };
 
@@ -202,7 +246,7 @@ export default function EditNodeModal({
     >
       <div
         style={{
-          background: "#ffffff",
+          background: colors.surface,
           borderRadius: 12,
           padding: "24px 28px",
           maxWidth: 460,
@@ -227,7 +271,7 @@ export default function EditNodeModal({
               margin: 0,
               fontSize: 18,
               fontWeight: 600,
-              color: "#1a1a2e",
+              color: colors.text,
             }}
           >
             Edit Node #{node.id}
@@ -246,9 +290,11 @@ export default function EditNodeModal({
               borderRadius: 6,
               cursor: "pointer",
               fontSize: 16,
-              color: "#9ca3af",
+              color: colors.textMuted,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = colors.hover)
+            }
             onMouseLeave={(e) =>
               (e.currentTarget.style.background = "transparent")
             }
@@ -266,8 +312,8 @@ export default function EditNodeModal({
             maxLength={128}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             style={inputStyle}
-            onFocus={(e) => (e.currentTarget.style.borderColor = "#6366f1")}
-            onBlur={(e) => (e.currentTarget.style.borderColor = "#d1d5db")}
+            onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
+            onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
           />
         </div>
 
@@ -282,8 +328,8 @@ export default function EditNodeModal({
               setForm((f) => ({ ...f, details: e.target.value }))
             }
             style={{ ...inputStyle, resize: "vertical" }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = "#6366f1")}
-            onBlur={(e) => (e.currentTarget.style.borderColor = "#d1d5db")}
+            onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
+            onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
           />
         </div>
 
@@ -300,8 +346,8 @@ export default function EditNodeModal({
               ...inputStyle,
               colorScheme: "light",
             }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = "#6366f1")}
-            onBlur={(e) => (e.currentTarget.style.borderColor = "#d1d5db")}
+            onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
+            onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
           />
         </div>
 
@@ -322,7 +368,7 @@ export default function EditNodeModal({
               borderRadius: 12,
               border: "none",
               cursor: "pointer",
-              background: form.important ? "#6366f1" : "#d1d5db",
+              background: form.important ? colors.accent : colors.border,
               position: "relative",
               transition: "background 0.2s",
               flexShrink: 0,
@@ -336,13 +382,13 @@ export default function EditNodeModal({
                 width: 20,
                 height: 20,
                 borderRadius: "50%",
-                background: "#ffffff",
+                background: colors.surface,
                 transition: "left 0.2s",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
               }}
             />
           </button>
-          <span style={{ fontSize: 13, color: "#374151" }}>Important</span>
+          <span style={{ fontSize: 13, color: colors.text }}>Important</span>
         </div>
 
         {/* Subtasks */}
@@ -369,8 +415,8 @@ export default function EditNodeModal({
                       alignItems: "center",
                       gap: 4,
                       padding: "3px 8px",
-                      background: "#eef0ff",
-                      color: "#4338ca",
+                      background: colors.bg,
+                      color: colors.accentDark,
                       borderRadius: 6,
                       fontSize: 12,
                       fontWeight: 500,
@@ -384,7 +430,7 @@ export default function EditNodeModal({
                         background: "none",
                         border: "none",
                         cursor: "pointer",
-                        color: "#6366f1",
+                        color: colors.accent,
                         fontSize: 14,
                         lineHeight: 1,
                         padding: 0,
@@ -410,11 +456,11 @@ export default function EditNodeModal({
                 padding: "6px 10px",
                 fontSize: 12,
                 fontWeight: 500,
-                background: addDropdownOpen ? "#f3f4f6" : "#ffffff",
-                border: "1px solid #d1d5db",
+                background: addDropdownOpen ? colors.hover : colors.surface,
+                border: `1px solid ${colors.border}`,
                 borderRadius: 6,
                 cursor: "pointer",
-                color: "#374151",
+                color: colors.text,
               }}
             >
               + Add subtask
@@ -430,8 +476,8 @@ export default function EditNodeModal({
                   zIndex: 10,
                   minWidth: 240,
                   maxWidth: 320,
-                  background: "#ffffff",
-                  border: "1px solid #e5e7eb",
+                  background: colors.surface,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: 8,
                   boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
                   maxHeight: 200,
@@ -451,17 +497,17 @@ export default function EditNodeModal({
                       background: "transparent",
                       border: "none",
                       cursor: "pointer",
-                      color: "#374151",
+                      color: colors.text,
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#f9fafb")
+                      (e.currentTarget.style.background = colors.hover)
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
                     }
                   >
                     <span style={{ fontWeight: 500 }}>#{n.id}</span>
-                    <span style={{ marginLeft: 8, color: "#6b7280" }}>
+                    <span style={{ marginLeft: 8, color: colors.textMuted }}>
                       {n.name}
                     </span>
                   </button>
@@ -470,7 +516,9 @@ export default function EditNodeModal({
             )}
 
             {canAdd.length === 0 && form.subtask_ids.length === 0 && (
-              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+              <div
+                style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}
+              >
                 No available nodes to add as subtasks
               </div>
             )}
@@ -485,7 +533,7 @@ export default function EditNodeModal({
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 11, color: "#9ca3af" }}>
+          <span style={{ fontSize: 11, color: colors.textMuted }}>
             Ctrl+Enter to save · Esc to cancel
           </span>
           <div style={{ display: "flex", gap: 8 }}>
@@ -495,9 +543,9 @@ export default function EditNodeModal({
                 padding: "8px 16px",
                 fontSize: 13,
                 fontWeight: 500,
-                background: "#ffffff",
-                color: "#374151",
-                border: "1px solid #d1d5db",
+                background: colors.surface,
+                color: colors.text,
+                border: `1px solid ${colors.border}`,
                 borderRadius: 6,
                 cursor: "pointer",
               }}
@@ -510,18 +558,16 @@ export default function EditNodeModal({
                 padding: "8px 20px",
                 fontSize: 13,
                 fontWeight: 500,
-                background: "#6366f1",
+                background: colors.accent,
                 color: "#ffffff",
                 border: "none",
                 borderRadius: 6,
                 cursor: "pointer",
               }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "#4f46e5")
+                (e.currentTarget.style.filter = "brightness(0.85)")
               }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "#6366f1")
-              }
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
             >
               Save
             </button>

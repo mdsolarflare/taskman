@@ -11,35 +11,69 @@ const NODE_RADIUS = 6;
 const PADDING_X = 240;
 const PADDING_Y = 80;
 
-// Color scheme
-const COLORS = {
-  bg: "#fafafa",
-  grid: "#e8e8e8",
-  nodeFill: "#ffffff",
-  nodeStroke: "#d0d0d0",
-  nodeHover: "#f0f0ff",
-  nodeHoverStroke: "#8888ff",
-  nodeSelected: "#eef0ff",
-  nodeSelectedStroke: "#6366f1",
-  nodeImportant: "#fff8e1",
-  nodeImportantStroke: "#ffb300",
-  text: "#1a1a2e",
-  textSubtle: "#6b7280",
-  edge: "#c5cae9",
-  edgeActive: "#8888ff",
-  collapseIcon: "#6366f1",
-  toolbarBg: "#ffffff",
-  toolbarBorder: "#e5e7eb",
-  toolbarHover: "#f3f4f6",
-  toolbarText: "#374151",
-  toolbarActive: "#6366f1",
-  menuBg: "#ffffff",
-  menuBorder: "#e5e7eb",
-  menuHover: "#f9fafb",
-  menuText: "#374151",
-  menuTextActive: "#6366f1",
-  menuBorderAccent: "#e0e7ff",
-};
+// Graph color roles - mapped from CSS theme variables
+interface GraphColors {
+  bg: string;
+  grid: string;
+  nodeFill: string;
+  nodeStroke: string;
+  nodeHover: string;
+  nodeHoverStroke: string;
+  nodeSelected: string;
+  nodeSelectedStroke: string;
+  nodeImportant: string;
+  nodeImportantStroke: string;
+  text: string;
+  textSubtle: string;
+  edge: string;
+  edgeActive: string;
+  collapseIcon: string;
+  toolbarBg: string;
+  toolbarBorder: string;
+  toolbarHover: string;
+  toolbarText: string;
+  toolbarActive: string;
+  menuBg: string;
+  menuBorder: string;
+  menuHover: string;
+  menuText: string;
+  menuTextActive: string;
+  menuBorderAccent: string;
+}
+
+// Color scheme - read from CSS variables set by the active theme
+function readGraphColors(): GraphColors {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (v: string) => cs.getPropertyValue(v).trim();
+  return {
+    bg: g("--bg-primary") || "#fafafa",
+    grid: g("--grid-color") || "#e8e8e8",
+    nodeFill: g("--bg-secondary") || "#ffffff",
+    nodeStroke: g("--border-color") || "#d0d0d0",
+    nodeHover: g("--bg-primary") || "#f0f0ff",
+    nodeHoverStroke: g("--accent") || "#8888ff",
+    nodeSelected: g("--bg-secondary") || "#eef0ff",
+    nodeSelectedStroke: g("--accent") || "#6366f1",
+    nodeImportant: g("--semantic-important") || "#fff8e1",
+    nodeImportantStroke: g("--semantic-important-stroke") || "#ffb300",
+    text: g("--text-primary") || "#1a1a2e",
+    textSubtle: g("--text-secondary") || "#6b7280",
+    edge: g("--edge-color") || "#c5cae9",
+    edgeActive: g("--edge-color") || "#8888ff",
+    collapseIcon: g("--accent") || "#6366f1",
+    toolbarBg: g("--bg-secondary") || "#ffffff",
+    toolbarBorder: g("--border-color") || "#e5e7eb",
+    toolbarHover: g("--bg-primary") || "#f3f4f6",
+    toolbarText: g("--text-primary") || "#374151",
+    toolbarActive: g("--accent") || "#6366f1",
+    menuBg: g("--bg-secondary") || "#ffffff",
+    menuBorder: g("--border-color") || "#e5e7eb",
+    menuHover: g("--bg-primary") || "#f9fafb",
+    menuText: g("--text-primary") || "#374151",
+    menuTextActive: g("--accent") || "#6366f1",
+    menuBorderAccent: g("--border-color") || "#e0e7ff",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -128,6 +162,7 @@ export default function GraphRenderer({
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [viewportStart, setViewportStart] = useState({ x: 0, y: 0 });
+  const [colors, setColors] = useState(readGraphColors);
 
   // Compute layout once when graph changes
   const layout = useMemo(() => {
@@ -141,6 +176,18 @@ export default function GraphRenderer({
       setViewport(computeRootViewport(svgRef.current));
     }
   }, [layout]);
+
+  // Watch for theme changes via MutationObserver on data-theme attribute
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setColors(readGraphColors());
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   // -----------------------------------------------------------------------
   // Pan handlers
@@ -254,20 +301,20 @@ export default function GraphRenderer({
       const isSelected = selectedNodeId === node.id;
       const isImportant = node.important;
 
-      let fill = COLORS.nodeFill;
-      let stroke = COLORS.nodeStroke;
+      let fill = colors.nodeFill;
+      let stroke = colors.nodeStroke;
 
       if (isSelected) {
-        fill = COLORS.nodeSelected;
-        stroke = COLORS.nodeSelectedStroke;
+        fill = colors.nodeSelected;
+        stroke = colors.nodeSelectedStroke;
       } else if (isHovered) {
-        fill = COLORS.nodeHover;
-        stroke = COLORS.nodeHoverStroke;
+        fill = colors.nodeHover;
+        stroke = colors.nodeHoverStroke;
       }
 
       if (isImportant && !isSelected && !isHovered) {
-        fill = COLORS.nodeImportant;
-        stroke = COLORS.nodeImportantStroke;
+        fill = colors.nodeImportant;
+        stroke = colors.nodeImportantStroke;
       }
 
       return {
@@ -289,8 +336,8 @@ export default function GraphRenderer({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: COLORS.bg,
-          color: COLORS.textSubtle,
+          background: colors.bg,
+          color: colors.textSubtle,
           fontSize: 16,
           fontFamily: "system-ui, sans-serif",
         }}
@@ -318,7 +365,7 @@ export default function GraphRenderer({
         width: "100%",
         height: "100%",
         position: "relative",
-        background: COLORS.bg,
+        background: colors.bg,
         overflow: "hidden",
       }}
     >
@@ -333,8 +380,8 @@ export default function GraphRenderer({
           display: "flex",
           alignItems: "center",
           padding: "8px 12px",
-          background: COLORS.toolbarBg,
-          borderBottom: `1px solid ${COLORS.toolbarBorder}`,
+          background: colors.toolbarBg,
+          borderBottom: `1px solid ${colors.toolbarBorder}`,
           gap: 4,
         }}
       >
@@ -346,14 +393,14 @@ export default function GraphRenderer({
             padding: "4px 8px",
             fontSize: 16,
             fontFamily: "system-ui, sans-serif",
-            color: COLORS.toolbarText,
+            color: colors.toolbarText,
             background: "transparent",
             border: "none",
             borderRadius: 4,
             cursor: "pointer",
           }}
           onMouseEnter={(e) =>
-            (e.currentTarget.style.background = COLORS.toolbarHover)
+            (e.currentTarget.style.background = colors.toolbarHover)
           }
           onMouseLeave={(e) =>
             (e.currentTarget.style.background = "transparent")
@@ -364,7 +411,7 @@ export default function GraphRenderer({
         <span
           style={{
             fontSize: 12,
-            color: COLORS.toolbarText,
+            color: colors.toolbarText,
             minWidth: 40,
             textAlign: "center",
             userSelect: "none",
@@ -379,14 +426,14 @@ export default function GraphRenderer({
             padding: "4px 8px",
             fontSize: 16,
             fontFamily: "system-ui, sans-serif",
-            color: COLORS.toolbarText,
+            color: colors.toolbarText,
             background: "transparent",
             border: "none",
             borderRadius: 4,
             cursor: "pointer",
           }}
           onMouseEnter={(e) =>
-            (e.currentTarget.style.background = COLORS.toolbarHover)
+            (e.currentTarget.style.background = colors.toolbarHover)
           }
           onMouseLeave={(e) =>
             (e.currentTarget.style.background = "transparent")
@@ -399,7 +446,7 @@ export default function GraphRenderer({
           style={{
             width: 1,
             height: 20,
-            background: COLORS.toolbarBorder,
+            background: colors.toolbarBorder,
             margin: "0 4px",
           }}
         />
@@ -411,14 +458,14 @@ export default function GraphRenderer({
             padding: "4px 8px",
             fontSize: 13,
             fontFamily: "system-ui, sans-serif",
-            color: COLORS.toolbarText,
+            color: colors.toolbarText,
             background: "transparent",
             border: "none",
             borderRadius: 4,
             cursor: "pointer",
           }}
           onMouseEnter={(e) =>
-            (e.currentTarget.style.background = COLORS.toolbarHover)
+            (e.currentTarget.style.background = colors.toolbarHover)
           }
           onMouseLeave={(e) =>
             (e.currentTarget.style.background = "transparent")
@@ -433,7 +480,7 @@ export default function GraphRenderer({
         <span
           style={{
             fontSize: 12,
-            color: COLORS.textSubtle,
+            color: colors.textSubtle,
             userSelect: "none",
           }}
         >
@@ -471,7 +518,7 @@ export default function GraphRenderer({
             refY="3"
             orient="auto"
           >
-            <polygon points="0 0, 8 3, 0 6" fill={COLORS.edge} />
+            <polygon points="0 0, 8 3, 0 6" fill={colors.edge} />
           </marker>
           <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.08" />
@@ -480,7 +527,7 @@ export default function GraphRenderer({
 
         {/* Grid pattern */}
         <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <circle cx="10" cy="10" r="0.5" fill={COLORS.grid} />
+          <circle cx="10" cy="10" r="0.5" fill={colors.grid} />
         </pattern>
         <rect
           x={-graphWidth * 10}
@@ -511,7 +558,7 @@ export default function GraphRenderer({
                 key={`edge-${from}-${to}`}
                 d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
                 fill="none"
-                stroke={COLORS.edge}
+                stroke={colors.edge}
                 strokeWidth={1.5}
                 markerEnd="url(#arrowhead)"
                 style={{ transition: "stroke 0.15s" }}
@@ -597,7 +644,7 @@ export default function GraphRenderer({
                       width={14}
                       height={14}
                       rx={3}
-                      fill={COLORS.collapseIcon}
+                      fill={colors.collapseIcon}
                       opacity={0.15}
                     />
                     <text
@@ -605,7 +652,7 @@ export default function GraphRenderer({
                       y={10}
                       textAnchor="middle"
                       fontSize={10}
-                      fill={COLORS.collapseIcon}
+                      fill={colors.collapseIcon}
                       fontWeight={600}
                       pointerEvents="none"
                     >
@@ -621,7 +668,7 @@ export default function GraphRenderer({
                   dominantBaseline="middle"
                   fontSize={13}
                   fontWeight={600}
-                  fill={COLORS.text}
+                  fill={colors.text}
                   style={{ userSelect: "none", pointerEvents: "none" }}
                 >
                   {truncateText(
@@ -638,7 +685,7 @@ export default function GraphRenderer({
                     y={detailsY}
                     dominantBaseline="middle"
                     fontSize={10}
-                    fill={COLORS.textSubtle}
+                    fill={colors.textSubtle}
                     style={{ userSelect: "none", pointerEvents: "none" }}
                   >
                     {truncatedDetails}
@@ -652,7 +699,7 @@ export default function GraphRenderer({
                     y={deadlineY}
                     dominantBaseline="middle"
                     fontSize={10}
-                    fill={COLORS.textSubtle}
+                    fill={colors.textSubtle}
                     style={{ userSelect: "none", pointerEvents: "none" }}
                   >
                     {formatDeadline(node.deadline)}
@@ -682,10 +729,10 @@ export default function GraphRenderer({
           display: "flex",
           alignItems: "center",
           padding: "0 12px",
-          background: COLORS.toolbarBg,
-          borderTop: `1px solid ${COLORS.toolbarBorder}`,
+          background: colors.toolbarBg,
+          borderTop: `1px solid ${colors.toolbarBorder}`,
           fontSize: 12,
-          color: COLORS.textSubtle,
+          color: colors.textSubtle,
           gap: 16,
         }}
       >
@@ -694,7 +741,7 @@ export default function GraphRenderer({
           Position: {Math.round(viewport.x)}, {Math.round(viewport.y)}
         </span>
         {selectedNodeId !== null && (
-          <span style={{ color: COLORS.menuTextActive, fontWeight: 500 }}>
+          <span style={{ color: colors.menuTextActive, fontWeight: 500 }}>
             Selected: {graph.nodes.find((n) => n.id === selectedNodeId)?.name}
           </span>
         )}

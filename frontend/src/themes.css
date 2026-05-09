@@ -1,0 +1,110 @@
+/* ============================================================================
+   Taskman - Theme System
+   ============================================================================
+
+   12 semantic color variables per theme, applied via data-theme attribute on <html>.
+   Hover states are derived via CSS filter/color-mix, not stored as variables.
+   ============================================================================ */
+
+/* Default theme (Banana Crisis) */
+:root,
+[data-theme="banana-crisis"] {
+    --bg-primary: #fffde7;
+    --bg-secondary: #fff9c4;
+    --text-primary: #4e342e;
+    --text-secondary: #8d6e63;
+    --border-color: #ffe082;
+    --accent: #f57f17;
+    --semantic-important: #fff3e0;
+    --semantic-important-stroke: #ff8f00;
+    --semantic-overdue: #d84315;
+    --grid-color: #fff8e1;
+    --edge-color: #b0bec5;
+    --backdrop: rgba(78, 52, 46, 0.4);
+}
+
+[data-theme="manhattan-lagoon"] {
+    --bg-primary: #eff6ff;
+    --bg-secondary: #ffffff;
+    --text-primary: #1e3a5f;
+    --text-secondary: #64748b;
+    --border-color: #cbd5e1;
+    --accent: #1d4ed8;
+    --semantic-important: #e8f5e9;
+    --semantic-important-stroke: #2e7d32;
+    --semantic-overdue: #b71c1c;
+    --grid-color: #e3f2fd;
+    --edge-color: #90a4ae;
+    --backdrop: rgba(30, 58, 95, 0.35);
+}
+
+[data-theme="brooding-burg"] {
+    --bg-primary: #2d1b1e;
+    --bg-secondary: #3d2b2e;
+    --text-primary: #f5e6e8;
+    --text-secondary: #c4a0a4;
+    --border-color: #5d3b3f;
+    --accent: #ef6c7a;
+    --semantic-important: #4e3435;
+    --semantic-important-stroke: #e65100;
+    --semantic-overdue: #ff5252;
+    --grid-color: #362022;
+    --edge-color: #78909c;
+    --backdrop: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="carbon-noir"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --text-primary: #d4d4d4;
+    --text-secondary: #9a9a9a;
+    --border-color: #3a3a3a;
+    --accent: #b0b0b0;
+    --semantic-important: #333333;
+    --semantic-important-stroke: #757575;
+    --semantic-overdue: #ef5350;
+    --grid-color: #252525;
+    --edge-color: #606060;
+    --backdrop: rgba(0, 0, 0, 0.7);
+}
+
+/* ============================================================================
+   Monochrome Dystopia - white-dominant, black-and-white only
+   ============================================================================
+
+   Design decisions:
+   - Pure white background (#ffffff) with black text (#000000) = 21:1 contrast
+   - Black borders for maximum definition on white surfaces
+   - Dark gray (#333333) as accent — stays within the monochrome palette
+   - Overdue uses bold black via --text-primary rather than a color accent
+   - Important uses light gray fill (#e0e0e0) with black stroke
+   - Grid and edges use mid-grays to stay subtle against white
+   - Semi-transparent dark backdrop for modal overlay
+   ============================================================================ */
+
+[data-theme="monochrome-dystopia"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --text-primary: #000000;
+    --text-secondary: #666666;
+    --border-color: #000000;
+    --accent: #333333;
+    --semantic-important: #e0e0e0;
+    --semantic-important-stroke: #000000;
+    --semantic-overdue: #000000;
+    --grid-color: #e8e8e8;
+    --edge-color: #666666;
+    --backdrop: rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+   Shared utility classes for hover derivation (no extra variables needed)
+   ============================================================================ */
+
+.accent-hover {
+    filter: brightness(0.85);
+}
+
+.surface-hover {
+    background: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
+}

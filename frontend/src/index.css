@@ -37,7 +37,7 @@ body {
 
 /* Focus ring for accessibility */
 :focus-visible {
-    outline: 2px solid #6366f1;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
 
@@ -52,10 +52,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--border-color);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--text-secondary);
 }
