@@ -84,6 +84,7 @@ interface GraphRendererProps {
     yaml: string | null;
     onNodeToggle: (nodeId: number, collapsed: boolean) => void;
     onNodeEdit?: (nodeId: number) => void;
+    onDeleteNode?: (nodeId: number) => void;
 }
 
 interface Viewport {
@@ -154,6 +155,7 @@ export default function GraphRenderer({
     yaml,
     onNodeToggle,
     onNodeEdit,
+    onDeleteNode,
 }: GraphRendererProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
@@ -177,17 +179,30 @@ export default function GraphRenderer({
         }
     }, [layout]);
 
-    // Watch for theme changes via MutationObserver on data-theme attribute
+    // -----------------------------------------------------------------------
+    // Keyboard handler — Backspace / Delete triggers delete modal
+    // -----------------------------------------------------------------------
+
     useEffect(() => {
-        const observer = new MutationObserver(() => {
-            setColors(readGraphColors());
-        });
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ["data-theme"],
-        });
-        return () => observer.disconnect();
-    }, []);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't interfere with typing in inputs
+            const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+            if (tag === "input" || tag === "textarea" || tag === "select")
+                return;
+
+            if (
+                (e.key === "Backspace" || e.key === "Delete") &&
+                selectedNodeId !== null &&
+                onDeleteNode
+            ) {
+                e.preventDefault();
+                onDeleteNode(selectedNodeId);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [selectedNodeId, onDeleteNode]);
 
     // -----------------------------------------------------------------------
     // Pan handlers
@@ -794,7 +809,6 @@ export default function GraphRenderer({
                         onClick={() => onNodeEdit(selectedNodeId!)}
                         title="Edit node"
                         style={{
-                            marginLeft: "auto",
                             padding: "2px 10px",
                             fontSize: 12,
                             fontWeight: 500,
@@ -813,6 +827,32 @@ export default function GraphRenderer({
                         }
                     >
                         ✎ Edit
+                    </button>
+                )}
+                {selectedNodeId !== null && onDeleteNode && (
+                    <button
+                        onClick={() => onDeleteNode(selectedNodeId!)}
+                        title="Delete node (roots cannot be deleted)"
+                        style={{
+                            marginLeft: "auto",
+                            padding: "2px 10px",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            fontFamily: "system-ui, sans-serif",
+                            background: "#dc2626",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: 4,
+                            cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = "#b91c1c")
+                        }
+                        onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "#dc2626")
+                        }
+                    >
+                        🗑 Delete
                     </button>
                 )}
             </div>
