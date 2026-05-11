@@ -1,6 +1,6 @@
 # 🚀 Taskman — Local-First Graph Engine
 
-A high-performance, privacy-focused task graph application built with a **Local-First** architecture. By leveraging Rust compiled to WebAssembly (WASM), this project moves heavy computational logic from the server to the client's browser, ensuring near-native performance and total data ownership.
+A high-performance, privacy-focused task graph application built with a **Offline-First** architecture. This is Rust compiled to WebAssembly (WASM), this project moves heavy computational logic from the server to the client's browser, ensuring near-native performance and total data ownership.
 
 ## 🏗️ Architecture Overview
 
@@ -12,65 +12,62 @@ This project follows a monorepo structure, separating the "Brain" (computation) 
 
 ## ✨ Key Features
 
-- 🔒 **Privacy by Design:** Data stays on the user's machine; no backend required for core logic.
+- 🔒 **Privacy by Design:** Data stays on the user's machine; no backend required.
 - ⚡ **Near-Native Speed:** WASM allows complex graph algorithms to run at speeds impossible with pure JavaScript.
 - 💾 **Persistent Workspace:** Your YAML workspace is saved to `localStorage` and restored automatically on return visits.
-- 📋 **Sample Data:** First-time users get a 4-node sample graph demonstrating the full data model hierarchy (parent nodes, leaf nodes, nesting).
+- 📋 **Sample Data:** First-time users get a sample graph demonstrating the full data model hierarchy (parent nodes, leaf nodes, nesting).
 - 🎨 **Modern UI:** A clean, responsive interface using inline styles for a lightweight, zero-dependency frontend.
 
 ## 🛠️ Development Setup
-
-This guide assumes you are running a Linux distribution.
 
 ### 1. Prerequisites
 
 Install the following toolchains on your system:
 
-**Rust Toolchain**
+**Rust + WASM** (Works on macOS and Linux)
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
+source "$HOME/.cargo/env"
+
+# Install wasm-pack
+cargo install wasm-pack
 ```
 
-**WASM Pack** (The bridge between Rust and NPM)
+**Node.js & npm** (Pick your package manager)
 ```bash
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-```
+# macOS (Homebrew)
+brew install nodejs
 
-**Node.js & npm**
-Node.js is required to run the project and install `pnpm`. Choose the commands based on your Linux distribution:
+# Debian/Ubuntu
+sudo apt update && sudo apt install nodejs npm
 
-**Debian/Ubuntu (apt)**
-```bash
-sudo apt update
-sudo apt install nodejs npm
-```
-
-**Arch/CachyOS (pacman)**
-```bash
+# Arch/CachyOS
 sudo pacman -Syu nodejs npm
-```
 
-**Fedora/RHEL (dnf)**
-```bash
+# Fedora/RHEL
 sudo dnf install nodejs npm
 ```
 
-**pnpm**
-We recommend `pnpm` for faster installations and better disk efficiency.
+**pnpm** (Works on macOS and Linux)
 ```bash
-sudo npm install -g pnpm
+npm install -g pnpm
 ```
 
-### 1.5 Sanity Check (Optional but Recommended)
+### 1.5 Sanity Check
 
-Before we get into the heavy lifting, let's make sure your Rust toolchain is actually working. This is your "Hello, World!" moment. Run this in a throwaway location:
+Verify all tools are installed and on your PATH:
 
 ```bash
-cargo new hello-world --bin && cd hello-world && cargo run
+rustc --version
+cargo --version
+wasm-pack --version
+node --version
+npm --version
+pnpm --version
 ```
 
-If you see `Hello, world!` printed to your terminal, you're good to go. If not, double-check your Rust installation before proceeding!
+If any of these commands fail, double-check your installation before proceeding.
+
 
 ### 2. Installation & Build Process
 

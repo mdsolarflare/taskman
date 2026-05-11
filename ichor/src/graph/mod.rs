@@ -51,6 +51,10 @@ impl Graph {
     ///
     /// Constructs the adjacency and reverse adjacency lists, and identifies
     /// root nodes (nodes not referenced as subtasks by any other node).
+    ///
+    /// Prevents full graph cycles by stripping root node IDs from all
+    /// `subtask_ids` vectors — a root referencing itself or another root
+    /// would break the DAG invariant.
     pub fn from_nodes(nodes: Vec<GraphNode>) -> Self {
         let mut adjacency: std::collections::HashMap<i64, Vec<i64>> =
             std::collections::HashMap::new();
@@ -58,7 +62,7 @@ impl Graph {
             std::collections::HashMap::new();
         let mut referenced_ids: std::collections::HashSet<i64> = std::collections::HashSet::new();
 
-        // Build adjacency and reverse adjacency
+        // Pass 1 — build adjacency and identify root nodes
         for node in &nodes {
             if let Some(ref subtask_ids) = node.subtask_ids {
                 adjacency.insert(node.id, subtask_ids.clone());
@@ -72,18 +76,51 @@ impl Graph {
             }
         }
 
-        // Identify root nodes
-        let root_ids: Vec<i64> = nodes
+        let root_ids: std::collections::HashSet<i64> = nodes
             .iter()
             .filter(|n| !referenced_ids.contains(&n.id))
             .map(|n| n.id)
             .collect();
 
+        // Pass 2 — sanitize subtask_ids by removing any root node references
+        let sanitized_nodes: Vec<GraphNode> = nodes
+            .into_iter()
+            .map(|mut node| {
+                if let Some(ref mut subtask_ids) = node.subtask_ids {
+                    subtask_ids.retain(|id| !root_ids.contains(id));
+                    if subtask_ids.is_empty() {
+                        node.subtask_ids = None;
+                    }
+                }
+                node
+            })
+            .collect();
+
+        // Rebuild adjacency from sanitized data
+        let mut adjacency: std::collections::HashMap<i64, Vec<i64>> =
+            std::collections::HashMap::new();
+        let mut reverse_adjacency: std::collections::HashMap<i64, Vec<i64>> =
+            std::collections::HashMap::new();
+
+        for node in &sanitized_nodes {
+            if let Some(ref subtask_ids) = node.subtask_ids {
+                adjacency.insert(node.id, subtask_ids.clone());
+                for sub_id in subtask_ids {
+                    reverse_adjacency
+                        .entry(*sub_id)
+                        .or_insert_with(Vec::new)
+                        .push(node.id);
+                }
+            }
+        }
+
+        let root_ids_vec: Vec<i64> = root_ids.into_iter().collect();
+
         Graph {
-            nodes,
+            nodes: sanitized_nodes,
             adjacency,
             reverse_adjacency,
-            root_ids,
+            root_ids: root_ids_vec,
         }
     }
 
