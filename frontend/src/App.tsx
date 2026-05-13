@@ -3,7 +3,12 @@ import GraphRenderer from "./components/GraphRenderer";
 import EditNodeModal from "./components/EditNodeModal";
 import DeleteNodeDialog from "./components/DeleteNodeDialog";
 import type { Graph, GraphNode } from "./types/graph";
-import { buildGraphFromYaml, deleteNode, saveGraphToYaml } from "./wasm";
+import {
+    addNode,
+    buildGraphFromYaml,
+    deleteNode,
+    saveGraphToYaml,
+} from "./wasm";
 import ThemeModal from "./components/ThemeModal";
 import { useTheme } from "./hooks/useTheme";
 import "./themes.css";
@@ -61,6 +66,8 @@ function App() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [editingNodeId, setEditingNodeId] = useState<number | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [addParentId, setAddParentId] = useState<number>(-1); // -1 = root node
     const [deletingNodeId, setDeletingNodeId] = useState<number | null>(null);
     const [showThemeModal, setShowThemeModal] = useState(false);
 
@@ -190,30 +197,68 @@ function App() {
         setEditingNodeId(nodeId);
     }, []);
 
-    const handleNodeSave = useCallback((updated: GraphNode) => {
-        setState((s) => {
-            if (!s.graph) return s;
-            const nodes = s.graph.nodes.map((n) =>
-                n.id === updated.id ? updated : n,
-            );
-            const newGraph = { ...s.graph, nodes };
-            // Auto-save to localStorage
-            // We regenerate YAML from the mutated graph via WASM
-            (async () => {
-                try {
-                    const yaml = await saveGraphToYaml(newGraph);
-                    saveWorkspace(yaml);
-                } catch {
-                    /* silent — wasm may not handle mid-edit graphs */
-                }
-            })();
-            return { ...s, graph: newGraph, yaml: s.yaml };
-        });
-        setEditingNodeId(null);
+    const handleNodeAdd = useCallback((parentId: number = -1) => {
+        setIsCreating(true);
+        setAddParentId(parentId);
+        // Use a placeholder node — the actual ID is assigned by WASM on save
+        setEditingNodeId(0);
     }, []);
+
+    // Common save-and-update logic for both create and edit paths
+    const saveGraphAndUpdate = useCallback(async (newGraph: Graph) => {
+        try {
+            const yaml = await saveGraphToYaml(newGraph);
+            saveWorkspace(yaml);
+            setState((s) => ({ ...s, graph: newGraph, yaml }));
+        } catch (err) {
+            setState((s) => ({
+                ...s,
+                error:
+                    err instanceof Error ? err.message : "Failed to save graph",
+            }));
+        }
+        setEditingNodeId(null);
+        setIsCreating(false);
+        setAddParentId(-1);
+    }, []);
+
+    const handleNodeSave = useCallback(
+        async (updated: GraphNode) => {
+            if (!state.graph) return;
+
+            let newGraph: Graph;
+
+            if (isCreating) {
+                // Create mode — call addNode via WASM
+                const result = (await addNode(
+                    state.graph,
+                    addParentId,
+                    updated.name,
+                    updated.details ?? "",
+                    updated.deadline ?? "",
+                    updated.important ?? false,
+                    updated.subtask_ids ?? [],
+                )) as { graph: Graph; new_id: number };
+                newGraph = result.graph;
+            } else {
+                // Edit mode — mutate existing node in place
+                newGraph = {
+                    ...state.graph,
+                    nodes: state.graph.nodes.map((n) =>
+                        n.id === updated.id ? updated : n,
+                    ),
+                };
+            }
+
+            await saveGraphAndUpdate(newGraph);
+        },
+        [isCreating, state.graph, addParentId, saveGraphAndUpdate],
+    );
 
     const handleNodeCancelEdit = useCallback(() => {
         setEditingNodeId(null);
+        setIsCreating(false);
+        setAddParentId(-1);
     }, []);
 
     const handleNodeDeleteRequest = useCallback((nodeId: number) => {
@@ -760,6 +805,7 @@ function App() {
                         onNodeToggle={handleNodeToggle}
                         onNodeEdit={handleNodeEdit}
                         onDeleteNode={handleNodeDeleteRequest}
+                        onAddNode={handleNodeAdd}
                     />
                 ) : (
                     // Empty state
@@ -1027,16 +1073,27 @@ function App() {
                 </div>
             )}
 
-            {/* ─── Edit Node Modal ─── */}
+            {/* ─── Edit/Create Node Modal ─── */}
             {editingNodeId !== null && state.graph && (
                 <EditNodeModal
                     node={
-                        state.graph.nodes.find((n) => n.id === editingNodeId) ??
-                        state.graph.nodes[0]
+                        isCreating
+                            ? {
+                                  id: 0,
+                                  name: "",
+                                  details: "",
+                                  deadline: "",
+                                  important: false,
+                                  subtask_ids: [],
+                              }
+                            : (state.graph.nodes.find(
+                                  (n) => n.id === editingNodeId,
+                              ) ?? state.graph.nodes[0])
                     }
                     allNodes={state.graph.nodes}
                     onSave={handleNodeSave}
                     onCancel={handleNodeCancelEdit}
+                    isCreate={isCreating}
                 />
             )}
 

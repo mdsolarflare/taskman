@@ -85,6 +85,7 @@ interface GraphRendererProps {
     onNodeToggle: (nodeId: number, collapsed: boolean) => void;
     onNodeEdit?: (nodeId: number) => void;
     onDeleteNode?: (nodeId: number) => void;
+    onAddNode?: (parentId: number) => void;
 }
 
 interface Viewport {
@@ -156,6 +157,7 @@ export default function GraphRenderer({
     onNodeToggle,
     onNodeEdit,
     onDeleteNode,
+    onAddNode,
 }: GraphRendererProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
@@ -165,6 +167,18 @@ export default function GraphRenderer({
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [viewportStart, setViewportStart] = useState({ x: 0, y: 0 });
     const [colors, setColors] = useState(readGraphColors);
+
+    // Re-read colors on theme switch via MutationObserver
+    useEffect(() => {
+        const observer = new MutationObserver(() =>
+            setColors(readGraphColors()),
+        );
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-theme"],
+        });
+        return () => observer.disconnect();
+    }, []);
 
     // Compute layout once when graph changes
     const layout = useMemo(() => {
@@ -827,6 +841,31 @@ export default function GraphRenderer({
                         }
                     >
                         ✎ Edit
+                    </button>
+                )}
+                {onAddNode && (
+                    <button
+                        onClick={() => onAddNode?.(selectedNodeId ?? -1)}
+                        title="Add node"
+                        style={{
+                            padding: "2px 10px",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            fontFamily: "system-ui, sans-serif",
+                            background: "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: 4,
+                            cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = "#15803d")
+                        }
+                        onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "#16a34a")
+                        }
+                    >
+                        ＋ Add
                     </button>
                 )}
                 {selectedNodeId !== null && onDeleteNode && (
