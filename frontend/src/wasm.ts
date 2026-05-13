@@ -20,6 +20,15 @@ interface WasmExports {
     get_root_names: (yaml: string) => string;
     graph_to_yaml: (graphJson: string) => string;
     delete_node: (graphJson: string, nodeId: BigInt) => string;
+    add_node: (
+        graphJson: string,
+        parentId: bigint,
+        name: string,
+        details: string,
+        deadline: string,
+        important: boolean,
+        subtaskIdsJson: string,
+    ) => string;
     __wbindgen_malloc: (size: number, alignment: number) => number;
     __wbindgen_free: (ptr: number, size: number) => void;
 }
@@ -141,5 +150,35 @@ export async function deleteNode(
     const wasm = await initWasm();
     const graphJson = JSON.stringify(graph);
     const result = wasm.delete_node(graphJson, BigInt(nodeId));
+    return JSON.parse(result);
+}
+
+/**
+ * Add a new node to the graph.
+ * `parentId` of -1 means no parent (new root node).
+ * Returns an object with `graph` (updated graph) and `new_id` (id of the new node).
+ */
+export async function addNode(
+    graph: unknown,
+    parentId: number,
+    name: string,
+    details: string,
+    deadline: string,
+    important: boolean,
+    subtaskIds: number[],
+): Promise<{ graph: unknown; new_id: number }> {
+    const wasm = await initWasm();
+    const graphJson = JSON.stringify(graph);
+    const subtaskIdsJson =
+        subtaskIds.length > 0 ? JSON.stringify(subtaskIds) : "";
+    const result = wasm.add_node(
+        graphJson,
+        BigInt(parentId),
+        name,
+        details,
+        deadline,
+        important,
+        subtaskIdsJson,
+    );
     return JSON.parse(result);
 }

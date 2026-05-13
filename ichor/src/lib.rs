@@ -13,6 +13,7 @@ pub use yaml::parse_yaml_to_json;
 pub use yaml::root_names;
 
 // Re-export graph module's public WASM API
+pub use graph::add_node;
 pub use graph::build_graph_from_yaml;
 pub use graph::delete_node;
 pub use graph::get_node_count;

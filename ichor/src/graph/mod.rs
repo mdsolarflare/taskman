@@ -300,6 +300,89 @@ impl Graph {
 
         Ok(())
     }
+
+    /// Add a new node to the graph.
+    ///
+    /// If `parent_id` is `Some`, the new node becomes a child of that parent.
+    /// If `parent_id` is `None`, the new node is added as a root.
+    ///
+    /// Returns the ID of the newly created node.
+    pub fn add_node(
+        &mut self,
+        parent_id: Option<i64>,
+        name: String,
+        details: Option<String>,
+        deadline: Option<String>,
+        important: Option<bool>,
+        subtask_ids: Option<Vec<i64>>,
+    ) -> Result<i64, String> {
+        // Generate new ID: max existing ID + 1
+        let new_id = if let Some(max_id) = self.nodes.iter().map(|n| n.id).max() {
+            max_id + 1
+        } else {
+            1 // First node in an empty graph
+        };
+
+        // Validate parent exists if provided
+        if let Some(pid) = parent_id {
+            if !self.nodes.iter().any(|n| n.id == pid) {
+                return Err(format!("Parent node with id {} not found", pid));
+            }
+        }
+
+        // Build parent_ids for new node
+        let node_parent_ids = parent_id.map(|pid| vec![pid]);
+
+        // Create the new node
+        let new_node = GraphNode {
+            id: new_id,
+            name,
+            details,
+            deadline,
+            important,
+            subtask_ids,
+            parent_ids: node_parent_ids,
+            collapsed: Some(false),
+        };
+
+        // Update parent's subtask_ids if parent exists
+        if let Some(pid) = parent_id {
+            if let Some(parent) = self.nodes.iter_mut().find(|n| n.id == pid) {
+                let subtasks = parent.subtask_ids.get_or_insert_with(Vec::new);
+                if !subtasks.contains(&new_id) {
+                    subtasks.push(new_id);
+                }
+            }
+            // Update adjacency list (parent -> child)
+            self.adjacency.entry(pid).or_insert_with(Vec::new);
+            self.adjacency.get_mut(&pid).unwrap().push(new_id);
+            // Update reverse adjacency (child -> parent)
+            self.reverse_adjacency
+                .entry(new_id)
+                .or_insert_with(Vec::new);
+            self.reverse_adjacency.get_mut(&new_id).unwrap().push(pid);
+            // New node is not a root - remove from root_ids if somehow present
+            self.root_ids.retain(|&id| id != new_id);
+        } else {
+            // No parent - this is a new root
+            self.root_ids.push(new_id);
+        }
+
+        // Handle subtask_ids - update adjacency for any subtasks
+        if let Some(ref sub_ids) = new_node.subtask_ids {
+            for sub_id in sub_ids {
+                // Update reverse adjacency for each subtask
+                self.reverse_adjacency
+                    .entry(*sub_id)
+                    .or_insert_with(Vec::new);
+                self.reverse_adjacency.get_mut(sub_id).unwrap().push(new_id);
+            }
+            self.adjacency.insert(new_id, sub_ids.clone());
+        }
+
+        self.nodes.push(new_node);
+        Ok(new_id)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -393,6 +476,68 @@ pub fn delete_node(graph_json: &str, node_id: i64) -> Result<JsValue, JsValue> {
         .to_json()
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
     Ok(JsValue::from_str(&json))
+}
+
+/// Add a new node to the graph.
+///
+/// `parent_id` of `-1` means no parent (new root node).
+/// Returns the updated graph as JSON, or an error string.
+#[wasm_bindgen]
+pub fn add_node(
+    graph_json: &str,
+    parent_id: i64,
+    name: &str,
+    details: &str,
+    deadline: &str,
+    important: bool,
+    subtask_ids_json: &str,
+) -> Result<JsValue, JsValue> {
+    let mut graph = Graph::from_json(graph_json)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))?;
+
+    // -1 sentinel means no parent (root node)
+    let pid = if parent_id == -1 {
+        None
+    } else {
+        Some(parent_id)
+    };
+
+    // Parse optional subtask_ids from JSON array string
+    let sub_ids: Option<Vec<i64>> = if subtask_ids_json.trim().is_empty() {
+        None
+    } else {
+        serde_json::from_str(subtask_ids_json)
+            .ok()
+            .filter(|v: &Vec<i64>| !v.is_empty())
+    };
+
+    let new_id = graph
+        .add_node(
+            pid,
+            name.to_string(),
+            if details.trim().is_empty() {
+                None
+            } else {
+                Some(details.to_string())
+            },
+            if deadline.trim().is_empty() {
+                None
+            } else {
+                Some(deadline.to_string())
+            },
+            Some(important),
+            sub_ids,
+        )
+        .map_err(|e| JsValue::from_str(&e))?;
+
+    // Return both the updated graph JSON and the new node's ID
+    let json = graph
+        .to_json()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    // Wrap in a JSON object with both graph and new_id
+    let result = serde_json::json!({ "graph": serde_json::from_str::<serde_json::Value>(&json).map_err(|e| JsValue::from_str(&e.to_string()))?, "new_id": new_id });
+    Ok(JsValue::from_str(&result.to_string()))
 }
 
 /// Convert a Graph JSON back to the YAML data schema format.
