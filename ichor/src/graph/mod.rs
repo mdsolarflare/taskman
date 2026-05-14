@@ -68,10 +68,7 @@ impl Graph {
                 adjacency.insert(node.id, subtask_ids.clone());
                 for sub_id in subtask_ids {
                     referenced_ids.insert(*sub_id);
-                    reverse_adjacency
-                        .entry(*sub_id)
-                        .or_insert_with(Vec::new)
-                        .push(node.id);
+                    reverse_adjacency.entry(*sub_id).or_default().push(node.id);
                 }
             }
         }
@@ -106,10 +103,7 @@ impl Graph {
             if let Some(ref subtask_ids) = node.subtask_ids {
                 adjacency.insert(node.id, subtask_ids.clone());
                 for sub_id in subtask_ids {
-                    reverse_adjacency
-                        .entry(*sub_id)
-                        .or_insert_with(Vec::new)
-                        .push(node.id);
+                    reverse_adjacency.entry(*sub_id).or_default().push(node.id);
                 }
             }
         }
@@ -217,10 +211,7 @@ impl Graph {
                     child_parents.push(*parent_id);
                 }
             }
-            *self
-                .reverse_adjacency
-                .entry(*child_id)
-                .or_insert_with(Vec::new) = child_parents;
+            *self.reverse_adjacency.entry(*child_id).or_default() = child_parents;
 
             // Update the child node's parent_ids field
             if let Some(child_node) = self.nodes.iter_mut().find(|n| n.id == *child_id) {
@@ -243,7 +234,7 @@ impl Graph {
                     }
                     parent_node.subtask_ids = Some(subtasks);
                 }
-                self.adjacency.entry(*parent_id).or_insert_with(Vec::new);
+                self.adjacency.entry(*parent_id).or_default();
                 let parent_children = self.adjacency.get_mut(parent_id).unwrap();
                 if !parent_children.contains(child_id) {
                     parent_children.push(*child_id);
@@ -324,10 +315,10 @@ impl Graph {
         };
 
         // Validate parent exists if provided
-        if let Some(pid) = parent_id {
-            if !self.nodes.iter().any(|n| n.id == pid) {
-                return Err(format!("Parent node with id {} not found", pid));
-            }
+        if let Some(pid) = parent_id
+            && !self.nodes.iter().any(|n| n.id == pid)
+        {
+            return Err(format!("Parent node with id {} not found", pid));
         }
 
         // Build parent_ids for new node
@@ -354,12 +345,10 @@ impl Graph {
                 }
             }
             // Update adjacency list (parent -> child)
-            self.adjacency.entry(pid).or_insert_with(Vec::new);
+            self.adjacency.entry(pid).or_default();
             self.adjacency.get_mut(&pid).unwrap().push(new_id);
             // Update reverse adjacency (child -> parent)
-            self.reverse_adjacency
-                .entry(new_id)
-                .or_insert_with(Vec::new);
+            self.reverse_adjacency.entry(new_id).or_default();
             self.reverse_adjacency.get_mut(&new_id).unwrap().push(pid);
             // New node is not a root - remove from root_ids if somehow present
             self.root_ids.retain(|&id| id != new_id);
@@ -372,9 +361,7 @@ impl Graph {
         if let Some(ref sub_ids) = new_node.subtask_ids {
             for sub_id in sub_ids {
                 // Update reverse adjacency for each subtask
-                self.reverse_adjacency
-                    .entry(*sub_id)
-                    .or_insert_with(Vec::new);
+                self.reverse_adjacency.entry(*sub_id).or_default();
                 self.reverse_adjacency.get_mut(sub_id).unwrap().push(new_id);
             }
             self.adjacency.insert(new_id, sub_ids.clone());

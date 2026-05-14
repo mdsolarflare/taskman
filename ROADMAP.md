@@ -13,3 +13,20 @@ Marking a task as "done" is semantically equivalent to deleting it from the acti
 
 ## Add some form of node navigation
 We think maybe a navigation pane with the task names listed out?
+
+## Better button accessibility
+when a node is selected,
+the "+" key triggers add button
+the "=" key triggers edit button
+
+## Sort out the CI
+on prs:
+run all compile and test checks for rust and typescript
+do we want to test build the website? maybe just wasm?
+basically i think we don't want to pnpm install
+
+## Improve the storage model
+when working from the sample file, no changes are tracked, when working from new or opening a pre-existing file, we will clearly indicate the file being tracked. we will auto-save changes async to file.
+
+## build a yaml repair tool
+if files get corrupted and therefore cannot be loaded into the graph, we should have a non-destructive method of auto-repair.

@@ -518,7 +518,7 @@ function App() {
                                     >
                                         📂
                                     </span>
-                                    Open YAML…
+                                    Open
                                 </button>
                                 <button
                                     onClick={handleFileSaveAs}
