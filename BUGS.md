@@ -2,11 +2,7 @@
 2. The "reset" view location isn't very good, need to figure out better node spacing and default views.
 
 
-2. The diagnostics show:
+3. The diagnostics show:
 - App.tsx: pre-existing warnings/errors (unused eslint directive, loadYaml dependency issue, unexpected any) - none from my changes
 - EditNodeModal.tsx: pre-existing issue (setState in effect) - the existing code had this, not from my changes
 - GraphRenderer.tsx: pre-existing issues (unused vars, type mismatches) - none from my changes
-
-3. we show zoom twice, also position should be up by the +/- zoom slider and reset button. ideally, we should have the second line below the menu bar
-i.e.
-+ 100% - | Position: <x pos>, <y pos> | Reset

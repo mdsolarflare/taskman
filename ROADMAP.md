@@ -9,3 +9,7 @@ Marking a task as "done" is semantically equivalent to deleting it from the acti
 **Key tension:** Delete removes a node and adopts its children into the parent(s). Completion should probably preserve the node in some archived/completed state, or at least distinguish itself visually and logically from a hard delete.
 
 **Next steps:** Decide whether "done" is a flag on the node (e.g., `completed: true`), a separate view/filter, or a distinct graph operation that doesn't re-map children.
+
+
+## Add some form of node navigation
+We think maybe a navigation pane with the task names listed out?
