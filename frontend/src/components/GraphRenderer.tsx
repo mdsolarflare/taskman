@@ -39,6 +39,8 @@ interface GraphColors {
     menuText: string;
     menuTextActive: string;
     menuBorderAccent: string;
+    accent: string;
+    overdue: string;
 }
 
 // Color scheme - read from CSS variables set by the active theme
@@ -72,6 +74,8 @@ function readGraphColors(): GraphColors {
         menuText: g("--text-primary") || "#374151",
         menuTextActive: g("--accent") || "#6366f1",
         menuBorderAccent: g("--border-color") || "#e0e7ff",
+        accent: g("--accent") || "#f57f17",
+        overdue: g("--semantic-overdue") || "#d84315",
     };
 }
 
@@ -480,6 +484,26 @@ export default function GraphRenderer({
                     }}
                 />
 
+                <span
+                    style={{
+                        fontSize: 12,
+                        color: colors.toolbarText,
+                        minWidth: 80,
+                        userSelect: "none",
+                    }}
+                >
+                    Position: {Math.round(viewport.x)}, {Math.round(viewport.y)}
+                </span>
+
+                <div
+                    style={{
+                        width: 1,
+                        height: 20,
+                        background: colors.toolbarBorder,
+                        margin: "0 4px",
+                    }}
+                />
+
                 <button
                     onClick={handleResetView}
                     title="Reset View"
@@ -803,10 +827,6 @@ export default function GraphRenderer({
                     gap: 16,
                 }}
             >
-                <span>Zoom: {Math.round(viewport.zoom * 100)}%</span>
-                <span>
-                    Position: {Math.round(viewport.x)}, {Math.round(viewport.y)}
-                </span>
                 {selectedNodeId !== null && (
                     <span
                         style={{
@@ -827,17 +847,18 @@ export default function GraphRenderer({
                             fontSize: 12,
                             fontWeight: 500,
                             fontFamily: "system-ui, sans-serif",
-                            background: "#6366f1",
+                            background: colors.accent,
                             color: "#ffffff",
                             border: "none",
                             borderRadius: 4,
                             cursor: "pointer",
+                            transition: "filter 0.2s",
                         }}
                         onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "#4f46e5")
+                            (e.currentTarget.style.filter = "brightness(0.85)")
                         }
                         onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "#6366f1")
+                            (e.currentTarget.style.filter = "none")
                         }
                     >
                         ✎ Edit
@@ -852,17 +873,18 @@ export default function GraphRenderer({
                             fontSize: 12,
                             fontWeight: 500,
                             fontFamily: "system-ui, sans-serif",
-                            background: "#16a34a",
+                            background: colors.accent,
                             color: "#ffffff",
                             border: "none",
                             borderRadius: 4,
                             cursor: "pointer",
+                            transition: "filter 0.2s",
                         }}
                         onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "#15803d")
+                            (e.currentTarget.style.filter = "brightness(0.85)")
                         }
                         onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "#16a34a")
+                            (e.currentTarget.style.filter = "none")
                         }
                     >
                         ＋ Add
@@ -878,17 +900,18 @@ export default function GraphRenderer({
                             fontSize: 12,
                             fontWeight: 500,
                             fontFamily: "system-ui, sans-serif",
-                            background: "#dc2626",
+                            background: colors.overdue,
                             color: "#ffffff",
                             border: "none",
                             borderRadius: 4,
                             cursor: "pointer",
+                            transition: "filter 0.2s",
                         }}
                         onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "#b91c1c")
+                            (e.currentTarget.style.filter = "brightness(0.85)")
                         }
                         onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "#dc2626")
+                            (e.currentTarget.style.filter = "none")
                         }
                     >
                         🗑 Delete
