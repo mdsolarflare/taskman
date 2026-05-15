@@ -1,22 +1,28 @@
-# 🚀 Taskman — Local-First Graph Engine
+# Taskman - Tackling Tasks with Graphs
 
-A high-performance, privacy-focused task graph application built with a **Offline-First** architecture. This is Rust compiled to WebAssembly (WASM), this project moves heavy computational logic from the server to the client's browser, ensuring near-native performance and total data ownership.
+A high-performance, privacy-focused task graph application built with an **Offline-First** architecture. This is Rust compiled to WebAssembly (WASM), this project moves heavy computational logic from the server to the client's browser, ensuring near-native performance and total data ownership.
 
-## 🏗️ Architecture Overview
+## 🏗️ Architectural Overview
 
-This project follows a monorepo structure, separating the "Brain" (computation) from the "Face" (interface).
+This project follows a module structure, separating the "Brain" (computation) from the "Face" (interface).
 
-- **The Brain (`/ichor`):** Written in **Rust**. Handles YAML parsing, graph theory calculations, and heavy data processing. Compiled to WASM for browser execution.
+- **The Brain (`/ichor`):** Written in **Rust**. Handles YAML parsing, graph theory calculations, and data processing. Compiled to WASM for browser execution. Our goal is near native speed.
 - **The Face (`/frontend`):** Built with **React**, **TypeScript**, and **Vite**. Styled with inline JavaScript style objects for a lightweight, dependency-free approach.
 - **The Bridge:** `wasm-bindgen` and `wasm-pack` facilitate the communication between Rust logic and the TypeScript frontend.
+
+Our key design imperatives:
+- As much idomatic rust as possible
+- As simple as possible
+- As few dependencies as possible, currently rust, typescript, pnpm, vite, and react. If opportunities arise to aim lower, I will.
+- Minimal design, highly opinionated styling
 
 ## ✨ Key Features
 
 - 🔒 **Privacy by Design:** Data stays on the user's machine; no backend required.
 - ⚡ **Near-Native Speed:** WASM allows complex graph algorithms to run at speeds impossible with pure JavaScript.
-- 💾 **Persistent Workspace:** Your YAML workspace is saved to `localStorage` and restored automatically on return visits.
+- 💾 **Persistent Workspace:** Your data can be yours. Taskman supports tracking local files with auto-saving. Later, we may support online storage of your choice.
 - 📋 **Sample Data:** First-time users get a sample graph demonstrating the full data model hierarchy (parent nodes, leaf nodes, nesting).
-- 🎨 **Modern UI:** A clean, responsive interface using inline styles for a lightweight, zero-dependency frontend.
+- 🎨 **Fast UI:** A clean, responsive interface using inline styles for a lightweight, zero-dependency frontend.
 
 ## 🛠️ Development Setup
 
@@ -75,6 +81,7 @@ If any of these commands fail, double-check your installation before proceeding.
 First, we need to compile the Rust logic into a WASM package that the frontend can import.
 
 ```bash
+# From root
 cd ichor
 wasm-pack build --target web
 ```
@@ -83,7 +90,8 @@ wasm-pack build --target web
 Now, initialize the React environment and link it to the compiled WASM package.
 
 ```bash
-cd ../frontend
+# From root
+cd frontend
 pnpm install
 # Link the local Rust package
 pnpm add ../ichor/pkg
@@ -100,11 +108,13 @@ pnpm dev
 
 On first load, the app automatically serves a sample graph from `/sample.yaml` (see [Sample Data](#-sample-data)). Subsequent visits restore your last workspace from `localStorage`.
 
+See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
+
 ## 📁 Project Structure
 
 ```text
 .
-├── Sample.yaml              # Reference copy of the 4-node sample graph (project root)
+├── Sample.yaml              # Reference copy of the sample graph (project root)
 ├── DATA_MODEL.md            # Full schema spec for Nodes and DAG mapping
 ├── ichor/                   # Rust WASM project
 │   ├── src/                 # YAML parsing, graph builder, layout algorithms
@@ -116,21 +126,6 @@ On first load, the app automatically serves a sample graph from `/sample.yaml` (
     └── package.json         # Frontend dependencies
 ```
 
-## 📋 Sample Data
-
-The app ships with a 4-node sample graph demonstrating the full data model:
-
-- **Location:** `frontend/public/sample.yaml` (served at `/sample.yaml`) and `Sample.yaml` (project root reference)
-- **Structure:**
-  ```
-  [1] Build Taskman App          → Root Node (all fields: details, important, subtask_ids)
-  ├── [2] Implement Rust Core    → Child of [1], also a parent with child [3] (nesting demo)
-  │   └── [3] Compile to WASM    → Leaf Node (minimal: id, name, deadline only)
-  └── [4] Design Frontend UI     → Leaf Node (minimal)
-  ```
-- **Key concepts illustrated:** Roots vs children, parents with subtask_ids, leaf nodes, and DAG nesting
-
-See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
 
 ## 🔄 Development Workflow
 
@@ -143,4 +138,13 @@ When making changes to the application:
 
 ## 🚀 Deployment
 
-Since this is a Local-First app, it can be deployed as a static site on any hosting provider (GitHub Pages, Vercel, Netlify) without the need for a dedicated backend server.
+This is a Offline-First app, it can be deployed as a static site on any hosting provider (GitHub Pages, Vercel, Netlify) without the need for a dedicated backend server.
+
+### Guidance for Future Work - Agent Friendly
+
+- Always verify with grep before deleting — confirm the symbol is truly unreferenced
+- Re-run the linter/test suite after every edit batch, not just at the end. `pnpm lint` is available for the frontend. `cargo check --manifest-path <Cargo.toml location>` is available for the rust ichor project.
+- We can use prettier using `npx prettier --write .` on the frontend and we can use `cargo fmt` on the ichor directory after making changes to apply the formatter and avoid chasing weird formatting diffs while we are working.
+- Prefer fixing over silencing — remove dead code instead of adding `// eslint-disable`
+- Use idiomatic rust
+- Use idiomatic typescript

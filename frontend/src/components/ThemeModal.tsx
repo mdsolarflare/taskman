@@ -218,14 +218,18 @@ export default function ThemeModal({
   const onSwitchRef = useRef(onSwitchTheme);
   const readColorsRef = useRef(readCurrentColors);
 
-  onCloseRef.current = onClose;
-  onSaveRef.current = onSaveCustom;
-  onSwitchRef.current = onSwitchTheme;
-  readColorsRef.current = readCurrentColors;
+  // Keep refs in sync with props
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onSaveRef.current = onSaveCustom;
+    onSwitchRef.current = onSwitchTheme;
+    readColorsRef.current = readCurrentColors;
+  }, [onClose, onSaveCustom, onSwitchTheme, readCurrentColors]);
 
   // Load current colors when modal opens
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraftColors(readCurrentColors());
       setShowEditor(false);
     }

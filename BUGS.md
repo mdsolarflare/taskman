@@ -3,4 +3,3 @@
 
 3. Fix all lint errors and compile warnings
 4. better task spacing vertically
-5. the delete modal isn't using the theme colors
