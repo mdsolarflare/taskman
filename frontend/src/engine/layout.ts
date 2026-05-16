@@ -266,7 +266,7 @@ export class LayoutEngine {
 export function createLayoutEngine(
   config?: Partial<LayoutConfig>,
 ): LayoutEngine {
-  return new LayoutEngine(config ?? DEFAULT_LAYOUT);
+  return new LayoutEngine({ ...DEFAULT_LAYOUT, ...config });
 }
 
 export function getLayoutBounds(layout: LayoutResult): {
