@@ -40,6 +40,7 @@ jobs:
               with:
                   version: 10
                   cache: true
+                  cache_dependency_path: frontend/pnpm-lock.yaml
 
             - name: Install frontend dependencies
               run: pnpm install --dir frontend
