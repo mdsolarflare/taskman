@@ -31,7 +31,7 @@ jobs:
               run: cargo install wasm-pack
 
             - name: Build WASM
-              run: wasm-pack build --target web --manifest-path ichor/Cargo.toml
+              run: wasm-pack build ichor --target web
 
             # ─── TypeScript (frontend) ────────────────────────────────────
 
