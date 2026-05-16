@@ -90,7 +90,6 @@ export class LayoutEngine {
       this.placeSubtree(rootId, 0, rootY, heights, nodes, edges);
 
       // Next root starts below this one's full subtree extent
-      const placedRoot = nodes.get(rootId);
       const subtreeMaxY = this.findSubtreeMaxY(rootId, nodes);
       rootY = subtreeMaxY + this.config.verticalSpacing;
     }
@@ -267,7 +266,7 @@ export class LayoutEngine {
 export function createLayoutEngine(
   config?: Partial<LayoutConfig>,
 ): LayoutEngine {
-  return new LayoutEngine(config ?? DEFAULT_LAYOUT);
+  return new LayoutEngine({ ...DEFAULT_LAYOUT, ...config });
 }
 
 export function getLayoutBounds(layout: LayoutResult): {

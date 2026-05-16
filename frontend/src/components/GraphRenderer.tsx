@@ -8,8 +8,6 @@ import { LayoutEngine, getLayoutBounds } from "../engine/layout";
 
 const NODE_WIDTH = 200;
 const NODE_RADIUS = 6;
-const PADDING_X = 240;
-const PADDING_Y = 80;
 
 // Graph color roles - mapped from CSS theme variables
 interface GraphColors {
@@ -85,7 +83,6 @@ function readGraphColors(): GraphColors {
 
 interface GraphRendererProps {
     graph: Graph | null;
-    yaml: string | null;
     onNodeToggle: (nodeId: number, collapsed: boolean) => void;
     onNodeEdit?: (nodeId: number) => void;
     onDeleteNode?: (nodeId: number) => void;
@@ -136,7 +133,7 @@ function formatDeadline(iso: string): string {
 function computeLayout(graph: Graph): {
     nodes: Map<number, { x: number; y: number; height: number }>;
     edges: Array<{ from: number; to: number }>;
-    bounds: { w: number; h: number };
+    bounds: { width: number; height: number };
 } {
     const engine = new LayoutEngine();
     engine.setGraph(graph);
@@ -157,7 +154,6 @@ function computeLayout(graph: Graph): {
 
 export default function GraphRenderer({
     graph,
-    yaml,
     onNodeToggle,
     onNodeEdit,
     onDeleteNode,
@@ -660,7 +656,6 @@ export default function GraphRenderer({
                         let deadlineY: number | null = null;
                         if (node.deadline) {
                             deadlineY = currentY;
-                            currentY += 18;
                         }
 
                         // Collapse button position (bottom-right area)

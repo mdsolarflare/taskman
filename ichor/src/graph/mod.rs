@@ -68,10 +68,7 @@ impl Graph {
                 adjacency.insert(node.id, subtask_ids.clone());
                 for sub_id in subtask_ids {
                     referenced_ids.insert(*sub_id);
-                    reverse_adjacency
-                        .entry(*sub_id)
-                        .or_insert_with(Vec::new)
-                        .push(node.id);
+                    reverse_adjacency.entry(*sub_id).or_default().push(node.id);
                 }
             }
         }
@@ -106,10 +103,7 @@ impl Graph {
             if let Some(ref subtask_ids) = node.subtask_ids {
                 adjacency.insert(node.id, subtask_ids.clone());
                 for sub_id in subtask_ids {
-                    reverse_adjacency
-                        .entry(*sub_id)
-                        .or_insert_with(Vec::new)
-                        .push(node.id);
+                    reverse_adjacency.entry(*sub_id).or_default().push(node.id);
                 }
             }
         }
@@ -151,6 +145,11 @@ impl Graph {
     /// Get a node by its id.
     pub fn get_node(&self, node_id: i64) -> Option<&GraphNode> {
         self.nodes.iter().find(|n| n.id == node_id)
+    }
+
+    /// Get a mutable reference to a node by its id.
+    pub fn get_node_mut(&mut self, node_id: i64) -> Option<&mut GraphNode> {
+        self.nodes.iter_mut().find(|n| n.id == node_id)
     }
 
     /// Get all root nodes.
@@ -217,10 +216,7 @@ impl Graph {
                     child_parents.push(*parent_id);
                 }
             }
-            *self
-                .reverse_adjacency
-                .entry(*child_id)
-                .or_insert_with(Vec::new) = child_parents;
+            *self.reverse_adjacency.entry(*child_id).or_default() = child_parents;
 
             // Update the child node's parent_ids field
             if let Some(child_node) = self.nodes.iter_mut().find(|n| n.id == *child_id) {
@@ -243,7 +239,7 @@ impl Graph {
                     }
                     parent_node.subtask_ids = Some(subtasks);
                 }
-                self.adjacency.entry(*parent_id).or_insert_with(Vec::new);
+                self.adjacency.entry(*parent_id).or_default();
                 let parent_children = self.adjacency.get_mut(parent_id).unwrap();
                 if !parent_children.contains(child_id) {
                     parent_children.push(*child_id);
@@ -324,10 +320,10 @@ impl Graph {
         };
 
         // Validate parent exists if provided
-        if let Some(pid) = parent_id {
-            if !self.nodes.iter().any(|n| n.id == pid) {
-                return Err(format!("Parent node with id {} not found", pid));
-            }
+        if let Some(pid) = parent_id
+            && !self.nodes.iter().any(|n| n.id == pid)
+        {
+            return Err(format!("Parent node with id {} not found", pid));
         }
 
         // Build parent_ids for new node
@@ -354,12 +350,10 @@ impl Graph {
                 }
             }
             // Update adjacency list (parent -> child)
-            self.adjacency.entry(pid).or_insert_with(Vec::new);
+            self.adjacency.entry(pid).or_default();
             self.adjacency.get_mut(&pid).unwrap().push(new_id);
             // Update reverse adjacency (child -> parent)
-            self.reverse_adjacency
-                .entry(new_id)
-                .or_insert_with(Vec::new);
+            self.reverse_adjacency.entry(new_id).or_default();
             self.reverse_adjacency.get_mut(&new_id).unwrap().push(pid);
             // New node is not a root - remove from root_ids if somehow present
             self.root_ids.retain(|&id| id != new_id);
@@ -372,9 +366,7 @@ impl Graph {
         if let Some(ref sub_ids) = new_node.subtask_ids {
             for sub_id in sub_ids {
                 // Update reverse adjacency for each subtask
-                self.reverse_adjacency
-                    .entry(*sub_id)
-                    .or_insert_with(Vec::new);
+                self.reverse_adjacency.entry(*sub_id).or_default();
                 self.reverse_adjacency.get_mut(sub_id).unwrap().push(new_id);
             }
             self.adjacency.insert(new_id, sub_ids.clone());
@@ -1003,5 +995,380 @@ nodes:
             !graph.reverse_adjacency.contains_key(&2),
             "B should not be in reverse_adjacency"
         );
+    }
+
+    // =====================================================================
+    // CRUD: Create (add_node)
+    // =====================================================================
+
+    #[test]
+    fn test_create_first_node_in_empty_graph() {
+        let mut graph = Graph {
+            nodes: vec![],
+            adjacency: std::collections::HashMap::new(),
+            reverse_adjacency: std::collections::HashMap::new(),
+            root_ids: vec![],
+        };
+
+        let id = graph
+            .add_node(None, "First task".into(), None, None, None, None)
+            .expect("Adding first node should succeed");
+
+        assert_eq!(id, 1, "First node should get id 1");
+        assert_eq!(graph.nodes.len(), 1);
+        assert!(graph.root_ids.contains(&1), "First node should be a root");
+
+        let node = graph.nodes.first().expect("Graph should have one node");
+        assert_eq!(node.id, 1);
+        assert_eq!(node.name, "First task");
+        assert!(
+            node.parent_ids.is_none(),
+            "Root node should have no parents"
+        );
+    }
+
+    #[test]
+    fn test_create_child_node() {
+        let graph_nodes = vec![
+            make_node(1, "Parent", vec![2]),
+            make_node(2, "Child", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        let id = graph
+            .add_node(Some(1), "Sibling".into(), None, None, None, None)
+            .expect("Adding child should succeed");
+
+        assert_eq!(id, 3, "New child should get auto-incremented id 3");
+        assert_eq!(graph.nodes.len(), 3);
+        assert!(!graph.root_ids.contains(&id), "Child should not be a root");
+
+        // Parent should now reference the new node
+        let parent = graph.get_node(1).expect("Parent should exist");
+        assert!(
+            parent
+                .subtask_ids
+                .as_ref()
+                .map_or(false, |ids| ids.contains(&3)),
+            "Parent should list new node in subtask_ids"
+        );
+
+        // New node should have parent_ids pointing back
+        let child = graph.get_node(id).expect("New child should exist");
+        assert!(
+            child
+                .parent_ids
+                .as_ref()
+                .map_or(false, |ids| ids.contains(&1)),
+            "New child should reference parent"
+        );
+    }
+
+    #[test]
+    fn test_create_node_with_full_fields() {
+        let mut graph = Graph {
+            nodes: vec![],
+            adjacency: std::collections::HashMap::new(),
+            reverse_adjacency: std::collections::HashMap::new(),
+            root_ids: vec![],
+        };
+
+        let id = graph
+            .add_node(
+                None,
+                "Big project".into(),
+                Some("Build the thing".into()),
+                Some("2025-12-31".into()),
+                Some(true),
+                None,
+            )
+            .expect("Adding full node should succeed");
+
+        let node = graph.get_node(id).expect("Node should exist");
+        assert_eq!(node.name, "Big project");
+        assert_eq!(node.details, Some("Build the thing".into()));
+        assert_eq!(node.deadline, Some("2025-12-31".into()));
+        assert_eq!(node.important, Some(true));
+        assert_eq!(node.collapsed, Some(false));
+    }
+
+    #[test]
+    fn test_create_node_fails_with_invalid_parent() {
+        let graph_nodes = vec![make_node(1, "Root", vec![2]), make_node(2, "Child", vec![])];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        let result = graph.add_node(Some(999), "Orphan".into(), None, None, None, None);
+        assert!(
+            result.is_err(),
+            "Adding node with nonexistent parent should fail"
+        );
+
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("999"),
+            "Error should mention the bad parent id"
+        );
+        assert_eq!(
+            graph.nodes.len(),
+            2,
+            "Graph should be unchanged after failed add"
+        );
+    }
+
+    #[test]
+    fn test_create_node_auto_id_skips_existing_ids() {
+        // Create a gap: ids 1 and 3 exist, but not 2
+        let graph_nodes = vec![make_node(1, "A", vec![]), make_node(3, "C", vec![])];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        let id = graph
+            .add_node(None, "B".into(), None, None, None, None)
+            .expect("Should succeed");
+
+        assert_eq!(id, 4, "New id should be max_existing + 1, ignoring gaps");
+    }
+
+    #[test]
+    fn test_create_node_with_subtask_ids() {
+        let graph_nodes = vec![
+            make_node(1, "Root", vec![]),
+            make_node(2, "Child A", vec![]),
+            make_node(3, "Child B", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        let id = graph
+            .add_node(Some(1), "Middle".into(), None, None, None, Some(vec![2, 3]))
+            .expect("Should succeed");
+
+        let middle = graph.get_node(id).expect("Middle should exist");
+        assert_eq!(middle.subtask_ids, Some(vec![2, 3]));
+
+        // Children 2 and 3 should now have `middle` in reverse_adjacency
+        // (add_node updates adjacency structs but not the child nodes' parent_ids field)
+        let rev = graph
+            .reverse_adjacency
+            .get(&2)
+            .expect("Child A should be in reverse_adjacency");
+        assert!(
+            rev.contains(&id),
+            "Child A reverse_adjacency should include Middle"
+        );
+
+        let rev = graph
+            .reverse_adjacency
+            .get(&3)
+            .expect("Child B should be in reverse_adjacency");
+        assert!(
+            rev.contains(&id),
+            "Child B reverse_adjacency should include Middle"
+        );
+    }
+
+    // =====================================================================
+    // CRUD: Read
+    // =====================================================================
+
+    #[test]
+    fn test_read_get_node_existing() {
+        let graph_nodes = vec![make_node(1, "Alpha", vec![2]), make_node(2, "Beta", vec![])];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        let node = graph.get_node(1).expect("Node 1 should exist");
+        assert_eq!(node.name, "Alpha");
+    }
+
+    #[test]
+    fn test_read_get_node_missing() {
+        let graph_nodes = vec![make_node(1, "Only", vec![])];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        assert!(
+            graph.get_node(42).is_none(),
+            "Missing node should return None"
+        );
+    }
+
+    #[test]
+    fn test_read_get_children() {
+        let graph_nodes = vec![
+            make_node(1, "Parent", vec![2, 3]),
+            make_node(2, "A", vec![]),
+            make_node(3, "B", vec![]),
+        ];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        let children = graph.get_children(1);
+        assert_eq!(children.len(), 2);
+        let names: Vec<&str> = children.iter().map(|n| n.name.as_str()).collect();
+        assert!(names.contains(&"A"));
+        assert!(names.contains(&"B"));
+    }
+
+    #[test]
+    fn test_read_get_children_leaf() {
+        let graph_nodes = vec![
+            make_node(1, "Parent", vec![2]),
+            make_node(2, "Leaf", vec![]),
+        ];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        let children = graph.get_children(2);
+        assert!(children.is_empty(), "Leaf should have no children");
+    }
+
+    #[test]
+    fn test_read_get_parents() {
+        let graph_nodes = vec![
+            make_node(1, "P1", vec![3]),
+            make_node(2, "P2", vec![3]),
+            make_node(3, "Child", vec![]),
+        ];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        let parents = graph.get_parents(3);
+        assert_eq!(parents.len(), 2, "Child should have two parents");
+        let names: Vec<&str> = parents.iter().map(|n| n.name.as_str()).collect();
+        assert!(names.contains(&"P1"));
+        assert!(names.contains(&"P2"));
+    }
+
+    #[test]
+    fn test_read_get_parents_root() {
+        let graph_nodes = vec![make_node(1, "Root", vec![2]), make_node(2, "Child", vec![])];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        let parents = graph.get_parents(1);
+        assert!(parents.is_empty(), "Root should have no parents");
+    }
+
+    #[test]
+    fn test_read_get_root_nodes() {
+        let graph_nodes = vec![
+            make_node(1, "Root A", vec![3]),
+            make_node(2, "Root B", vec![4]),
+            make_node(3, "Child A", vec![]),
+            make_node(4, "Child B", vec![]),
+        ];
+        let graph = Graph::from_nodes(graph_nodes);
+
+        let roots = graph.get_root_nodes();
+        assert_eq!(roots.len(), 2);
+        let names: Vec<&str> = roots.iter().map(|n| n.name.as_str()).collect();
+        assert!(names.contains(&"Root A"));
+        assert!(names.contains(&"Root B"));
+    }
+
+    #[test]
+    fn test_read_json_roundtrip() {
+        let graph_nodes = vec![
+            make_node(1, "Parent", vec![2]),
+            make_node(2, "Child", vec![]),
+        ];
+        let original = Graph::from_nodes(graph_nodes);
+
+        let json = original.to_json().expect("Serialization should succeed");
+        let restored = Graph::from_json(&json).expect("Deserialization should succeed");
+
+        assert_eq!(restored.nodes.len(), original.nodes.len());
+        for orig_node in &original.nodes {
+            let restored_node = restored
+                .get_node(orig_node.id)
+                .expect("Restored graph should contain all original nodes");
+            assert_eq!(restored_node.name, orig_node.name);
+        }
+    }
+
+    // =====================================================================
+    // CRUD: Update (direct field mutation on mutable graph)
+    // =====================================================================
+
+    #[test]
+    fn test_update_node_fields() {
+        let graph_nodes = vec![make_node(1, "Old Name", vec![])];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        let node = graph.get_node_mut(1).expect("Node 1 should exist");
+        node.name = "New Name".into();
+        node.details = Some("Updated details".into());
+        node.important = Some(true);
+
+        // Verify the mutation persisted
+        let node = graph.get_node(1).expect("Node 1 should still exist");
+        assert_eq!(node.name, "New Name");
+        assert_eq!(node.details, Some("Updated details".into()));
+        assert_eq!(node.important, Some(true));
+    }
+
+    #[test]
+    fn test_update_node_add_subtask_field() {
+        let graph_nodes = vec![
+            make_node(1, "A", vec![]),
+            make_node(2, "B", vec![]),
+            make_node(3, "C", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        // Initially no parents
+        let c = graph.get_node(3).expect("C should exist");
+        assert!(c.parent_ids.is_none());
+
+        // Mutate A to claim C as a subtask
+        let a = graph.get_node_mut(1).expect("A should exist");
+        a.subtask_ids = Some(vec![3]);
+
+        // Note: adjacency lists won't update automatically — that's the
+        // caller's responsibility. `add_node` does it, raw mutation doesn't.
+        // This test just enforces that the field itself is writable.
+        let a = graph.get_node(1).expect("A should still exist");
+        assert_eq!(a.subtask_ids, Some(vec![3]));
+    }
+
+    // =====================================================================
+    // CRUD: YAML roundtrip (graph_to_yaml preserves node data)
+    // =====================================================================
+
+    #[test]
+    fn test_yaml_roundtrip_preserves_node_data() {
+        let yaml = r#"
+nodes:
+  - id: 1
+    name: Build Taskman
+    details: The big project
+    deadline: "2025-12-31"
+    important: true
+    subtask_ids: [2]
+  - id: 2
+    name: Rust Core
+    subtask_ids: []
+"#;
+        let graph = build_graph_from_yaml_str(yaml);
+
+        // Convert back to YAML
+        let roundtripped =
+            graph_to_yaml(&graph.to_json().unwrap()).expect("YAML serialization should succeed");
+
+        // Parse it again and verify node count and names
+        let doc: crate::yaml::TaskDocument =
+            serde_yaml::from_str(&roundtripped).expect("Roundtripped YAML should be valid");
+        assert_eq!(doc.nodes.len(), 2);
+
+        let node_1 = doc
+            .nodes
+            .iter()
+            .find(|n| n.id == 1)
+            .expect("Node 1 should exist");
+        assert_eq!(node_1.name, "Build Taskman");
+        assert_eq!(node_1.details, Some("The big project".into()));
+        assert_eq!(node_1.deadline, Some("2025-12-31".into()));
+        assert_eq!(node_1.important, Some(true));
+        assert!(node_1.subtask_ids.contains(&2));
+
+        let node_2 = doc
+            .nodes
+            .iter()
+            .find(|n| n.id == 2)
+            .expect("Node 2 should exist");
+        assert_eq!(node_2.name, "Rust Core");
     }
 }
