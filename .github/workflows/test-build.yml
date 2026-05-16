@@ -43,13 +43,13 @@ jobs:
                   cache_dependency_path: frontend/pnpm-lock.yaml
 
             - name: Install frontend dependencies
-              run: pnpm install --dir frontend
+              run: pnpm --dir frontend install
 
             - name: Lint TypeScript
-              run: pnpm lint --dir frontend
+              run: pnpm --dir frontend lint
 
             - name: Build TypeScript
-              run: pnpm build --dir frontend
+              run: pnpm --dir frontend build
 
     # TODO: Step 9 — Test TypeScript
     # Once frontend tests are implemented, uncomment the following:
