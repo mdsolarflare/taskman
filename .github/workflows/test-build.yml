@@ -1,22 +1,54 @@
 name: Run project build & tests
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
 
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
 
 jobs:
-  ichor-build:
+    build:
+        runs-on: ubuntu-latest
 
-    runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-    steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose --manifest-path ichor/Cargo.toml
-    - name: Run tests
-      run: cargo test --verbose --manifest-path ichor/Cargo.toml
+            # ─── Rust (ichor) ─────────────────────────────────────────────
+
+            - name: Lint Rust
+              run: cargo check --manifest-path ichor/Cargo.toml
+
+            - name: Build Rust
+              run: cargo build --verbose --manifest-path ichor/Cargo.toml
+
+            - name: Test Rust
+              run: cargo test --verbose --manifest-path ichor/Cargo.toml
+
+            - name: Build WASM
+              run: wasm-pack build --target web --manifest-path ichor/Cargo.toml
+
+            # ─── TypeScript (frontend) ────────────────────────────────────
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 22
+                  cache: "pnpm"
+                  cache-dependency-path: frontend/pnpm-lock.yaml
+
+            - name: Install frontend dependencies
+              run: pnpm install --dir frontend
+
+            - name: Lint TypeScript
+              run: pnpm lint --dir frontend
+
+            - name: Build TypeScript
+              run: pnpm build --dir frontend
+
+    # TODO: Step 9 — Test TypeScript
+    # Once frontend tests are implemented, uncomment the following:
+    #
+    # - name: Test TypeScript
+    #   run: pnpm test --dir frontend
