@@ -42,4 +42,6 @@ The project lives well to its principles (lean dependencies, offline-first, stat
 - **Fix `// eslint-disable` in ThemeModal** — `frontend/src/components/ThemeModal.tsx` has a silenced `set-state-in-effect` rule. Refactor the effect to remove the need for the disable comment.
 - **Review Rust edition 2024** — `ichor/Cargo.toml` uses edition 2024 which is bleeding-edge and may cause friction with older toolchains. Consider 2021 for broader compatibility.
 - **Sample YAML hierarchy quirk** — `frontend/public/sample.yaml` node 14 (`Implement Pan & Zoom`) lists `subtask_ids: [12]` (Integration Tests), which creates an unexpected cross-branch parent-child link. Verify this is intentional or fix.
-ENDOFSECTION
+
+## think about some of the default views
+The "reset" view location isn't very good, need to figure out better node spacing and default views.
