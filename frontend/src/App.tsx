@@ -538,33 +538,6 @@ function App() {
                   </span>
                   Save As…
                 </button>
-                <div
-                  style={{
-                    height: 1,
-                    background: c["--border-color"],
-                    margin: "4px 0",
-                  }}
-                />
-                <button
-                  onClick={handleLoadSample}
-                  style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
-                >
-                  <span
-                    style={{
-                      marginRight: 10,
-                      opacity: 0.6,
-                    }}
-                  >
-                    📋
-                  </span>
-                  Load Sample
-                </button>
               </div>
               <div style={{ padding: "8px 0" }}>
                 <div
@@ -638,6 +611,26 @@ function App() {
                     ❓
                   </span>
                   About
+                </button>
+                <button
+                  onClick={handleLoadSample}
+                  style={menuItemStyle}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <span
+                    style={{
+                      marginRight: 10,
+                      opacity: 0.6,
+                    }}
+                  >
+                    📋
+                  </span>
+                  Load Sample
                 </button>
               </div>
             </div>
