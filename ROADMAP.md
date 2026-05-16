@@ -17,12 +17,6 @@ The navigation pane will allow you to three views
 2. all tasks marked important
 3. all tasks near deadline (user configurable but defaults to 14 days)
 
-
-## Better button accessibility
-when a node is selected,
-the "+" key triggers add button
-the "=" key triggers edit button
-
 ## Sort out the CI
 on prs:
 run all compile and test checks for rust and typescript

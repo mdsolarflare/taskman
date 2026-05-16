@@ -197,6 +197,7 @@ export default function GraphRenderer({
 
     // -----------------------------------------------------------------------
     // Keyboard handler — Backspace / Delete triggers delete modal
+    //                — + triggers add node, = triggers edit node
     // -----------------------------------------------------------------------
 
     useEffect(() => {
@@ -214,11 +215,23 @@ export default function GraphRenderer({
                 e.preventDefault();
                 onDeleteNode(selectedNodeId);
             }
+
+            // "+" key triggers add node (only when node selected)
+            if (e.key === "+" && selectedNodeId !== null && onAddNode) {
+                e.preventDefault();
+                onAddNode(selectedNodeId);
+            }
+
+            // "=" key triggers edit node (only when node selected)
+            else if (e.key === "=" && selectedNodeId !== null && onNodeEdit) {
+                e.preventDefault();
+                onNodeEdit(selectedNodeId);
+            }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [selectedNodeId, onDeleteNode]);
+    }, [selectedNodeId, onDeleteNode, onAddNode, onNodeEdit]);
 
     // -----------------------------------------------------------------------
     // Pan handlers
