@@ -17,12 +17,6 @@ The navigation pane will allow you to three views
 2. all tasks marked important
 3. all tasks near deadline (user configurable but defaults to 14 days)
 
-## Sort out the CI
-on prs:
-run all compile and test checks for rust and typescript
-do we want to test build the website? maybe just wasm?
-basically i think we don't want to pnpm install
-
 ## Improve the storage model
 when working from the sample file, no changes are tracked, when working from new or opening a pre-existing file, we will clearly indicate the file being tracked. we will auto-save changes async to file.
 
