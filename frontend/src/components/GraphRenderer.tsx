@@ -167,6 +167,7 @@ export default function GraphRenderer({
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [viewportStart, setViewportStart] = useState({ x: 0, y: 0 });
     const [colors, setColors] = useState(readGraphColors);
+    const hasCentered = useRef(false);
 
     // Re-read colors on theme switch via MutationObserver
     useEffect(() => {
@@ -186,9 +187,10 @@ export default function GraphRenderer({
         return computeLayout(graph);
     }, [graph]);
 
-    // Center viewport on root node at first load
+    // Center viewport on root node at first load only
     useEffect(() => {
-        if (layout && svgRef.current) {
+        if (layout && svgRef.current && !hasCentered.current) {
+            hasCentered.current = true;
             setViewport(computeRootViewport(svgRef.current));
         }
     }, [layout]);
