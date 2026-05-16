@@ -27,6 +27,9 @@ jobs:
             - name: Test Rust
               run: cargo test --verbose --manifest-path ichor/Cargo.toml
 
+            - name: Install wasm-pack
+              run: cargo install wasm-pack
+
             - name: Build WASM
               run: wasm-pack build --target web --manifest-path ichor/Cargo.toml
 
