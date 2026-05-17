@@ -11,6 +11,7 @@ This project follows a module structure, separating the "Brain" (computation) fr
 - **The Bridge:** `wasm-bindgen` and `wasm-pack` facilitate the communication between Rust logic and the TypeScript frontend.
 
 Our key design imperatives:
+
 - As much idomatic rust as possible
 - As simple as possible
 - As few dependencies as possible, currently rust, typescript, pnpm, vite, and react. If opportunities arise to aim lower, I will.
@@ -31,6 +32,7 @@ Our key design imperatives:
 Install the following toolchains on your system:
 
 **Rust + WASM** (Works on macOS and Linux)
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
@@ -40,6 +42,7 @@ cargo install wasm-pack
 ```
 
 **Node.js & npm** (Pick your package manager)
+
 ```bash
 # macOS (Homebrew)
 brew install nodejs
@@ -55,11 +58,12 @@ sudo dnf install nodejs npm
 ```
 
 **pnpm** (Works on macOS and Linux)
+
 ```bash
 npm install -g pnpm
 ```
 
-### 1.5 Sanity Check
+### 1.1 Sanity Check
 
 Verify all tools are installed and on your PATH:
 
@@ -74,27 +78,29 @@ pnpm --version
 
 If any of these commands fail, double-check your installation before proceeding.
 
-
 ### 2. Installation & Build Process
 
 #### Step A: Build the Rust Ichor
+
 First, we need to compile the Rust logic into a WASM package that the frontend can import.
 
 ```bash
 # From root
-cd ichor
-wasm-pack build --target web
+cargo check --manifest-path ichor/Cargo.toml
+cargo build --verbose --manifest-path ichor/Cargo.toml
+cargo test --verbose --manifest-path ichor/Cargo.toml
+wasm-pack build ichor --target web
 ```
 
-#### Step B: Set up the Frontend
+#### Step B: Build up the Frontend
+
 Now, initialize the React environment and link it to the compiled WASM package.
 
 ```bash
 # From root
-cd frontend
-pnpm install
-# Link the local Rust package
-pnpm add ../ichor/pkg
+pnpm --dir frontend install
+pnpm --dir frontend lint
+pnpm --dir frontend build
 ```
 
 ### 3. Running the App
@@ -125,7 +131,6 @@ See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
     │   └── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
     └── package.json         # Frontend dependencies
 ```
-
 
 ## 🔄 Development Workflow
 

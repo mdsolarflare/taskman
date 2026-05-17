@@ -4,28 +4,25 @@ import { resolve } from "path";
 import fs from "fs";
 
 export default defineConfig({
-    plugins: [
-        react(),
-        {
-            name: "copy-wasm",
-            configResolved() {
-                const wasmSrc = resolve(
-                    __dirname,
-                    "../ichor/pkg/ichor_bg.wasm",
-                );
-                const wasmDst = resolve(__dirname, "public/ichor_bg.wasm");
-                if (fs.existsSync(wasmSrc)) {
-                    fs.copyFileSync(wasmSrc, wasmDst);
-                }
-            },
-        },
-    ],
-    build: {
-        target: "esnext",
+  plugins: [
+    react(),
+    {
+      name: "copy-wasm",
+      configResolved() {
+        const wasmSrc = resolve(__dirname, "../ichor/pkg/ichor_bg.wasm");
+        const wasmDst = resolve(__dirname, "public/ichor_bg.wasm");
+        if (fs.existsSync(wasmSrc)) {
+          fs.copyFileSync(wasmSrc, wasmDst);
+        }
+      },
     },
-    resolve: {
-        alias: {
-            "@": resolve(__dirname, "./src"),
-        },
+  ],
+  build: {
+    target: "esnext",
+  },
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "./src"),
     },
+  },
 });

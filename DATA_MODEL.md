@@ -36,15 +36,16 @@ nodes:
 ## Schema Definitions
 
 ### Node
+
 Every node in the graph uses the same schema. Fields beyond `id` and `name` are
 optional — a "leaf" node simply omits `details`, `important`, and `subtask_ids`.
 
-*   `id` (int): Unique identifier.
-*   `name` (string, max 128 chars): Display name.
-*   `details` (string, max 1024 chars, optional): Detailed description.
-*   `deadline` (datetime, optional): ISO 8601 date/time.
-*   `important` (bool, optional): Flag for highlighting.
-*   `subtask_ids` (list[int], optional): IDs of child nodes. Empty or absent on leaf nodes.
+- `id` (int): Unique identifier.
+- `name` (string, max 128 chars): Display name.
+- `details` (string, max 1024 chars, optional): Detailed description.
+- `deadline` (datetime, optional): ISO 8601 date/time.
+- `important` (bool, optional): Flag for highlighting.
+- `subtask_ids` (list[int], optional): IDs of child nodes. Empty or absent on leaf nodes.
 
 ## Directed Graph Mapping
 
@@ -53,5 +54,5 @@ The file structure implicitly defines a **Directed Acyclic Graph (DAG)**:
 1.  **Adjacency List**: The `subtask_ids` field acts as the adjacency list for outgoing edges from a parent task to its children.
 2.  **Roots**: Nodes that are not referenced in any other node's `subtask_ids` list are considered **Roots**. We anticipate a limit of ~3 roots for the initial product scope.
 3.  **Traversability**:
-    *   **Downward**: Iterate `subtask_ids` to find children.
-    *   **Upward**: Requires a reverse-index lookup built at load time (parent references), as the file format is strictly parent-to-child.
+    - **Downward**: Iterate `subtask_ids` to find children.
+    - **Upward**: Requires a reverse-index lookup built at load time (parent references), as the file format is strictly parent-to-child.

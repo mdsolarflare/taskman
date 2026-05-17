@@ -1,58 +1,58 @@
 name: Run project build & tests
 
 on:
-    push:
-        branches: ["main"]
-    pull_request:
-        branches: ["main"]
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            # ─── Rust (ichor) ─────────────────────────────────────────────
+      # ─── Rust (ichor) ─────────────────────────────────────────────
 
-            - name: Lint Rust
-              run: cargo check --manifest-path ichor/Cargo.toml
+      - name: Lint Rust
+        run: cargo check --manifest-path ichor/Cargo.toml
 
-            - name: Build Rust
-              run: cargo build --verbose --manifest-path ichor/Cargo.toml
+      - name: Build Rust
+        run: cargo build --verbose --manifest-path ichor/Cargo.toml
 
-            - name: Test Rust
-              run: cargo test --verbose --manifest-path ichor/Cargo.toml
+      - name: Test Rust
+        run: cargo test --verbose --manifest-path ichor/Cargo.toml
 
-            - name: Install wasm-pack
-              run: cargo install wasm-pack
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
 
-            - name: Build WASM
-              run: wasm-pack build ichor --target web
+      - name: Build WASM
+        run: wasm-pack build ichor --target web
 
-            # ─── TypeScript (frontend) ────────────────────────────────────
+      # ─── TypeScript (frontend) ────────────────────────────────────
 
-            - uses: pnpm/action-setup@v6
-              name: Install pnpm
-              with:
-                  version: latest
-                  cache: true
-                  cache_dependency_path: frontend/pnpm-lock.yaml
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: latest
+          cache: true
+          cache_dependency_path: frontend/pnpm-lock.yaml
 
-            - name: Install frontend dependencies
-              run: pnpm --dir frontend install
+      - name: Install frontend dependencies
+        run: pnpm --dir frontend install
 
-            - name: Lint TypeScript
-              run: pnpm --dir frontend lint
+      - name: Lint TypeScript
+        run: pnpm --dir frontend lint
 
-            - name: Build TypeScript
-              run: pnpm --dir frontend build
+      - name: Build TypeScript
+        run: pnpm --dir frontend build
 
-    # TODO: Step 9 — Test TypeScript
-    # Once frontend tests are implemented, uncomment the following:
-    #
-    # - name: Test TypeScript
-    #   run: pnpm test --dir frontend
+  # TODO: Step 9 — Test TypeScript
+  # Once frontend tests are implemented, uncomment the following:
+  #
+  # - name: Test TypeScript
+  #   run: pnpm test --dir frontend

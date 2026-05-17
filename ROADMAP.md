@@ -10,22 +10,25 @@ Marking a task as "done" is semantically equivalent to deleting it from the acti
 
 **Next steps:** Decide whether "done" is a flag on the node (e.g., `completed: true`), a separate view/filter, or a distinct graph operation that doesn't re-map children.
 
-
 ## Add navigation pane
+
 The navigation pane will allow you to three views
+
 1. a list of all node children (tasks with no subtasks) that are ready to be worked
 2. all tasks marked important
 3. all tasks near deadline (user configurable but defaults to 14 days)
 
 ## Improve the storage model
+
 when working from the sample file, no changes are tracked, when working from new or opening a pre-existing file, we will clearly indicate the file being tracked. we will auto-save changes async to file.
 
 ## build a yaml repair tool
+
 if files get corrupted and therefore cannot be loaded into the graph, we should have a non-destructive method of auto-repair.
 
 ## design icon and the web presence
-the default "frontend" with the lightning bolt isn't cool enough
 
+the default "frontend" with the lightning bolt isn't cool enough
 
 ## Technical Debt — Cleanup Pass (Principle Audit Findings)
 
@@ -44,4 +47,5 @@ The project lives well to its principles (lean dependencies, offline-first, stat
 - **Sample YAML hierarchy quirk** — `frontend/public/sample.yaml` node 14 (`Implement Pan & Zoom`) lists `subtask_ids: [12]` (Integration Tests), which creates an unexpected cross-branch parent-child link. Verify this is intentional or fix.
 
 ## think about some of the default views
+
 The "reset" view location isn't very good, need to figure out better node spacing and default views.
