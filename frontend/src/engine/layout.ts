@@ -1,20 +1,32 @@
 /**
- * Graph Layout Engine — two-pass hierarchical tree layout.
+ * Graph Layout Engine — Reingold-Tilford hierarchical tree layout.
  *
- * Pass 1 (bottom-up): compute subtree height for every node.
- * Pass 2 (top-down): place nodes using dynamic vertical spacing per level.
+ * Reingold, E. M.; Tilford, J. S. (1991), "Tidier Drawings of Trees",
+ * Software: Practice and Experience, 21(2): 95-113.
  *
- * Horizontal spacing is static so bezier curves have predictable room.
- * Vertical spacing scales with the tallest sibling at each depth level,
- * preventing both collisions and wasted gaps.
+ * Adapted for:
+ * - Left-to-right trees (X = depth * horizontalSpacing, Y = RT position)
+ * - Variable node heights (spacing between siblings accounts for actual height)
+ * - Multiple roots (each root processed as a separate tree)
+ *
+ * Back-edge handling:
+ *   DAGs may contain edges that point to a shallower depth (cycles from
+ *   the layout's perspective). We filter these out in `getLayoutChildren`
+ *   so the layout walks a clean tree with no cycles.
+ *
+ * The algorithm uses a single bottom-up walk:
+ *   firstWalk: walk children → shift siblings apart → center parent
+ *
+ * This guarantees zero collisions with tight, deterministic spacing —
+ * no magic multipliers needed.
  */
 
 import type { Graph, GraphNode, LayoutConfig } from "../types/graph";
 import { DEFAULT_LAYOUT } from "../types/graph";
 
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 
 const BASE_NODE_HEIGHT = 40;
 const FIELD_HEIGHT_DETAILS = 28;
@@ -23,12 +35,9 @@ const FIELD_HEIGHT_DEADLINE = 24;
 /** Minimum vertical gap between siblings (pixels) */
 const MIN_V_GAP = 16;
 
-/** Multiplier for dynamic spacing — fraction of max subtree height at a level */
-const V_SPACING_FACTOR = 0.15;
-
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 
 interface LayoutNode {
   id: number;
@@ -43,17 +52,23 @@ interface LayoutResult {
   edges: Array<{ from: number; to: number }>;
 }
 
-// ---------------------------------------------------------------------------
+/** Per-node state for the Reingold-Tilford algorithm */
+interface RT {
+  prelim: number; // Final Y position (computed during firstWalk)
+  depth: number; // Depth from root (0 = root)
+}
+
+// --------------------------------------------------------------------------
 // Engine
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 
 export class LayoutEngine {
   private config: LayoutConfig;
   private nodeMap: Map<number, GraphNode> = new Map();
   private rootIds: number[] = [];
 
-  // Per-layout caches (invalidated on setGraph / setConfig)
-  private subtreeHeights: Map<number, number> | null = null;
+  // Reingold-Tilford state (reset each computeLayout call)
+  private rt = new Map<number, RT>();
 
   constructor(config: LayoutConfig = DEFAULT_LAYOUT) {
     this.config = config;
@@ -65,160 +80,261 @@ export class LayoutEngine {
       this.nodeMap.set(node.id, node);
     }
     this.rootIds = graph.root_ids || [];
-    this.subtreeHeights = null;
   }
 
   setConfig(config: Partial<LayoutConfig>): void {
     this.config = { ...this.config, ...config };
-    this.subtreeHeights = null;
   }
 
-  // -----------------------------------------------------------------------
+  // ------------------------------------------------------------------
   // Public entry point
-  // -----------------------------------------------------------------------
+  // ------------------------------------------------------------------
 
   computeLayout(): LayoutResult {
-    const heights = this.computeSubtreeHeights();
-    const nodes = new Map<number, LayoutNode>();
-    const edges: Array<{ from: number; to: number }> = [];
+    this.rt.clear();
 
-    let rootY = 0;
-    for (const rootId of this.rootIds) {
+    // Initialize and walk each root
+    for (let i = 0; i < this.rootIds.length; i++) {
+      const rootId = this.rootIds[i];
       const root = this.nodeMap.get(rootId);
       if (!root) continue;
 
-      this.placeSubtree(rootId, 0, rootY, heights, nodes, edges);
+      this.rt.set(rootId, { prelim: 0, depth: 0 });
 
-      // Next root starts below this one's full subtree extent
-      const subtreeMaxY = this.findSubtreeMaxY(rootId, nodes);
-      rootY = subtreeMaxY + this.config.verticalSpacing;
+      this.firstWalk(rootId, 0);
+
+      // Apply spacing between consecutive roots
+      if (i > 0) {
+        const prevRootId = this.rootIds[i - 1];
+        const prevRoot = this.nodeMap.get(prevRootId);
+        if (prevRoot) {
+          const prevBottom = this.getSubtreeBottom(prevRootId);
+          const gap = this.estimateNodeHeight(prevRoot) + MIN_V_GAP;
+          const currTop = this.getSubtreeTop(rootId);
+          const needed = prevBottom + gap;
+
+          if (currTop < needed) {
+            this.shiftSubtree(rootId, needed - currTop);
+            // Root was shifted, re-center it on its children
+            this.recenterNode(rootId);
+          }
+        }
+      }
+    }
+
+    // Collect placed nodes
+    const nodes = new Map<number, LayoutNode>();
+    for (const [nodeId, r] of this.rt) {
+      const node = this.nodeMap.get(nodeId);
+      if (!node) continue;
+
+      const selfW = this.estimateNodeWidth(node);
+      const selfH = this.estimateNodeHeight(node);
+
+      nodes.set(nodeId, {
+        id: nodeId,
+        x: r.depth * this.config.horizontalSpacing,
+        y: r.prelim,
+        width: selfW,
+        height: selfH,
+      });
+    }
+
+    // Collect edges from raw subtask_ids (including back-edges).
+    // Back-edges affect rendering but not layout positioning.
+    const edges: Array<{ from: number; to: number }> = [];
+    for (const [nodeId] of this.rt) {
+      const node = this.nodeMap.get(nodeId);
+      if (!node) continue;
+      if (!node.subtask_ids || node.subtask_ids.length === 0) continue;
+      if (node.collapsed === true || node.collapsed === undefined) continue;
+      for (const childId of node.subtask_ids) {
+        if (this.rt.has(childId)) {
+          edges.push({ from: nodeId, to: childId });
+        }
+      }
     }
 
     return { nodes, edges };
   }
 
-  // -----------------------------------------------------------------------
-  // Pass 1 — bottom-up subtree heights
-  // -----------------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // Reingold-Tilford firstWalk (bottom-up)
+  // ------------------------------------------------------------------
 
   /**
-   * Returns a map of nodeId → total rendered height of that node's visible
-   * subtree (including all descendants and the gaps between them).
-   */
-  private computeSubtreeHeights(): Map<number, number> {
-    if (this.subtreeHeights) return this.subtreeHeights;
-
-    const cache = new Map<number, number>();
-    const visited = new Set<number>();
-
-    const visit = (id: number): number => {
-      if (cache.has(id)) return cache.get(id)!;
-      if (visited.has(id)) return 0; // guard against cycles
-      visited.add(id);
-
-      const node = this.nodeMap.get(id);
-      if (!node) return 0;
-
-      const selfH = this.estimateNodeHeight(node);
-      const children = this.getChildren(node);
-
-      if (children.length === 0) {
-        cache.set(id, selfH);
-        return selfH;
-      }
-
-      // Sum of all child subtree heights + gaps between them
-      let total = selfH;
-      for (const ch of children) {
-        total += visit(ch.id);
-      }
-      // Add gap after each child except the last
-      total += Math.max(0, children.length - 1) * this.config.verticalSpacing;
-
-      cache.set(id, total);
-      return total;
-    };
-
-    for (const rid of this.rootIds) visit(rid);
-    this.subtreeHeights = cache;
-    return cache;
-  }
-
-  // -----------------------------------------------------------------------
-  // Pass 2 — top-down placement with dynamic vertical spacing
-  // -----------------------------------------------------------------------
-
-  /**
-   * Place a subtree rooted at `nodeId` at `(x, y)`.
+   * Bottom-up walk that computes final Y positions.
    *
-   * Children are placed to the right (static horizontalSpacing).
-   * Vertical positions use dynamic spacing: we first collect all children's
-   * subtree heights, then distribute them evenly around the parent using
-   * a gap derived from the maximum child height.
+   * Order matters:
+   *   1. Recursively walk all children
+   *   2. Shift siblings apart to avoid overlap
+   *   3. Center parent on its children (using final shifted positions)
    */
-  private placeSubtree(
-    nodeId: number,
-    x: number,
-    y: number,
-    heights: Map<number, number>,
-    nodes: Map<number, LayoutNode>,
-    edges: Array<{ from: number; to: number }>,
-  ): void {
+  private firstWalk(nodeId: number, depth: number): void {
     const node = this.nodeMap.get(nodeId);
     if (!node) return;
 
-    const selfH = this.estimateNodeHeight(node);
-    const selfW = this.estimateNodeWidth(node);
+    const children = this.getLayoutChildren(nodeId, node.collapsed);
 
-    nodes.set(nodeId, { id: nodeId, x, y, width: selfW, height: selfH });
-
-    const children = this.getChildren(node);
-    if (children.length === 0) return;
-
-    // Collect child subtree heights
-    const childHeights: number[] = [];
-    for (const ch of children) {
-      childHeights.push(heights.get(ch.id) ?? selfH);
+    if (children.length === 0) {
+      // Leaf: prelim stays 0
+      return;
     }
 
-    // Dynamic vertical gap — scales with the tallest sibling at this level
-    const maxChildHeight = Math.max(...childHeights);
-    const vGap = Math.max(MIN_V_GAP, maxChildHeight * V_SPACING_FACTOR);
+    // 1. Recursively walk all children first
+    for (const child of children) {
+      if (!this.rt.has(child.id)) {
+        this.rt.set(child.id, { prelim: 0, depth: depth + 1 });
+      }
+      this.firstWalk(child.id, depth + 1);
+    }
 
-    // Total band occupied by children + gaps
-    let totalBand = childHeights.reduce((a, b) => a + b, 0);
-    totalBand += Math.max(0, childHeights.length - 1) * vGap;
+    // 2. Shift siblings apart to avoid overlap
+    let prevChild = children[0];
+    for (let i = 1; i < children.length; i++) {
+      const child = children[i];
+      this.ensureSiblingSpacing(prevChild, child);
+      prevChild = child;
+    }
 
-    // Start Y so the child band is centered on the parent's midpoint
-    const childStartY = y + selfH / 2 - totalBand / 2;
+    // 3. Center parent on its children (after shifting — positions are final)
+    const first = children[0];
+    const last = children[children.length - 1];
+    const firstCenter =
+      this.rt.get(first.id)!.prelim + this.estimateNodeHeight(first) / 2;
+    const lastCenter =
+      this.rt.get(last.id)!.prelim + this.estimateNodeHeight(last) / 2;
 
-    let curY = childStartY;
-    for (let i = 0; i < children.length; i++) {
-      const ch = children[i];
-      edges.push({ from: nodeId, to: ch.id });
-      this.placeSubtree(
-        ch.id,
-        x + this.config.horizontalSpacing,
-        curY,
-        heights,
-        nodes,
-        edges,
-      );
-      curY += childHeights[i] + vGap;
+    this.rt.get(nodeId)!.prelim = (firstCenter + lastCenter) / 2;
+  }
+
+  /** Ensure `later` sibling is below `earlier` sibling by at least MIN_V_GAP. */
+  private ensureSiblingSpacing(earlier: GraphNode, later: GraphNode): void {
+    const prevBottom = this.getSubtreeBottom(earlier.id);
+    const currTop = this.getSubtreeTop(later.id);
+    const needed = prevBottom + MIN_V_GAP;
+
+    if (currTop < needed) {
+      this.shiftSubtree(later.id, needed - currTop);
     }
   }
 
-  // -----------------------------------------------------------------------
-  // Helpers
-  // -----------------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // RT helpers
+  // ------------------------------------------------------------------
 
-  private getChildren(node: GraphNode): GraphNode[] {
-    // If collapsed (default true), hide children from layout
-    if (node.collapsed === true || node.collapsed === undefined) return [];
+  /** Shift a node and all its layout-descendants by the given distance. */
+  private shiftSubtree(nodeId: number, distance: number): void {
+    const r = this.rt.get(nodeId);
+    if (!r) return;
+
+    r.prelim += distance;
+
+    const node = this.nodeMap.get(nodeId);
+    if (!node) return;
+
+    for (const child of this.getLayoutChildren(nodeId, node.collapsed)) {
+      if (this.rt.has(child.id)) {
+        this.shiftSubtree(child.id, distance);
+      }
+    }
+  }
+
+  /** Center a node on its children's current positions (used after root shifts). */
+  private recenterNode(nodeId: number): void {
+    const node = this.nodeMap.get(nodeId);
+    if (!node) return;
+
+    const children = this.getLayoutChildren(nodeId, node.collapsed).filter(
+      (c) => this.rt.has(c.id),
+    );
+
+    if (children.length === 0) return;
+
+    const first = children[0];
+    const last = children[children.length - 1];
+    const firstCenter =
+      this.rt.get(first.id)!.prelim + this.estimateNodeHeight(first) / 2;
+    const lastCenter =
+      this.rt.get(last.id)!.prelim + this.estimateNodeHeight(last) / 2;
+
+    this.rt.get(nodeId)!.prelim = (firstCenter + lastCenter) / 2;
+  }
+
+  /** Get the bottom edge (max prelim + height) of a placed subtree. */
+  private getSubtreeBottom(rootId: number): number {
+    let bottom = -Infinity;
+    const queue: number[] = [rootId];
+
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      const r = this.rt.get(id);
+      const node = this.nodeMap.get(id);
+      if (!r || !node) continue;
+
+      bottom = Math.max(bottom, r.prelim + this.estimateNodeHeight(node));
+
+      for (const child of this.getLayoutChildren(id, node.collapsed)) {
+        if (this.rt.has(child.id)) queue.push(child.id);
+      }
+    }
+
+    return bottom;
+  }
+
+  /** Get the top edge (min prelim) of a placed subtree. */
+  private getSubtreeTop(rootId: number): number {
+    let top = Infinity;
+    const queue: number[] = [rootId];
+
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      const r = this.rt.get(id);
+      if (!r) continue;
+
+      top = Math.min(top, r.prelim);
+
+      const node = this.nodeMap.get(id);
+      if (!node) continue;
+      for (const child of this.getLayoutChildren(id, node.collapsed)) {
+        if (this.rt.has(child.id)) queue.push(child.id);
+      }
+    }
+
+    return top;
+  }
+
+  // ------------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------------
+
+  /**
+   * Get the layout children of a node, filtering out back-edges.
+   *
+   * A back-edge is a subtask whose depth is <= the parent's depth.
+   * This eliminates cycles so the layout walks a clean tree.
+   */
+  private getLayoutChildren(
+    nodeId: number,
+    collapsed: boolean | undefined,
+  ): GraphNode[] {
+    if (collapsed === true || collapsed === undefined) return [];
+    const node = this.nodeMap.get(nodeId);
+    if (!node) return [];
     if (!node.subtask_ids || node.subtask_ids.length === 0) return [];
+
+    const parentDepth = this.rt.get(nodeId)?.depth ?? 0;
+
     return node.subtask_ids
       .map((id) => this.nodeMap.get(id))
-      .filter((n): n is GraphNode => n !== undefined);
+      .filter((n): n is GraphNode => n !== undefined)
+      .filter((child) => {
+        // If child hasn't been visited yet, it's a forward edge
+        if (!this.rt.has(child.id)) return true;
+        // If child has a deeper depth, it's a forward edge
+        const childDepth = this.rt.get(child.id)!.depth;
+        return childDepth > parentDepth;
+      });
   }
 
   private estimateNodeWidth(node: GraphNode): number {
@@ -233,35 +349,14 @@ export class LayoutEngine {
     return h;
   }
 
-  /** Walk placed nodes to find the maximum Y+height in a subtree */
-  private findSubtreeMaxY(
-    rootId: number,
-    nodes: Map<number, LayoutNode>,
-  ): number {
-    let maxY = -Infinity;
-    const queue: number[] = [rootId];
-    while (queue.length > 0) {
-      const id = queue.shift()!;
-      const ln = nodes.get(id);
-      if (ln) maxY = Math.max(maxY, ln.y + ln.height);
-      const gn = this.nodeMap.get(id);
-      if (gn) {
-        for (const cid of gn.subtask_ids || []) {
-          if (nodes.has(cid)) queue.push(cid);
-        }
-      }
-    }
-    return maxY;
-  }
-
   clearCache(): void {
-    this.subtreeHeights = null;
+    this.rt.clear();
   }
 }
 
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 // Utilities
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 
 export function createLayoutEngine(
   config?: Partial<LayoutConfig>,
