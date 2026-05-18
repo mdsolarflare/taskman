@@ -56,3 +56,26 @@ The file structure implicitly defines a **Directed Acyclic Graph (DAG)**:
 3.  **Traversability**:
     - **Downward**: Iterate `subtask_ids` to find children.
     - **Upward**: Requires a reverse-index lookup built at load time (parent references), as the file format is strictly parent-to-child.
+
+## Graph Layout
+
+We use a modified **Reingold-Tilford** hierarchical tree layout algorithm ("Tidier Drawings of Trees," 1991) for deterministic, overlap-free rendering.
+
+### Orientation
+
+- **Left-to-right trees**: X-axis = depth × horizontal spacing, Y-axis = Reingold-Tilford computed position
+- This differs from the traditional top-to-bottom orientation in the original algorithm
+
+### Key Adaptations
+
+1.  **Back-edge handling**: Real-world DAGs may contain edges pointing to shallower depths. We filter these "back-edges" during layout positioning to walk a clean tree, but still render them as visible connections. This separation ensures:
+    - Layout positioning ignores cycles (no infinite recursion)
+    - Edge rendering shows all relationships (including cross-depth connections)
+
+2.  **Single bottom-up walk**: Unlike the traditional two-pass approach, we directly modify preliminary positions during sibling shifts. This eliminates the need for `shift`/`change` bookkeeping fields because the second walk becomes a no-op.
+
+3.  **Variable node heights**: Node height varies based on content (name, details, deadline fields). Sibling spacing uses actual node heights plus a minimum gap (16px) rather than uniform step sizes.
+
+4.  **Parent centering order**: Parents are centered on their children **after** sibling shifting completes. Centering before shifting produces stale parent positions when children move.
+
+5.  **Multiple roots**: Each root is processed as a separate tree, with consecutive roots spaced apart using the previous subtree's bottom edge plus padding.
