@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { GraphNode } from "../types/graph";
+import type { GraphNode } from "../types/graph.ts";
 
 // ---------------------------------------------------------------------------
 // Theme colors — read from CSS variables at runtime
@@ -166,8 +166,9 @@ export default function EditNodeModal({
       details: form.details.trim() || undefined,
       deadline: datetimeLocalToIso(form.deadline),
       important: form.important,
-      subtask_ids:
-        form.subtask_ids.length > 0 ? [...form.subtask_ids] : undefined,
+      subtask_ids: form.subtask_ids.length > 0
+        ? [...form.subtask_ids]
+        : undefined,
     };
     onSave(updated);
   };
@@ -193,8 +194,8 @@ export default function EditNodeModal({
   useEffect(() => {
     if (!addDropdownOpen) return;
     const handler = () => setAddDropdownOpen(false);
-    window.addEventListener("click", handler);
-    return () => window.removeEventListener("click", handler);
+    globalThis.addEventListener("click", handler);
+    return () => globalThis.removeEventListener("click", handler);
   }, [addDropdownOpen]);
 
   // Keyboard shortcut: Escape to cancel, Ctrl+Enter to save
@@ -203,8 +204,8 @@ export default function EditNodeModal({
       if (e.key === "Escape") onCancel();
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleSave();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    globalThis.addEventListener("keydown", handler);
+    return () => globalThis.removeEventListener("keydown", handler);
   }, [onCancel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inputStyle: React.CSSProperties = {
@@ -273,6 +274,7 @@ export default function EditNodeModal({
             Ensure Node
           </h2>
           <button
+            type="button"
             onClick={onCancel}
             title="Close"
             style={{
@@ -288,12 +290,12 @@ export default function EditNodeModal({
               fontSize: 16,
               color: colors.textMuted,
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = colors.hover)
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.background = colors.hover)}
+            onMouseLeave={(
+              e,
+            ) => (e.currentTarget.style.background = "transparent")}
           >
             ✕
           </button>
@@ -321,8 +323,7 @@ export default function EditNodeModal({
             maxLength={1024}
             rows={3}
             onChange={(e) =>
-              setForm((f) => ({ ...f, details: e.target.value }))
-            }
+              setForm((f) => ({ ...f, details: e.target.value }))}
             style={{ ...inputStyle, resize: "vertical" }}
             onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
             onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
@@ -336,8 +337,7 @@ export default function EditNodeModal({
             type="datetime-local"
             value={form.deadline}
             onChange={(e) =>
-              setForm((f) => ({ ...f, deadline: e.target.value }))
-            }
+              setForm((f) => ({ ...f, deadline: e.target.value }))}
             style={{
               ...inputStyle,
               colorScheme: "light",
@@ -357,6 +357,7 @@ export default function EditNodeModal({
           }}
         >
           <button
+            type="button"
             onClick={() => setForm((f) => ({ ...f, important: !f.important }))}
             style={{
               width: 44,
@@ -384,7 +385,9 @@ export default function EditNodeModal({
               }}
             />
           </button>
-          <span style={{ fontSize: 13, color: colors.text }}>Important</span>
+          <span style={{ fontSize: 13, color: colors.text }}>
+            Important
+          </span>
         </div>
 
         {/* Subtasks */}
@@ -420,6 +423,7 @@ export default function EditNodeModal({
                   >
                     {sub ? sub.name : `#${sid}`}
                     <button
+                      type="button"
                       onClick={() => removeSubtask(sid)}
                       title={`Remove ${sub?.name ?? sid}`}
                       style={{
@@ -444,6 +448,7 @@ export default function EditNodeModal({
           {/* Add dropdown */}
           <div style={{ position: "relative" }}>
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setAddDropdownOpen((o) => !o);
@@ -482,6 +487,7 @@ export default function EditNodeModal({
               >
                 {canAdd.map((n) => (
                   <button
+                    type="button"
                     key={n.id}
                     onClick={() => addSubtask(n.id)}
                     style={{
@@ -495,14 +501,16 @@ export default function EditNodeModal({
                       cursor: "pointer",
                       color: colors.text,
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = colors.hover)
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
+                    onMouseEnter={(
+                      e,
+                    ) => (e.currentTarget.style.background = colors.hover)}
+                    onMouseLeave={(
+                      e,
+                    ) => (e.currentTarget.style.background = "transparent")}
                   >
-                    <span style={{ fontWeight: 500 }}>#{n.id}</span>
+                    <span style={{ fontWeight: 500 }}>
+                      #{n.id}
+                    </span>
                     <span
                       style={{
                         marginLeft: 8,
@@ -516,7 +524,8 @@ export default function EditNodeModal({
               </div>
             )}
 
-            {canAdd.length === 0 && form.subtask_ids.length === 0 && (
+            {canAdd.length === 0 &&
+              form.subtask_ids.length === 0 && (
               <div
                 style={{
                   fontSize: 11,
@@ -543,6 +552,7 @@ export default function EditNodeModal({
           </span>
           <div style={{ display: "flex", gap: 8 }}>
             <button
+              type="button"
               onClick={onCancel}
               style={{
                 padding: "8px 16px",
@@ -558,6 +568,7 @@ export default function EditNodeModal({
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSave}
               style={{
                 padding: "8px 20px",
@@ -569,9 +580,9 @@ export default function EditNodeModal({
                 borderRadius: 6,
                 cursor: "pointer",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.filter = "brightness(0.85)")
-              }
+              onMouseEnter={(
+                e,
+              ) => (e.currentTarget.style.filter = "brightness(0.85)")}
               onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
             >
               Save
