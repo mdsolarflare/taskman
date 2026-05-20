@@ -86,7 +86,9 @@ export default function DeleteNodeDialog({
   }, []);
 
   const explanation = hasChildren
-    ? `Its children will be re-mapped to all of its ${parentCount > 1 ? "parents" : "parent"} to preserve the graph structure.`
+    ? `Its children will be re-mapped to all of its ${
+      parentCount > 1 ? "parents" : "parent"
+    } to preserve the graph structure.`
     : "This will permanently remove the node from the graph.";
 
   return (
@@ -186,6 +188,7 @@ export default function DeleteNodeDialog({
           }}
         >
           <button
+            type="button"
             onClick={onCancel}
             style={{
               padding: "6px 16px",
@@ -198,16 +201,17 @@ export default function DeleteNodeDialog({
               borderRadius: 4,
               cursor: "pointer",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = colors.hover)
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.background = colors.hover)}
+            onMouseLeave={(
+              e,
+            ) => (e.currentTarget.style.background = "transparent")}
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={!confirmed}
             style={{
