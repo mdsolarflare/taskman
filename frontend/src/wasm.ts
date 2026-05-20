@@ -43,7 +43,7 @@ let wasmPromise: Promise<WasmExports> | null = null;
  */
 export async function initWasm(): Promise<WasmExports> {
   if (wasmPromise !== null) {
-    return wasmPromise;
+    return await wasmPromise;
   }
 
   wasmPromise = (async () => {
@@ -67,7 +67,7 @@ export async function initWasm(): Promise<WasmExports> {
     }
   })();
 
-  return wasmPromise;
+  return await wasmPromise;
 }
 
 /**
@@ -170,8 +170,9 @@ export async function addNode(
 ): Promise<{ graph: unknown; new_id: number }> {
   const wasm = await initWasm();
   const graphJson = JSON.stringify(graph);
-  const subtaskIdsJson =
-    subtaskIds.length > 0 ? JSON.stringify(subtaskIds) : "";
+  const subtaskIdsJson = subtaskIds.length > 0
+    ? JSON.stringify(subtaskIds)
+    : "";
   const result = wasm.add_node(
     graphJson,
     BigInt(parentId),
