@@ -154,15 +154,11 @@ backend server.
 
 ### Guidance for Future Work - Agent Friendly
 
-- Always verify with grep before deleting — confirm the symbol is truly
-  unreferenced
-- Re-run the linter/test suite after every edit batch, not just at the end.
-  `deno lint && deno task test` is available for the frontend.
-  `cargo check --manifest-path <Cargo.toml location>` is available for the rust
-  ichor project.
-- We can use `deno fmt` on the frontend and we can use `cargo fmt` on the ichor directory after making changes to apply the formatter and avoid chasing weird formatting diffs while we are working.
-- Prefer fixing over silencing — remove dead code instead of adding
+- Always verify with grep before deleting — confirm the symbol is truly unreferenced.
+- Re-run the linter/test suite after every edit batch, not just at the end. `cd <root>/frontend && deno fmt && deno task lint && deno test` verifies the frontend. `cd <root>/ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
+- Prefer fixing over silencing — i.e. remove dead code instead of adding
   `// eslint-disable`
-- Don't add linter exclusions to hide issues.
+- Don't add linter exclusions.
 - Use idiomatic rust
 - Use idiomatic typescript
+- We use Deno's built in linter and eslint for the frontend project.

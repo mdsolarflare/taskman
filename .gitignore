@@ -22,3 +22,4 @@ target
 
 frontend/public/ichor_bg.wasm
 frontend/.vite/
+frontend/dist/

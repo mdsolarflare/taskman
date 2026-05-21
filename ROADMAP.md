@@ -1,14 +1,15 @@
 # Roadmap
 
 - [ ] Handle Task Completion
+- [x] Deno 2 Migration (from pnpm/nodejs)
 - [ ] Navigation Pane
 - [ ] Improve Storage Model
 - [ ] YAML Repair Tool
 - [ ] Tech Debt Review
 - [ ] Improve Default View
-- [ ] Remove NPM Dependency
-- [ ] Add Frontend Tests
-- [ ] Improve dev experience around linting
+- [x] Remove NPM Dependency
+- [x] Add Frontend Tests
+- [x] Improve dev experience around linting
 
 ## Handle Task Completion — Done vs Delete
 
@@ -84,20 +85,6 @@ architectural bloat.
 The "reset" view location isn't very good, need to figure out better node
 spacing and default views.
 
-## We can remove the npm and nodejs install dependency
-
-instead setup project coming from pnpm to install nodejs (or later deno?). this
-would allow us to skip over npm in it's entirety.
-
-https://pnpm.io/installation#on-posix-systems
-
-## add frontend tests
-
-vitest or raw nodejs? still undecided. research again.
-
 ## fact check layout.ts vs Reingold and Tillman
 
 https://williamyaoh.com/posts/2023-04-22-drawing-trees-functionally.html
-
-## fact check + doc update
-is eslint config needed? i should just embed it in the project right? a todo to learn more.

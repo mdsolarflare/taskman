@@ -34,8 +34,7 @@
         "dev": "deno run -A node_modules/.bin/vite --host",
         "build": "deno check && deno run -A node_modules/.bin/vite build",
         "lint": "deno lint && deno run -A node_modules/.bin/eslint .",
-        "preview": "deno run -A node_modules/.bin/vite preview",
-        "test": "deno test --allow-env"
+        "preview": "deno run -A node_modules/.bin/vite preview"
     },
     "dependencies": {
         "@eslint/js": "npm:@eslint/js@^10.0.1",
