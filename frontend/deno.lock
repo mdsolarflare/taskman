@@ -3,7 +3,9 @@
   "specifiers": {
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/assert@^1.0.16": "1.0.19",
-    "jsr:@std/internal@^1.0.12": "1.0.13"
+    "jsr:@std/internal@^1.0.12": "1.0.13",
+    "npm:react-dom@^19.2.5": "19.2.6_react@19.2.6",
+    "npm:react@^19.2.5": "19.2.6"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -16,9 +18,26 @@
       "integrity": "2f9546691d4ac2d32859c82dff284aaeac980ddeca38430d07941e7e288725c0"
     }
   },
+  "npm": {
+    "react-dom@19.2.6_react@19.2.6": {
+      "integrity": "sha512-0prMI+hvBbPjsWnxDLxlCGyM8PN6UuWjEUCYmZhO67xIV9Xasa/r/vDnq+Xyq4Lo27g8QSbO5YzARu0D1Sps3g==",
+      "dependencies": [
+        "react",
+        "scheduler"
+      ]
+    },
+    "react@19.2.6": {
+      "integrity": "sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q=="
+    },
+    "scheduler@0.27.0": {
+      "integrity": "sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q=="
+    }
+  },
   "workspace": {
     "dependencies": [
-      "jsr:@std/assert@^1.0.16"
+      "jsr:@std/assert@^1.0.16",
+      "npm:react-dom@^19.2.5",
+      "npm:react@^19.2.5"
     ]
   }
 }
