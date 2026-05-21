@@ -73,10 +73,6 @@ architectural bloat.
 - **Remove unused Vite template CSS** — `frontend/src/App.css` contains leftover
   `.counter`, `.hero`, `#center`, `#next-steps` classes from the Vite + React
   template. Delete or strip.
-- **Fix `// eslint-disable` in ThemeModal** —
-  `frontend/src/components/ThemeModal.tsx` has a silenced `set-state-in-effect`
-  rule. Refactor the effect to remove the need for the disable comment.
-
 - **Sample YAML hierarchy quirk** — `frontend/public/sample.yaml` node 14
   (`Implement Pan & Zoom`) lists `subtask_ids: [12]` (Integration Tests), which
   creates an unexpected cross-branch parent-child link. Verify this is
