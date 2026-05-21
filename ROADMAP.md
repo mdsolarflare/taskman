@@ -10,6 +10,8 @@
 - [x] Remove NPM Dependency
 - [x] Add Frontend Tests
 - [x] Improve dev experience around linting
+- [ ] Fact Check: Graph Algo
+- [ ] Fact Check: node_modules decomm
 
 ## Handle Task Completion — Done vs Delete
 
@@ -88,3 +90,7 @@ spacing and default views.
 ## fact check layout.ts vs Reingold and Tillman
 
 https://williamyaoh.com/posts/2023-04-22-drawing-trees-functionally.html
+
+## fat check do we need node_modules? no right
+
+frontend/node_modules` - This is a leftover from pnpm/nodejs! Deno 2 doesn't use node_modules in the same way (it uses its own cache).

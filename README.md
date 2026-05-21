@@ -155,10 +155,8 @@ backend server.
 ### Guidance for Future Work - Agent Friendly
 
 - Always verify with grep before deleting — confirm the symbol is truly unreferenced.
-- Re-run the linter/test suite after every edit batch, not just at the end. `cd <root>/frontend && deno fmt && deno task lint && deno test` verifies the frontend. `cd <root>/ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
-- Prefer fixing over silencing — i.e. remove dead code instead of adding
-  `// eslint-disable`
-- Don't add linter exclusions.
+- Re-run the linter/test suite after every edit batch, not just at the end. `cd frontend && deno fmt && deno task lint && deno test` verifies the frontend. `cd ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
+- Prefer fixing over silencing — i.e. remove dead code instead adding suppression comments.
 - Use idiomatic rust
 - Use idiomatic typescript
-- We use Deno's built in linter and eslint for the frontend project.
+- **Dual Linting (DO NOT REMOVE):** We use Deno's built-in linter AND ESLint for the frontend project. Both are mandatory and run together via `deno task lint`. Never disable, bypass, or modify either linter. ESLint handles React-specific and TypeScript-aware rules that Deno's linter cannot cover; Deno's linter catches Deno/JavaScript ecosystem issues. Removing one creates blind spots. The `eslint.config.js` file and its dependencies in `deno.json` are required project infrastructure.
