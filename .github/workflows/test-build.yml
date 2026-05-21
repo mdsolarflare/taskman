@@ -35,13 +35,18 @@ jobs:
 
       # ─── TypeScript (frontend) ────────────────────────────────────
 
-      # USE deno
-      #
-      #- name: Install frontend dependencies
-      #  run: deno install
-      #
-      #- name: Lint TypeScript
-      #  run: deno task lint
-      #
-      #- name: Build TypeScript
-      #  run: deno check
+      # Install Deno & cache remote modules automatically
+      - name: Setup Deno Environment
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x # Installs the latest stable Deno release
+          cache: true # Caches downloaded JSR/NPM packages based on your lockfile
+
+      - name: Install frontend dependencies
+        run: deno fmt --check
+
+      - name: Lint TypeScript
+        run: deno task lint
+
+      - name: Build TypeScript
+        run: deno check
