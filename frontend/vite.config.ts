@@ -1,15 +1,19 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { resolve } from "path";
-import fs from "fs";
+import { resolve } from "node:path";
+import fs from "node:fs";
 
+// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     {
       name: "copy-wasm",
       configResolved() {
-        const wasmSrc = resolve(__dirname, "../ichor/pkg/ichor_bg.wasm");
+        const wasmSrc = resolve(
+          __dirname,
+          "../ichor/pkg/ichor_bg.wasm",
+        );
         const wasmDst = resolve(__dirname, "public/ichor_bg.wasm");
         if (fs.existsSync(wasmSrc)) {
           fs.copyFileSync(wasmSrc, wasmDst);
@@ -23,6 +27,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
+      ichor: resolve(__dirname, "../ichor/pkg/ichor.js"),
     },
   },
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ColorMap, ColorVariable, ThemeId } from "../hooks/useTheme";
-import { COLOR_LABELS, COLOR_VARIABLES, THEMES } from "../hooks/useTheme";
+import type { ColorMap, ColorVariable, ThemeId } from "../hooks/useTheme.ts";
+import { COLOR_LABELS, COLOR_VARIABLES, THEMES } from "../hooks/useTheme.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,6 +56,7 @@ function ThemeCard({
 }) {
   return (
     <button
+      type="button"
       onClick={() => onSelect(theme.id)}
       style={{
         display: "flex",
@@ -97,16 +98,15 @@ function ThemeCard({
           height: 18,
           borderRadius: 4,
           border: "1px solid var(--border-color)",
-          background:
-            theme.id === "banana-crisis"
-              ? "linear-gradient(135deg, #f57f17, #ff8f00)"
-              : theme.id === "manhattan-lagoon"
-                ? "linear-gradient(135deg, #1d4ed8, #2e7d32)"
-                : theme.id === "brooding-burg"
-                  ? "linear-gradient(135deg, #ef6c7a, #e65100)"
-                  : theme.id === "carbon-noir"
-                    ? "linear-gradient(135deg, #3a3a3a, #b0b0b0)"
-                    : "linear-gradient(135deg, #ffffff, #00b0ff)",
+          background: theme.id === "banana-crisis"
+            ? "linear-gradient(135deg, #f57f17, #ff8f00)"
+            : theme.id === "manhattan-lagoon"
+            ? "linear-gradient(135deg, #1d4ed8, #2e7d32)"
+            : theme.id === "brooding-burg"
+            ? "linear-gradient(135deg, #ef6c7a, #e65100)"
+            : theme.id === "carbon-noir"
+            ? "linear-gradient(135deg, #3a3a3a, #b0b0b0)"
+            : "linear-gradient(135deg, #ffffff, #00b0ff)",
           flexShrink: 0,
         }}
       />
@@ -147,13 +147,11 @@ function ColorInput({
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <input
           type="color"
-          value={
-            variable === "--backdrop"
-              ? "#000000"
-              : /^rgba?/.test(value)
-                ? "#000000"
-                : value
-          }
+          value={variable === "--backdrop"
+            ? "#000000"
+            : /^rgba?/.test(value)
+            ? "#000000"
+            : value}
           onChange={(e) => onChange(variable, e.target.value)}
           disabled={variable === "--backdrop"}
           style={{
@@ -203,8 +201,18 @@ export default function ThemeModal({
   hasCustom,
   readCurrentColors,
 }: ThemeModalProps) {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [draftColors, setDraftColors] = useState<ColorMap>({} as ColorMap);
   const [showEditor, setShowEditor] = useState(false);
+
+  // Synchronize state inline during the render pass to avoid effect cascades
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setDraftColors(readCurrentColors());
+      setShowEditor(false);
+    }
+  }
 
   const onCloseRef = useRef(onClose);
   const onSaveRef = useRef(onSaveCustom);
@@ -219,15 +227,6 @@ export default function ThemeModal({
     readColorsRef.current = readCurrentColors;
   }, [onClose, onSaveCustom, onSwitchTheme, readCurrentColors]);
 
-  // Load current colors when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDraftColors(readCurrentColors());
-      setShowEditor(false);
-    }
-  }, [isOpen, readCurrentColors]);
-
   const handleSelectTheme = useCallback((id: ThemeId) => {
     const colors = snapshotThemeColors(id);
     setDraftColors(colors);
@@ -236,7 +235,10 @@ export default function ThemeModal({
 
   const handleSetDraftColor = useCallback(
     (variable: ColorVariable, value: string) => {
-      setDraftColors((prev) => ({ ...prev, [variable]: value }));
+      setDraftColors((prev: ColorMap) => ({
+        ...prev,
+        [variable]: value,
+      }));
     },
     [],
   );
@@ -304,6 +306,7 @@ export default function ThemeModal({
             Theme
           </h2>
           <button
+            type="button"
             onClick={handleCancel}
             style={{
               width: 28,
@@ -318,12 +321,12 @@ export default function ThemeModal({
               fontSize: 16,
               color: "var(--text-secondary)",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--bg-primary)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.background = "var(--bg-primary)")}
+            onMouseLeave={(
+              e,
+            ) => (e.currentTarget.style.background = "transparent")}
           >
             ✕
           </button>
@@ -340,7 +343,7 @@ export default function ThemeModal({
                 marginBottom: 16,
               }}
             >
-              {THEMES.map((theme) => (
+              {THEMES.map((theme: (typeof THEMES)[number]) => (
                 <ThemeCard
                   key={theme.id}
                   theme={theme}
@@ -351,6 +354,7 @@ export default function ThemeModal({
 
               {/* Custom theme option */}
               <button
+                type="button"
                 onClick={handleEditCurrent}
                 style={{
                   display: "flex",
@@ -360,18 +364,15 @@ export default function ThemeModal({
                   fontSize: 13,
                   fontFamily: "system-ui, -apple-system, sans-serif",
                   fontWeight: activeTheme === "custom" ? 600 : 400,
-                  color:
-                    activeTheme === "custom"
-                      ? "var(--accent)"
-                      : "var(--text-primary)",
-                  background:
-                    activeTheme === "custom"
-                      ? "var(--bg-tertiary, transparent)"
-                      : "transparent",
-                  border:
-                    activeTheme === "custom"
-                      ? "1.5px solid var(--accent)"
-                      : "1.5px solid transparent",
+                  color: activeTheme === "custom"
+                    ? "var(--accent)"
+                    : "var(--text-primary)",
+                  background: activeTheme === "custom"
+                    ? "var(--bg-tertiary, transparent)"
+                    : "transparent",
+                  border: activeTheme === "custom"
+                    ? "1.5px solid var(--accent)"
+                    : "1.5px solid transparent",
                   borderRadius: 8,
                   cursor: "pointer",
                   textAlign: "left",
@@ -426,6 +427,7 @@ export default function ThemeModal({
               }}
             >
               <button
+                type="button"
                 onClick={handleCancel}
                 style={{
                   padding: "8px 20px",
@@ -467,7 +469,7 @@ export default function ThemeModal({
                 marginBottom: 20,
               }}
             >
-              {COLOR_VARIABLES.map((variable) => (
+              {COLOR_VARIABLES.map((variable: ColorVariable) => (
                 <ColorInput
                   key={variable}
                   variable={variable}
@@ -487,6 +489,7 @@ export default function ThemeModal({
               }}
             >
               <button
+                type="button"
                 onClick={handleCancel}
                 style={{
                   padding: "8px 20px",
@@ -502,6 +505,7 @@ export default function ThemeModal({
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleSave}
                 style={{
                   padding: "8px 20px",

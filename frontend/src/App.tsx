@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import GraphRenderer from "./components/GraphRenderer";
-import EditNodeModal from "./components/EditNodeModal";
-import DeleteNodeDialog from "./components/DeleteNodeDialog";
-import type { Graph, GraphNode } from "./types/graph";
+import GraphRenderer from "./components/GraphRenderer.tsx";
+import EditNodeModal from "./components/EditNodeModal.tsx";
+import DeleteNodeDialog from "./components/DeleteNodeDialog.tsx";
+import type { Graph, GraphNode } from "./types/graph.ts";
 import {
   addNode,
   buildGraphFromYaml,
   deleteNode,
   saveGraphToYaml,
-} from "./wasm";
-import ThemeModal from "./components/ThemeModal";
-import { useTheme } from "./hooks/useTheme";
+} from "./wasm.ts";
+import ThemeModal from "./components/ThemeModal.tsx";
+import { useTheme } from "./hooks/useTheme.ts";
 import "./themes.css";
 
 // ---------------------------------------------------------------------------
@@ -43,6 +43,12 @@ interface FilePickerWindow {
   showSaveFilePicker(
     options?: ShowSaveFilePickerOptions,
   ): Promise<FileSystemFileHandle>;
+  showOpenFilePicker(options?: {
+    types?: Array<{
+      description: string;
+      accept: Record<string, string[]>;
+    }>;
+  }): Promise<Array<FileSystemFileHandle>>;
 }
 
 interface AppState {
@@ -113,8 +119,10 @@ function App() {
             graph: null,
             yaml: null,
             loading: false,
-            error: `Failed to load sample: ${err instanceof Error ? err.message : "Unknown error"}`,
-          }),
+            error: `Failed to load sample: ${
+              err instanceof Error ? err.message : "Unknown error"
+            }`,
+          })
         );
     }
   }, []);
@@ -153,22 +161,45 @@ function App() {
     loadYamlRef.current = loadYaml;
   }, [loadYaml]);
 
-  const handleNodeToggle = useCallback((nodeId: number, collapsed: boolean) => {
-    setState((s) => {
-      if (!s.graph) return s;
-      const nodes = s.graph.nodes.map((n) =>
-        n.id === nodeId ? { ...n, collapsed } : n,
-      );
-      return { ...s, graph: { ...s.graph, nodes } };
-    });
-  }, []);
+  // Auto-save timer for debounced saves
+  const autoSaveTimer = useRef<number | null>(null);
 
-  const handleFileOpen = async () => {
+  // Debounced auto-save to localStorage
+  useEffect(() => {
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current);
+    }
+    autoSaveTimer.current = setTimeout(() => {
+      if (state.yaml) {
+        saveWorkspace(state.yaml);
+      }
+    }, 1000) as unknown as number;
+    return () => {
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
+      }
+    };
+  }, [state.yaml]);
+
+  const handleNodeToggle = useCallback(
+    (nodeId: number, collapsed: boolean) => {
+      setState((s) => {
+        if (!s.graph) return s;
+        const nodes = s.graph.nodes.map((n: GraphNode) =>
+          n.id === nodeId ? { ...n, collapsed } : n
+        );
+        return { ...s, graph: { ...s.graph, nodes } };
+      });
+    },
+    [],
+  );
+
+  const handleFileOpen = () => {
     setMenuOpen(false);
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".yaml,.yml";
-    input.onchange = async (e) => {
+    input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const text = await file.text();
@@ -201,7 +232,9 @@ function App() {
         graph: null,
         yaml: null,
         loading: false,
-        error: `Failed to load sample: ${err instanceof Error ? err.message : "Unknown error"}`,
+        error: `Failed to load sample: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`,
       });
     }
   };
@@ -260,8 +293,8 @@ function App() {
         // Edit mode — mutate existing node in place
         newGraph = {
           ...state.graph,
-          nodes: state.graph.nodes.map((n) =>
-            n.id === updated.id ? updated : n,
+          nodes: state.graph.nodes.map((n: GraphNode) =>
+            n.id === updated.id ? updated : n
           ),
         };
       }
@@ -284,7 +317,10 @@ function App() {
   const handleNodeDeleteConfirm = useCallback(async () => {
     if (!state.graph || deletingNodeId === null) return;
     try {
-      const newGraph = (await deleteNode(state.graph, deletingNodeId)) as Graph;
+      const newGraph = (await deleteNode(
+        state.graph,
+        deletingNodeId,
+      )) as Graph;
       const yaml = await saveGraphToYaml(newGraph);
       saveWorkspace(yaml);
       setState((s) => ({ ...s, graph: newGraph, yaml }));
@@ -306,7 +342,9 @@ function App() {
     try {
       // Modern browsers: use showSaveFilePicker for native save dialog
       if ("showSaveFilePicker" in window) {
-        const handle = await (window as FilePickerWindow).showSaveFilePicker({
+        const handle = await (
+          window as unknown as FilePickerWindow
+        ).showSaveFilePicker({
           suggestedName: suggestedName || "tasks.yaml",
           types: [
             {
@@ -405,6 +443,7 @@ function App() {
         {/* Sandwich menu button */}
         <div style={{ position: "relative" }}>
           <button
+            type="button"
             onClick={() => setMenuOpen((o) => !o)}
             title="Menu"
             style={{
@@ -422,11 +461,14 @@ function App() {
               transition: "background 0.15s",
             }}
             onMouseEnter={(e) => {
-              if (!menuOpen)
+              if (!menuOpen) {
                 e.currentTarget.style.background = c["--bg-primary"];
+              }
             }}
             onMouseLeave={(e) => {
-              if (!menuOpen) e.currentTarget.style.background = "transparent";
+              if (!menuOpen) {
+                e.currentTarget.style.background = "transparent";
+              }
             }}
           >
             <svg
@@ -479,14 +521,15 @@ function App() {
                   File
                 </div>
                 <button
+                  type="button"
                   onClick={handleFileNew}
                   style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span
                     style={{
@@ -499,14 +542,15 @@ function App() {
                   New
                 </button>
                 <button
+                  type="button"
                   onClick={handleFileOpen}
                   style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span
                     style={{
@@ -519,14 +563,15 @@ function App() {
                   Open
                 </button>
                 <button
+                  type="button"
                   onClick={handleFileSaveAs}
                   style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span
                     style={{
@@ -537,6 +582,34 @@ function App() {
                     💾
                   </span>
                   Save As…
+                </button>
+                <div
+                  style={{
+                    height: 1,
+                    background: c["--border-color"],
+                    margin: "4px 0",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleLoadSample}
+                  style={menuItemStyle}
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span
+                    style={{
+                      marginRight: 10,
+                      opacity: 0.6,
+                    }}
+                  >
+                    📋
+                  </span>
+                  Load Sample
                 </button>
               </div>
               <div style={{ padding: "8px 0" }}>
@@ -553,17 +626,18 @@ function App() {
                   Theme
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setMenuOpen(false);
                     setShowThemeModal(true);
                   }}
                   style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span
                     style={{
@@ -590,17 +664,18 @@ function App() {
                   Help
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setMenuOpen(false);
                     setShowHelp(true);
                   }}
                   style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span
                     style={{
@@ -611,26 +686,6 @@ function App() {
                     ❓
                   </span>
                   About
-                </button>
-                <button
-                  onClick={handleLoadSample}
-                  style={menuItemStyle}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = c["--bg-primary"])
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
-                >
-                  <span
-                    style={{
-                      marginRight: 10,
-                      opacity: 0.6,
-                    }}
-                  >
-                    📋
-                  </span>
-                  Load Sample
                 </button>
               </div>
             </div>
@@ -666,17 +721,23 @@ function App() {
             flex: 1,
           }}
         >
-          {state.loading ? (
-            "Loading…"
-          ) : state.graph ? (
-            `${state.graph.nodes.length} nodes loaded`
-          ) : state.error ? (
-            <span style={{ color: c["--semantic-overdue"] }}>
-              Error: {state.error}
-            </span>
-          ) : (
-            "Ready"
-          )}
+          {state.loading
+            ? (
+              "Loading…"
+            )
+            : state.graph
+            ? (
+              `${state.graph.nodes.length} nodes loaded`
+            )
+            : state.error
+            ? (
+              <span style={{ color: c["--semantic-overdue"] }}>
+                Error: {state.error}
+              </span>
+            )
+            : (
+              "Ready"
+            )}
         </span>
       </header>
 
@@ -692,233 +753,243 @@ function App() {
           justifyContent: "center",
         }}
       >
-        {state.error ? (
-          // Error state
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-              padding: 32,
-              textAlign: "center",
-              maxWidth: 500,
-            }}
-          >
-            <div style={{ fontSize: 48 }}>⚠️</div>
-            <h2
-              style={{
-                fontSize: 18,
-                fontWeight: 600,
-                color: c["--text-primary"],
-              }}
-            >
-              Something went wrong
-            </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: c["--text-secondary"],
-                lineHeight: 1.6,
-              }}
-            >
-              {state.error}
-            </p>
+        {state.error
+          ? (
+            // Error state
             <div
               style={{
                 display: "flex",
-                gap: 8,
                 flexDirection: "column",
-                width: "100%",
+                alignItems: "center",
+                gap: 16,
+                padding: 32,
+                textAlign: "center",
+                maxWidth: 500,
               }}
             >
-              <button
-                onClick={handleLoadSample}
+              <div style={{ fontSize: 48 }}>⚠️</div>
+              <h2
                 style={{
-                  padding: "10px 20px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  background: c["--accent"],
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  transition: "background 0.2s",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.filter = "brightness(0.85)")
-                }
-                onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-              >
-                Try Loading Sample
-              </button>
-              <button
-                onClick={handleFileOpen}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  background: c["--bg-primary"],
+                  fontSize: 18,
+                  fontWeight: 600,
                   color: c["--text-primary"],
-                  border: `1px solid ${c["--border-color"]}`,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  transition: "background 0.2s",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = c["--border-color"])
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = c["--bg-primary"])
-                }
               >
-                Open Your File
-              </button>
+                Something went wrong
+              </h2>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: c["--text-secondary"],
+                  lineHeight: 1.6,
+                }}
+              >
+                {state.error}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexDirection: "column",
+                  width: "100%",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleLoadSample}
+                  style={{
+                    padding: "10px 20px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--accent"],
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.filter = "brightness(0.85)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+                >
+                  Try Loading Sample
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFileOpen}
+                  style={{
+                    padding: "10px 20px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--bg-primary"],
+                    color: c["--text-primary"],
+                    border: `1px solid ${c["--border-color"]}`,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--border-color"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                >
+                  Open Your File
+                </button>
+              </div>
             </div>
-          </div>
-        ) : state.graph ? (
-          <GraphRenderer
-            graph={state.graph}
-            onNodeToggle={handleNodeToggle}
-            onNodeEdit={handleNodeEdit}
-            onDeleteNode={handleNodeDeleteRequest}
-            onAddNode={handleNodeAdd}
-          />
-        ) : (
-          // Empty state
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-              padding: 32,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 64 }}>📊</div>
-            <h2
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                color: c["--text-primary"],
-              }}
-            >
-              Welcome to Taskman
-            </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: c["--text-secondary"],
-                lineHeight: 1.6,
-                maxWidth: 380,
-              }}
-            >
-              A local-first task graph engine. Visualize your tasks and their
-              dependencies as an interactive graph.
-            </p>
+          )
+          : state.graph
+          ? (
+            <GraphRenderer
+              graph={state.graph}
+              onNodeToggle={handleNodeToggle}
+              onNodeEdit={handleNodeEdit}
+              onDeleteNode={handleNodeDeleteRequest}
+              onAddNode={handleNodeAdd}
+            />
+          )
+          : (
+            // Empty state
             <div
               style={{
                 display: "flex",
-                gap: 8,
                 flexDirection: "column",
-                marginTop: 8,
-                width: "100%",
-                maxWidth: 300,
+                alignItems: "center",
+                gap: 16,
+                padding: 32,
+                textAlign: "center",
               }}
             >
-              <button
-                onClick={handleLoadSample}
+              <div style={{ fontSize: 64 }}>📊</div>
+              <h2
                 style={{
-                  padding: "12px 24px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  background: c["--accent"],
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  transition: "background 0.2s",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.filter = "brightness(0.85)")
-                }
-                onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-              >
-                📋 Load Sample
-              </button>
-              <button
-                onClick={handleFileOpen}
-                style={{
-                  padding: "12px 24px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  background: c["--bg-secondary"],
+                  fontSize: 20,
+                  fontWeight: 600,
                   color: c["--text-primary"],
-                  border: `1px solid ${c["--border-color"]}`,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = c["--bg-primary"];
-                  e.currentTarget.style.borderColor = c["--accent"];
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = c["--bg-secondary"];
-                  e.currentTarget.style.borderColor = c["--border-color"];
                 }}
               >
-                📂 Open YAML File
-              </button>
-              <button
-                onClick={handleFileNew}
+                Welcome to Taskman
+              </h2>
+              <p
                 style={{
-                  padding: "12px 24px",
                   fontSize: 14,
-                  fontWeight: 500,
-                  background: c["--bg-secondary"],
-                  color: c["--text-primary"],
-                  border: `1px solid ${c["--border-color"]}`,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = c["--bg-primary"];
-                  e.currentTarget.style.borderColor = c["--accent"];
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = c["--bg-secondary"];
-                  e.currentTarget.style.borderColor = c["--border-color"];
+                  color: c["--text-secondary"],
+                  lineHeight: 1.6,
+                  maxWidth: 380,
                 }}
               >
-                📄 Start Fresh
-              </button>
-            </div>
-            <div
-              style={{
-                marginTop: 16,
-                fontSize: 12,
-                color: c["--text-secondary"],
-              }}
-            >
-              <button
-                onClick={() => setShowHelp(true)}
+                A local-first task graph engine. Visualize your tasks and their
+                dependencies as an interactive graph.
+              </p>
+              <div
                 style={{
-                  background: "none",
-                  border: "none",
-                  color: c["--accent"],
-                  cursor: "pointer",
-                  textDecoration: "underline",
+                  display: "flex",
+                  gap: 8,
+                  flexDirection: "column",
+                  marginTop: 8,
+                  width: "100%",
+                  maxWidth: 300,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleLoadSample}
+                  style={{
+                    padding: "12px 24px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--accent"],
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.filter = "brightness(0.85)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+                >
+                  📋 Load Sample
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFileOpen}
+                  style={{
+                    padding: "12px 24px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--bg-secondary"],
+                    color: c["--text-primary"],
+                    border: `1px solid ${c["--border-color"]}`,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = c["--bg-primary"];
+                    e.currentTarget.style.borderColor = c["--accent"];
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = c["--bg-secondary"];
+                    e.currentTarget.style.borderColor = c["--border-color"];
+                  }}
+                >
+                  📂 Open YAML File
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFileNew}
+                  style={{
+                    padding: "12px 24px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--bg-secondary"],
+                    color: c["--text-primary"],
+                    border: `1px solid ${c["--border-color"]}`,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = c["--bg-primary"];
+                    e.currentTarget.style.borderColor = c["--accent"];
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = c["--bg-secondary"];
+                    e.currentTarget.style.borderColor = c["--border-color"];
+                  }}
+                >
+                  📄 Start Fresh
+                </button>
+              </div>
+              <div
+                style={{
+                  marginTop: 16,
                   fontSize: 12,
+                  color: c["--text-secondary"],
                 }}
               >
-                Learn more
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowHelp(true)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: c["--accent"],
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    fontSize: 12,
+                  }}
+                >
+                  Learn more
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Loading overlay */}
         {state.loading && (
@@ -1019,6 +1090,7 @@ function App() {
               }}
             >
               <button
+                type="button"
                 onClick={handleDismissHelp}
                 style={{
                   padding: "8px 20px",
@@ -1041,19 +1113,18 @@ function App() {
       {/* ─── Edit/Create Node Modal ─── */}
       {editingNodeId !== null && state.graph && (
         <EditNodeModal
-          node={
-            isCreating
-              ? {
-                  id: 0,
-                  name: "",
-                  details: "",
-                  deadline: "",
-                  important: false,
-                  subtask_ids: [],
-                }
-              : (state.graph.nodes.find((n) => n.id === editingNodeId) ??
-                state.graph.nodes[0])
-          }
+          node={isCreating
+            ? {
+              id: 0,
+              name: "",
+              details: "",
+              deadline: "",
+              important: false,
+              subtask_ids: [],
+            }
+            : (state.graph.nodes.find(
+              (n: GraphNode) => n.id === editingNodeId,
+            ) ?? state.graph.nodes[0])}
           allNodes={state.graph.nodes}
           onSave={handleNodeSave}
           onCancel={handleNodeCancelEdit}
@@ -1064,17 +1135,15 @@ function App() {
       {/* ─── Delete Node Dialog ─── */}
       {deletingNodeId !== null && state.graph && (
         <DeleteNodeDialog
-          nodeName={
-            state.graph.nodes.find((n) => n.id === deletingNodeId)?.name ?? ""
-          }
-          hasChildren={
-            (state.graph.nodes.find((n) => n.id === deletingNodeId)?.subtask_ids
-              ?.length ?? 0) > 0
-          }
-          parentCount={
-            state.graph.nodes.find((n) => n.id === deletingNodeId)?.parent_ids
-              ?.length ?? 0
-          }
+          nodeName={state.graph.nodes.find(
+            (n: GraphNode) => n.id === deletingNodeId,
+          )?.name ?? ""}
+          hasChildren={(state.graph.nodes.find(
+            (n: GraphNode) => n.id === deletingNodeId,
+          )?.subtask_ids?.length ?? 0) > 0}
+          parentCount={state.graph.nodes.find(
+            (n: GraphNode) => n.id === deletingNodeId,
+          )?.parent_ids?.length ?? 0}
           onConfirm={handleNodeDeleteConfirm}
           onCancel={handleNodeDeleteCancel}
         />
@@ -1092,11 +1161,13 @@ function App() {
       />
 
       {/* Spinner animation */}
-      <style>{`
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
+      <style>
+        {`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}
+      </style>
     </div>
   );
 }

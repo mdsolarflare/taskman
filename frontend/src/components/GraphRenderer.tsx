@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Graph, GraphNode } from "../types/graph";
-import { LayoutEngine, getLayoutBounds } from "../engine/layout";
+import type { Graph, GraphNode } from "../types/graph.ts";
+import { getLayoutBounds, LayoutEngine } from "../engine/layout.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -202,7 +202,9 @@ export default function GraphRenderer({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't interfere with typing in inputs
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (tag === "input" || tag === "textarea" || tag === "select") {
+        return;
+      }
 
       if (
         (e.key === "Backspace" || e.key === "Delete") &&
@@ -217,17 +219,15 @@ export default function GraphRenderer({
       if (e.key === "+" && selectedNodeId !== null && onAddNode) {
         e.preventDefault();
         onAddNode(selectedNodeId);
-      }
-
-      // "=" key triggers edit node (only when node selected)
+      } // "=" key triggers edit node (only when node selected)
       else if (e.key === "=" && selectedNodeId !== null && onNodeEdit) {
         e.preventDefault();
         onNodeEdit(selectedNodeId);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, [selectedNodeId, onDeleteNode, onAddNode, onNodeEdit]);
 
   // -----------------------------------------------------------------------
@@ -428,6 +428,7 @@ export default function GraphRenderer({
       >
         {/* Zoom controls */}
         <button
+          type="button"
           onClick={handleZoomIn}
           title="Zoom In"
           style={{
@@ -440,12 +441,12 @@ export default function GraphRenderer({
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = colors.toolbarHover)
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "transparent")
-          }
+          onMouseEnter={(
+            e,
+          ) => (e.currentTarget.style.background = colors.toolbarHover)}
+          onMouseLeave={(
+            e,
+          ) => (e.currentTarget.style.background = "transparent")}
         >
           +
         </button>
@@ -461,6 +462,7 @@ export default function GraphRenderer({
           {Math.round(viewport.zoom * 100)}%
         </span>
         <button
+          type="button"
           onClick={handleZoomOut}
           title="Zoom Out"
           style={{
@@ -473,12 +475,12 @@ export default function GraphRenderer({
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = colors.toolbarHover)
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "transparent")
-          }
+          onMouseEnter={(
+            e,
+          ) => (e.currentTarget.style.background = colors.toolbarHover)}
+          onMouseLeave={(
+            e,
+          ) => (e.currentTarget.style.background = "transparent")}
         >
           −
         </button>
@@ -513,6 +515,7 @@ export default function GraphRenderer({
         />
 
         <button
+          type="button"
           onClick={handleResetView}
           title="Reset View"
           style={{
@@ -525,12 +528,12 @@ export default function GraphRenderer({
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = colors.toolbarHover)
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "transparent")
-          }
+          onMouseEnter={(
+            e,
+          ) => (e.currentTarget.style.background = colors.toolbarHover)}
+          onMouseLeave={(
+            e,
+          ) => (e.currentTarget.style.background = "transparent")}
         >
           Reset
         </button>
@@ -581,13 +584,29 @@ export default function GraphRenderer({
           >
             <polygon points="0 0, 8 3, 0 6" fill={colors.edge} />
           </marker>
-          <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.08" />
+          <filter
+            id="shadow"
+            x="-10%"
+            y="-10%"
+            width="120%"
+            height="120%"
+          >
+            <feDropShadow
+              dx="0"
+              dy="1"
+              stdDeviation="2"
+              floodOpacity="0.08"
+            />
           </filter>
         </defs>
 
         {/* Grid pattern */}
-        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+        <pattern
+          id="grid"
+          width="20"
+          height="20"
+          patternUnits="userSpaceOnUse"
+        >
           <circle cx="10" cy="10" r="0.5" fill={colors.grid} />
         </pattern>
         <rect
@@ -781,8 +800,16 @@ export default function GraphRenderer({
 
                 {/* Important indicator */}
                 {node.important && (
-                  <g transform={`translate(${NODE_WIDTH - 26}, ${nameY - 4})`}>
-                    <circle cx={5} cy={5} r={4} fill="#ffb300" opacity={0.8} />
+                  <g
+                    transform={`translate(${NODE_WIDTH - 26}, ${nameY - 4})`}
+                  >
+                    <circle
+                      cx={5}
+                      cy={5}
+                      r={4}
+                      fill="#ffb300"
+                      opacity={0.8}
+                    />
                   </g>
                 )}
               </g>
@@ -821,6 +848,7 @@ export default function GraphRenderer({
         )}
         {selectedNodeId !== null && onNodeEdit && (
           <button
+            type="button"
             onClick={() => onNodeEdit(selectedNodeId!)}
             title="Edit node"
             style={{
@@ -835,9 +863,9 @@ export default function GraphRenderer({
               cursor: "pointer",
               transition: "filter 0.2s",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.filter = "brightness(0.85)")
-            }
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
             onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
           >
             ✎ Edit
@@ -845,6 +873,7 @@ export default function GraphRenderer({
         )}
         {onAddNode && (
           <button
+            type="button"
             onClick={() => onAddNode?.(selectedNodeId ?? -1)}
             title="Add node"
             style={{
@@ -859,9 +888,9 @@ export default function GraphRenderer({
               cursor: "pointer",
               transition: "filter 0.2s",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.filter = "brightness(0.85)")
-            }
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
             onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
           >
             ＋ Add
@@ -869,6 +898,7 @@ export default function GraphRenderer({
         )}
         {selectedNodeId !== null && onDeleteNode && (
           <button
+            type="button"
             onClick={() => onDeleteNode(selectedNodeId!)}
             title="Delete node (roots cannot be deleted)"
             style={{
@@ -884,9 +914,9 @@ export default function GraphRenderer({
               cursor: "pointer",
               transition: "filter 0.2s",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.filter = "brightness(0.85)")
-            }
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
             onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
           >
             🗑 Delete

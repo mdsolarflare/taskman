@@ -35,24 +35,18 @@ jobs:
 
       # ─── TypeScript (frontend) ────────────────────────────────────
 
-      - uses: pnpm/action-setup@v6
-        name: Install pnpm
+      # Install Deno & cache remote modules automatically
+      - name: Setup Deno Environment
+        uses: denoland/setup-deno@v2
         with:
-          version: latest
-          cache: true
-          cache_dependency_path: frontend/pnpm-lock.yaml
+          deno-version: v2.x # Installs the latest stable Deno release
+          cache: true # Caches downloaded JSR/NPM packages based on your lockfile
 
-      - name: Install frontend dependencies
-        run: pnpm --dir frontend install
+      - name: Verify formatting and styles
+        run: deno fmt --check frontend/
 
       - name: Lint TypeScript
-        run: pnpm --dir frontend lint
+        run: deno task --config frontend/deno.json lint
 
       - name: Build TypeScript
-        run: pnpm --dir frontend build
-
-  # TODO: Step 9 — Test TypeScript
-  # Once frontend tests are implemented, uncomment the following:
-  #
-  # - name: Test TypeScript
-  #   run: pnpm test --dir frontend
+        run: deno check --config frontend/deno.json

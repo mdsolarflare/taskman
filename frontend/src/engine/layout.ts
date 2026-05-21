@@ -21,8 +21,8 @@
  * no magic multipliers needed.
  */
 
-import type { Graph, GraphNode, LayoutConfig } from "../types/graph";
-import { DEFAULT_LAYOUT } from "../types/graph";
+import type { Graph, GraphNode, LayoutConfig } from "../types/graph.ts";
+import { DEFAULT_LAYOUT } from "../types/graph.ts";
 
 // --------------------------------------------------------------------------
 // Constants
@@ -147,7 +147,9 @@ export class LayoutEngine {
       const node = this.nodeMap.get(nodeId);
       if (!node) continue;
       if (!node.subtask_ids || node.subtask_ids.length === 0) continue;
-      if (node.collapsed === true || node.collapsed === undefined) continue;
+      if (node.collapsed === true || node.collapsed === undefined) {
+        continue;
+      }
       for (const childId of node.subtask_ids) {
         if (this.rt.has(childId)) {
           edges.push({ from: nodeId, to: childId });
@@ -200,10 +202,10 @@ export class LayoutEngine {
     // 3. Center parent on its children (after shifting — positions are final)
     const first = children[0];
     const last = children[children.length - 1];
-    const firstCenter =
-      this.rt.get(first.id)!.prelim + this.estimateNodeHeight(first) / 2;
-    const lastCenter =
-      this.rt.get(last.id)!.prelim + this.estimateNodeHeight(last) / 2;
+    const firstCenter = this.rt.get(first.id)!.prelim +
+      this.estimateNodeHeight(first) / 2;
+    const lastCenter = this.rt.get(last.id)!.prelim +
+      this.estimateNodeHeight(last) / 2;
 
     this.rt.get(nodeId)!.prelim = (firstCenter + lastCenter) / 2;
   }
@@ -253,10 +255,10 @@ export class LayoutEngine {
 
     const first = children[0];
     const last = children[children.length - 1];
-    const firstCenter =
-      this.rt.get(first.id)!.prelim + this.estimateNodeHeight(first) / 2;
-    const lastCenter =
-      this.rt.get(last.id)!.prelim + this.estimateNodeHeight(last) / 2;
+    const firstCenter = this.rt.get(first.id)!.prelim +
+      this.estimateNodeHeight(first) / 2;
+    const lastCenter = this.rt.get(last.id)!.prelim +
+      this.estimateNodeHeight(last) / 2;
 
     this.rt.get(nodeId)!.prelim = (firstCenter + lastCenter) / 2;
   }
@@ -326,9 +328,11 @@ export class LayoutEngine {
     const parentDepth = this.rt.get(nodeId)?.depth ?? 0;
 
     return node.subtask_ids
-      .map((id) => this.nodeMap.get(id))
-      .filter((n): n is GraphNode => n !== undefined)
-      .filter((child) => {
+      .map((id: number) => this.nodeMap.get(id))
+      .filter(
+        (n: GraphNode | undefined): n is GraphNode => n !== undefined,
+      )
+      .filter((child: GraphNode) => {
         // If child hasn't been visited yet, it's a forward edge
         if (!this.rt.has(child.id)) return true;
         // If child has a deeper depth, it's a forward edge
