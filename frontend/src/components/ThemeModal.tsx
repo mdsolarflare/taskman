@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ColorMap, ColorVariable, ThemeId } from "../hooks/useTheme.ts";
 import { COLOR_LABELS, COLOR_VARIABLES, THEMES } from "../hooks/useTheme.ts";
 
@@ -207,8 +201,18 @@ export default function ThemeModal({
   hasCustom,
   readCurrentColors,
 }: ThemeModalProps) {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [draftColors, setDraftColors] = useState<ColorMap>({} as ColorMap);
   const [showEditor, setShowEditor] = useState(false);
+
+  // Synchronize state inline during the render pass to avoid effect cascades
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setDraftColors(readCurrentColors());
+      setShowEditor(false);
+    }
+  }
 
   const onCloseRef = useRef(onClose);
   const onSaveRef = useRef(onSaveCustom);
@@ -222,15 +226,6 @@ export default function ThemeModal({
     onSwitchRef.current = onSwitchTheme;
     readColorsRef.current = readCurrentColors;
   }, [onClose, onSaveCustom, onSwitchTheme, readCurrentColors]);
-
-  // Load current colors when modal opens (useLayoutEffect to avoid
-  // cascading renders — this is a visual update tied to a DOM change)
-  useLayoutEffect(() => {
-    if (isOpen) {
-      setDraftColors(readCurrentColors());
-      setShowEditor(false);
-    }
-  }, [isOpen, readCurrentColors]);
 
   const handleSelectTheme = useCallback((id: ThemeId) => {
     const colors = snapshotThemeColors(id);
