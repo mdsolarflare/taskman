@@ -21,3 +21,4 @@ target
 .idea/
 
 frontend/public/ichor_bg.wasm
+frontend/.vite/
