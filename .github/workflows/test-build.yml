@@ -42,11 +42,11 @@ jobs:
           deno-version: v2.x # Installs the latest stable Deno release
           cache: true # Caches downloaded JSR/NPM packages based on your lockfile
 
-      - name: Install frontend dependencies
-        run: deno fmt --check
+      - name: Verify formatting and styles
+        run: deno fmt --check frontend/
 
       - name: Lint TypeScript
-        run: deno task lint
+        run: deno task --config frontend/deno.json lint
 
       - name: Build TypeScript
-        run: deno check
+        run: deno check --config frontend/deno.json
