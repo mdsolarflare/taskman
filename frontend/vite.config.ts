@@ -1,6 +1,4 @@
-// @ts-types="npm:vite@^8.0.10"
 import { defineConfig } from "vite";
-// @ts-types="npm:@vitejs/plugin-react@^6.0.1"
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import fs from "node:fs";
