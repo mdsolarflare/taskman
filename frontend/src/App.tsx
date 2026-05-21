@@ -583,36 +583,13 @@ function App() {
                   </span>
                   Save As…
                 </button>
-                <div
-                  style={{
-                    height: 1,
-                    background: c["--border-color"],
-                    margin: "4px 0",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
-                  style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <span
-                    style={{
-                      marginRight: 10,
-                      opacity: 0.6,
-                    }}
-                  >
-                    📋
-                  </span>
-                  Load Sample
-                </button>
               </div>
-              <div style={{ padding: "8px 0" }}>
+              <div
+                style={{
+                  padding: "8px 0",
+                  borderBottom: `1px solid ${c["--border-color"]}`,
+                }}
+              >
                 <div
                   style={{
                     padding: "4px 12px 6px",
@@ -686,6 +663,27 @@ function App() {
                     ❓
                   </span>
                   About
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLoadSample}
+                  style={menuItemStyle}
+                  onMouseEnter={(
+                    e,
+                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  onMouseLeave={(
+                    e,
+                  ) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span
+                    style={{
+                      marginRight: 10,
+                      opacity: 0.6,
+                    }}
+                  >
+                    📋
+                  </span>
+                  Load Sample
                 </button>
               </div>
             </div>
