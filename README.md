@@ -12,8 +12,7 @@ browser, ensuring near-native performance and total data ownership.
 
 ## 🏗️ Architectural Overview
 
-This project follows a module structure, separating the "Brain" (computation)
-from the "Face" (interface).
+The project is broken into modules
 
 - **The Brain (`/ichor`):** Written in **Rust**. Handles YAML parsing, graph
   theory calculations, and data processing. Compiled to WASM for browser
@@ -28,8 +27,7 @@ Our key design imperatives:
 
 - As much idomatic rust as possible
 - As simple as possible
-- As few dependencies as possible, currently rust, typescript, deno, vite, and
-  react. If opportunities arise to aim lower, I will.
+- As few dependencies as possible, currently rust, typescript, deno, vite, and react. If opportunities arise to aim lower, I will.
 - Minimal design, highly opinionated styling
 
 ## ✨ Key Features
@@ -162,10 +160,9 @@ backend server.
   `deno lint && deno task test` is available for the frontend.
   `cargo check --manifest-path <Cargo.toml location>` is available for the rust
   ichor project.
-- We can use `deno fmt` on the frontend and we can use `cargo fmt` on the ichor
-  directory after making changes to apply the formatter and avoid chasing weird
-  formatting diffs while we are working.
+- We can use `deno fmt` on the frontend and we can use `cargo fmt` on the ichor directory after making changes to apply the formatter and avoid chasing weird formatting diffs while we are working.
 - Prefer fixing over silencing — remove dead code instead of adding
   `// eslint-disable`
+- Don't add linter exclusions to hide issues.
 - Use idiomatic rust
 - Use idiomatic typescript
