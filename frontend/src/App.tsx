@@ -850,142 +850,17 @@ function App() {
             />
           )
           : (
-            // Empty state
+            // Empty state — shown briefly on mount before auto-load, or after "New"
             <div
               style={{
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                gap: 16,
-                padding: 32,
-                textAlign: "center",
+                justifyContent: "center",
+                color: c["--text-secondary"],
+                fontSize: 13,
               }}
             >
-              <div style={{ fontSize: 64 }}>📊</div>
-              <h2
-                style={{
-                  fontSize: 20,
-                  fontWeight: 600,
-                  color: c["--text-primary"],
-                }}
-              >
-                Welcome to Taskman
-              </h2>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: c["--text-secondary"],
-                  lineHeight: 1.6,
-                  maxWidth: 380,
-                }}
-              >
-                A local-first task graph engine. Visualize your tasks and their
-                dependencies as an interactive graph.
-              </p>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexDirection: "column",
-                  marginTop: 8,
-                  width: "100%",
-                  maxWidth: 300,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
-                  style={{
-                    padding: "12px 24px",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    background: c["--accent"],
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    transition: "background 0.2s",
-                  }}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.filter = "brightness(0.85)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-                >
-                  📋 Load Sample
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFileOpen}
-                  style={{
-                    padding: "12px 24px",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    background: c["--bg-secondary"],
-                    color: c["--text-primary"],
-                    border: `1px solid ${c["--border-color"]}`,
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = c["--bg-primary"];
-                    e.currentTarget.style.borderColor = c["--accent"];
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = c["--bg-secondary"];
-                    e.currentTarget.style.borderColor = c["--border-color"];
-                  }}
-                >
-                  📂 Open YAML File
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFileNew}
-                  style={{
-                    padding: "12px 24px",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    background: c["--bg-secondary"],
-                    color: c["--text-primary"],
-                    border: `1px solid ${c["--border-color"]}`,
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = c["--bg-primary"];
-                    e.currentTarget.style.borderColor = c["--accent"];
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = c["--bg-secondary"];
-                    e.currentTarget.style.borderColor = c["--border-color"];
-                  }}
-                >
-                  📄 Start Fresh
-                </button>
-              </div>
-              <div
-                style={{
-                  marginTop: 16,
-                  fontSize: 12,
-                  color: c["--text-secondary"],
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setShowHelp(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: c["--accent"],
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    fontSize: 12,
-                  }}
-                >
-                  Learn more
-                </button>
-              </div>
+              No graph loaded
             </div>
           )}
 
