@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Graph, GraphNode } from "../types/graph.ts";
 import { getLayoutBounds, LayoutEngine } from "../engine/layout.ts";
 
@@ -185,7 +185,10 @@ export default function GraphRenderer({
     [externalSelectedNodeId, onNodeSelect, setInternalSelectedNodeId],
   );
   // Compute layout once when graph changes
-  const layout = !graph ? null : computeLayout(graph);
+  const layout = useMemo(
+    () => (!graph ? null : computeLayout(graph)),
+    [graph],
+  );
 
   // Respond to external center request (e.g. from navigation panel)
   useEffect(() => {

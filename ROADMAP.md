@@ -3,6 +3,8 @@
 - [ ] Handle Task Completion
 - [x] Deno 2 Migration (from pnpm/nodejs)
 - [ ] Navigation Pane
+  - [x] Implement Navigation Pane
+  - [ ] Show Child Nesting in Navigation Pane
 - [ ] Improve Storage Model
 - [ ] YAML Repair Tool
 - [ ] Tech Debt Review
@@ -40,6 +42,11 @@ The navigation pane will allow you to three views
    worked
 2. all tasks marked important
 3. all tasks near deadline (user configurable but defaults to 14 days)
+
+Still needed:
+- Improve visual elements, slight misalignments, etc
+- Add child nesting visually
+- Missing near deadline
 
 ## Improve the storage model
 
