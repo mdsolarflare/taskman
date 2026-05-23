@@ -10,6 +10,7 @@ import {
   saveGraphToYaml,
 } from "./wasm.ts";
 import ThemeModal from "./components/ThemeModal.tsx";
+import NavigationPanel from "./components/NavigationPanel.tsx";
 import { useTheme } from "./hooks/useTheme.ts";
 import "./themes.css";
 
@@ -97,6 +98,11 @@ function App() {
   const [addParentId, setAddParentId] = useState<number>(-1); // -1 = root node
   const [deletingNodeId, setDeletingNodeId] = useState<number | null>(null);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
+  const [navOpen, setNavOpen] = useState(true);
+  const [centerTargetNodeId, setCenterTargetNodeId] = useState<number | null>(
+    null,
+  );
 
   const theme = useTheme();
 
@@ -180,6 +186,17 @@ function App() {
       }
     };
   }, [state.yaml]);
+
+  // Handle node selection from navigation panel (select + center)
+  const handleNavNodeSelect = useCallback((nodeId: number) => {
+    setSelectedNodeId(nodeId);
+    setCenterTargetNodeId(nodeId);
+  }, []);
+
+  // Handle node selection from graph view
+  const handleGraphNodeSelect = useCallback((nodeId: number | null) => {
+    setSelectedNodeId(nodeId);
+  }, []);
 
   const handleNodeToggle = useCallback(
     (nodeId: number, collapsed: boolean) => {
@@ -737,176 +754,248 @@ function App() {
               "Ready"
             )}
         </span>
+
+        {/* Nav panel toggle - right aligned */}
+        <button
+          type="button"
+          onClick={() => setNavOpen((o) => !o)}
+          title={navOpen ? "Close Navigation" : "Open Navigation"}
+          style={{
+            width: 32,
+            height: 32,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "transparent",
+            border: "none",
+            borderRadius: 6,
+            cursor: "pointer",
+            fontSize: 16,
+            color: c["--text-primary"],
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = c["--bg-primary"];
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="1" y="1" width="14" height="14" rx="2" />
+            <line x1="9" y1="1" x2="9" y2="15" />
+            <line x1="12" y1="5" x2="14" y2="5" />
+            <line x1="12" y1="8" x2="14" y2="8" />
+            <line x1="12" y1="11" x2="14" y2="11" />
+          </svg>
+        </button>
       </header>
 
-      {/* ─── Main Graph Canvas ─── */}
-      <main
+      {/* ─── Main Content Area (Graph + Navigation) ─── */}
+      <div
         style={{
           flex: 1,
-          position: "relative",
-          overflow: "hidden",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          overflow: "hidden",
+          position: "relative",
         }}
       >
-        {state.error
-          ? (
-            // Error state
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 16,
-                padding: 32,
-                textAlign: "center",
-                maxWidth: 500,
-              }}
-            >
-              <div style={{ fontSize: 48 }}>⚠️</div>
-              <h2
-                style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: c["--text-primary"],
-                }}
-              >
-                Something went wrong
-              </h2>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: c["--text-secondary"],
-                  lineHeight: 1.6,
-                }}
-              >
-                {state.error}
-              </p>
+        {/* Graph Canvas */}
+        <main
+          style={{
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 0,
+          }}
+        >
+          {state.error
+            ? (
+              // Error state
               <div
                 style={{
                   display: "flex",
-                  gap: 8,
                   flexDirection: "column",
-                  width: "100%",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: 32,
+                  textAlign: "center",
+                  maxWidth: 500,
                 }}
               >
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
+                <div style={{ fontSize: 48 }}>⚠️</div>
+                <h2
                   style={{
-                    padding: "10px 20px",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    background: c["--accent"],
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    transition: "background 0.2s",
-                  }}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.filter = "brightness(0.85)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-                >
-                  Try Loading Sample
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFileOpen}
-                  style={{
-                    padding: "10px 20px",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    background: c["--bg-primary"],
+                    fontSize: 18,
+                    fontWeight: 600,
                     color: c["--text-primary"],
-                    border: `1px solid ${c["--border-color"]}`,
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    transition: "background 0.2s",
                   }}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--border-color"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
                 >
-                  Open Your File
-                </button>
+                  Something went wrong
+                </h2>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: c["--text-secondary"],
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {state.error}
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexDirection: "column",
+                    width: "100%",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={handleLoadSample}
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      background: c["--accent"],
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(
+                      e,
+                    ) => (e.currentTarget.style.filter = "brightness(0.85)")}
+                    onMouseLeave={(
+                      e,
+                    ) => (e.currentTarget.style.filter = "none")}
+                  >
+                    Try Loading Sample
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFileOpen}
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      background: c["--bg-primary"],
+                      color: c["--text-primary"],
+                      border: `1px solid ${c["--border-color"]}`,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(
+                      e,
+                    ) => (e.currentTarget.style.background =
+                      c["--border-color"])}
+                    onMouseLeave={(
+                      e,
+                    ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                  >
+                    Open Your File
+                  </button>
+                </div>
               </div>
-            </div>
-          )
-          : state.graph
-          ? (
-            <GraphRenderer
-              graph={state.graph}
-              onNodeToggle={handleNodeToggle}
-              onNodeEdit={handleNodeEdit}
-              onDeleteNode={handleNodeDeleteRequest}
-              onAddNode={handleNodeAdd}
-            />
-          )
-          : (
-            // Empty state — shown briefly on mount before auto-load, or after "New"
+            )
+            : state.graph
+            ? (
+              <GraphRenderer
+                graph={state.graph}
+                onNodeToggle={handleNodeToggle}
+                onNodeEdit={handleNodeEdit}
+                onDeleteNode={handleNodeDeleteRequest}
+                onAddNode={handleNodeAdd}
+                selectedNodeId={selectedNodeId}
+                onNodeSelect={handleGraphNodeSelect}
+                centerTargetNodeId={centerTargetNodeId}
+              />
+            )
+            : (
+              // Empty state — shown briefly on mount before auto-load, or after "New"
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: c["--text-secondary"],
+                  fontSize: 13,
+                }}
+              >
+                No graph loaded
+              </div>
+            )}
+
+          {/* Loading overlay */}
+          {state.loading && (
             <div
               style={{
+                position: "absolute",
+                inset: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: c["--text-secondary"],
-                fontSize: 13,
-              }}
-            >
-              No graph loaded
-            </div>
-          )}
-
-        {/* Loading overlay */}
-        {state.loading && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: c["--backdrop"],
-              zIndex: 30,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 12,
+                background: c["--backdrop"],
+                zIndex: 30,
               }}
             >
               <div
                 style={{
-                  width: 32,
-                  height: 32,
-                  border: `3px solid ${c["--border-color"]}`,
-                  borderTopColor: c["--accent"],
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 13,
-                  color: c["--text-secondary"],
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 12,
                 }}
               >
-                Parsing YAML…
-              </span>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    border: `3px solid ${c["--border-color"]}`,
+                    borderTopColor: c["--accent"],
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: c["--text-secondary"],
+                  }}
+                >
+                  Parsing YAML…
+                </span>
+              </div>
             </div>
-          </div>
+          )}
+        </main>
+
+        {/* Right Navigation Panel */}
+        {state.graph && (
+          <NavigationPanel
+            nodes={state.graph.nodes}
+            selectedNodeId={selectedNodeId}
+            onNodeSelect={handleNavNodeSelect}
+            isOpen={navOpen}
+            colors={c}
+          />
         )}
-      </main>
+      </div>
 
       {/* ─── About / Help Modal ─── */}
       {showHelp && (
