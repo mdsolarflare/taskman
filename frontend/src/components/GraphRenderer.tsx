@@ -87,6 +87,9 @@ interface GraphRendererProps {
   onNodeEdit?: (nodeId: number) => void;
   onDeleteNode?: (nodeId: number) => void;
   onAddNode?: (parentId: number) => void;
+  selectedNodeId?: number | null;
+  onNodeSelect?: (nodeId: number | null) => void;
+  centerTargetNodeId?: number | null;
 }
 
 interface Viewport {
@@ -158,12 +161,52 @@ export default function GraphRenderer({
   onNodeEdit,
   onDeleteNode,
   onAddNode,
+  selectedNodeId: externalSelectedNodeId,
+  onNodeSelect,
+  centerTargetNodeId,
 }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const [isDragging, setIsDragging] = useState(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
+  // Use external selectedNodeId if provided, otherwise fall back to internal state
+  const [internalSelectedNodeId, setInternalSelectedNodeId] = useState<
+    number | null
+  >(null);
+  const selectedNodeId = externalSelectedNodeId ?? internalSelectedNodeId;
+  const setSelectedNodeId = useCallback(
+    (id: number | null) => {
+      if (externalSelectedNodeId !== undefined) {
+        onNodeSelect?.(id);
+      } else {
+        setInternalSelectedNodeId(id);
+      }
+    },
+    [externalSelectedNodeId, onNodeSelect, setInternalSelectedNodeId],
+  );
+  // Compute layout once when graph changes
+  const layout = useMemo(
+    () => (!graph ? null : computeLayout(graph)),
+    [graph],
+  );
+
+  // Respond to external center request (e.g. from navigation panel)
+  useEffect(() => {
+    if (centerTargetNodeId != null && svgRef.current && layout) {
+      const nodePos = layout.nodes.get(centerTargetNodeId);
+      if (nodePos) {
+        const rect = svgRef.current.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        setViewport((v) => ({
+          x: cx - (nodePos.x + NODE_WIDTH / 2) * v.zoom,
+          y: cy - (nodePos.y + nodePos.height / 2) * v.zoom,
+          zoom: v.zoom,
+        }));
+      }
+    }
+  }, [centerTargetNodeId, layout]);
+
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [viewportStart, setViewportStart] = useState({ x: 0, y: 0 });
   const [colors, setColors] = useState(readGraphColors);
@@ -178,12 +221,6 @@ export default function GraphRenderer({
     });
     return () => observer.disconnect();
   }, []);
-
-  // Compute layout once when graph changes
-  const layout = useMemo(() => {
-    if (!graph) return null;
-    return computeLayout(graph);
-  }, [graph]);
 
   // Center viewport on root node at first load only
   useEffect(() => {
@@ -296,7 +333,7 @@ export default function GraphRenderer({
         setSelectedNodeId(nodeId);
       }
     },
-    [selectedNodeId],
+    [selectedNodeId, setSelectedNodeId],
   );
 
   const handleNodeDoubleClick = useCallback(
