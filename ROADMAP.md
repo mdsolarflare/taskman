@@ -8,7 +8,8 @@
 - [ ] Improve Storage Model
 - [ ] YAML Repair Tool
 - [ ] Tech Debt Review
-- [?] Improve Default View
+- [ ] Merge bottom and top menu bar to the top
+- [x] Improve Default View
 - [x] Remove NPM Dependency
 - [x] Add Frontend Tests
 - [x] Improve dev experience around linting
@@ -72,11 +73,6 @@ architectural bloat.
   (`Implement Pan & Zoom`) lists `subtask_ids: [12]` (Integration Tests), which
   creates an unexpected cross-branch parent-child link. Verify this is
   intentional or fix. #note its intentional.
-
-## think about some of the default views
-
-The "reset" view location isn't very good, need to figure out better node
-spacing and default views.
 
 ## fact check layout.ts vs Reingold and Tillman
 
