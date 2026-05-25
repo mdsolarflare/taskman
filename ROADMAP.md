@@ -8,7 +8,7 @@
 - [ ] Improve Storage Model
 - [ ] YAML Repair Tool
 - [ ] Tech Debt Review
-- [ ] Improve Default View
+- [?] Improve Default View
 - [x] Remove NPM Dependency
 - [x] Add Frontend Tests
 - [x] Improve dev experience around linting
