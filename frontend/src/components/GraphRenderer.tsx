@@ -202,8 +202,9 @@ export default function GraphRenderer({
     if (centerTargetNodeId != null && svgRef.current && layout) {
       const nodePos = layout.nodes.get(centerTargetNodeId);
       if (nodePos) {
+        const svg = svgRef.current;
         setViewport((v) => ({
-          ...computeViewportForNode(svgRef.current, nodePos),
+          ...computeViewportForNode(svg, nodePos),
           zoom: v.zoom, // preserve current zoom level
         }));
       }
