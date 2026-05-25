@@ -2,9 +2,9 @@
 
 - [ ] Handle Task Completion
 - [x] Deno 2 Migration (from pnpm/nodejs)
-- [ ] Navigation Pane
+- [x] Navigation Pane
   - [x] Implement Navigation Pane
-  - [ ] Show Child Nesting in Navigation Pane
+  - [x] Show Child Nesting in Navigation Pane
 - [ ] Improve Storage Model
 - [ ] YAML Repair Tool
 - [ ] Tech Debt Review
@@ -34,19 +34,7 @@ from a hard delete.
 `completed: true`), a separate view/filter, or a distinct graph operation that
 doesn't re-map children.
 
-## Add navigation pane
-
-The navigation pane will allow you to three views
-
-1. a list of all node children (tasks with no subtasks) that are ready to be
-   worked
-2. all tasks marked important
-3. all tasks near deadline (user configurable but defaults to 14 days)
-
-Still needed:
-- Improve visual elements, slight misalignments, etc
-- Add child nesting visually
-- Missing near deadline
+When a task is done, it has a "strikethrough" the text
 
 ## Improve the storage model
 
