@@ -8,6 +8,7 @@ import { getLayoutBounds, LayoutEngine } from "../engine/layout.ts";
 
 const NODE_WIDTH = 200;
 const NODE_RADIUS = 6;
+const VIEWPORT_X_OFFSET = 40; // Pixels from left edge of viewport to target node's left edge
 
 // Graph color roles - mapped from CSS theme variables
 interface GraphColors {
@@ -98,10 +99,18 @@ interface Viewport {
   zoom: number;
 }
 
-// Default viewport that centers the root node in view
-function computeRootViewport(svgEl: SVGSVGElement): Viewport {
-  const height = svgEl.getBoundingClientRect().height;
-  return { x: 35, y: height / 2 - 40, zoom: 1 };
+function computeViewportForNode(
+  svgEl: SVGSVGElement,
+  nodePos: { x: number; y: number; height: number },
+): Viewport {
+  const rect = svgEl.getBoundingClientRect();
+  // X axis: pin node's left edge to a fixed offset from viewport's left edge.
+  // Y axis: vertically center the node.
+  return {
+    x: VIEWPORT_X_OFFSET - nodePos.x,
+    y: rect.height / 2 - (nodePos.y + nodePos.height / 2),
+    zoom: 1,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +143,7 @@ function formatDeadline(iso: string): string {
 }
 
 function computeLayout(graph: Graph): {
+  graph: Graph;
   nodes: Map<number, { x: number; y: number; height: number }>;
   edges: Array<{ from: number; to: number }>;
   bounds: { width: number; height: number };
@@ -148,7 +158,7 @@ function computeLayout(graph: Graph): {
     nodes.set(id, { x: node.x, y: node.y, height: node.height });
   }
 
-  return { nodes, edges: result.edges, bounds };
+  return { graph, nodes, edges: result.edges, bounds };
 }
 
 // ---------------------------------------------------------------------------
@@ -185,23 +195,17 @@ export default function GraphRenderer({
     [externalSelectedNodeId, onNodeSelect, setInternalSelectedNodeId],
   );
   // Compute layout once when graph changes
-  const layout = useMemo(
-    () => (!graph ? null : computeLayout(graph)),
-    [graph],
-  );
+  const layout = useMemo(() => (!graph ? null : computeLayout(graph)), [graph]);
 
   // Respond to external center request (e.g. from navigation panel)
   useEffect(() => {
     if (centerTargetNodeId != null && svgRef.current && layout) {
       const nodePos = layout.nodes.get(centerTargetNodeId);
       if (nodePos) {
-        const rect = svgRef.current.getBoundingClientRect();
-        const cx = rect.width / 2;
-        const cy = rect.height / 2;
+        const svg = svgRef.current;
         setViewport((v) => ({
-          x: cx - (nodePos.x + NODE_WIDTH / 2) * v.zoom,
-          y: cy - (nodePos.y + nodePos.height / 2) * v.zoom,
-          zoom: v.zoom,
+          ...computeViewportForNode(svg, nodePos),
+          zoom: v.zoom, // preserve current zoom level
         }));
       }
     }
@@ -222,11 +226,15 @@ export default function GraphRenderer({
     return () => observer.disconnect();
   }, []);
 
-  // Center viewport on root node at first load only
+  // Center viewport on first root node at first load only
   useEffect(() => {
     if (layout && svgRef.current && !hasCentered.current) {
       hasCentered.current = true;
-      setViewport(computeRootViewport(svgRef.current));
+      const firstRootId = layout.graph.root_ids[0];
+      const rootPos = layout.nodes.get(firstRootId);
+      if (rootPos && svgRef.current) {
+        setViewport(computeViewportForNode(svgRef.current, rootPos));
+      }
     }
   }, [layout]);
 
@@ -366,8 +374,13 @@ export default function GraphRenderer({
   }, []);
 
   const handleResetView = useCallback(() => {
-    if (svgRef.current) setViewport(computeRootViewport(svgRef.current));
-  }, []);
+    if (!svgRef.current || !layout) return;
+    const targetId = selectedNodeId ?? layout.graph.root_ids[0];
+    const targetPos = layout.nodes.get(targetId);
+    if (targetPos && svgRef.current) {
+      setViewport(computeViewportForNode(svgRef.current, targetPos));
+    }
+  }, [selectedNodeId, layout]);
 
   // -----------------------------------------------------------------------
   // Render helpers
@@ -621,29 +634,13 @@ export default function GraphRenderer({
           >
             <polygon points="0 0, 8 3, 0 6" fill={colors.edge} />
           </marker>
-          <filter
-            id="shadow"
-            x="-10%"
-            y="-10%"
-            width="120%"
-            height="120%"
-          >
-            <feDropShadow
-              dx="0"
-              dy="1"
-              stdDeviation="2"
-              floodOpacity="0.08"
-            />
+          <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.08" />
           </filter>
         </defs>
 
         {/* Grid pattern */}
-        <pattern
-          id="grid"
-          width="20"
-          height="20"
-          patternUnits="userSpaceOnUse"
-        >
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <circle cx="10" cy="10" r="0.5" fill={colors.grid} />
         </pattern>
         <rect
@@ -837,16 +834,8 @@ export default function GraphRenderer({
 
                 {/* Important indicator */}
                 {node.important && (
-                  <g
-                    transform={`translate(${NODE_WIDTH - 26}, ${nameY - 4})`}
-                  >
-                    <circle
-                      cx={5}
-                      cy={5}
-                      r={4}
-                      fill="#ffb300"
-                      opacity={0.8}
-                    />
+                  <g transform={`translate(${NODE_WIDTH - 26}, ${nameY - 4})`}>
+                    <circle cx={5} cy={5} r={4} fill="#ffb300" opacity={0.8} />
                   </g>
                 )}
               </g>
