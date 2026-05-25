@@ -198,18 +198,15 @@ function App() {
     setSelectedNodeId(nodeId);
   }, []);
 
-  const handleNodeToggle = useCallback(
-    (nodeId: number, collapsed: boolean) => {
-      setState((s) => {
-        if (!s.graph) return s;
-        const nodes = s.graph.nodes.map((n: GraphNode) =>
-          n.id === nodeId ? { ...n, collapsed } : n
-        );
-        return { ...s, graph: { ...s.graph, nodes } };
-      });
-    },
-    [],
-  );
+  const handleNodeToggle = useCallback((nodeId: number, collapsed: boolean) => {
+    setState((s) => {
+      if (!s.graph) return s;
+      const nodes = s.graph.nodes.map((n: GraphNode) =>
+        n.id === nodeId ? { ...n, collapsed } : n
+      );
+      return { ...s, graph: { ...s.graph, nodes } };
+    });
+  }, []);
 
   const handleFileOpen = () => {
     setMenuOpen(false);
@@ -334,10 +331,7 @@ function App() {
   const handleNodeDeleteConfirm = useCallback(async () => {
     if (!state.graph || deletingNodeId === null) return;
     try {
-      const newGraph = (await deleteNode(
-        state.graph,
-        deletingNodeId,
-      )) as Graph;
+      const newGraph = (await deleteNode(state.graph, deletingNodeId)) as Graph;
       const yaml = await saveGraphToYaml(newGraph);
       saveWorkspace(yaml);
       setState((s) => ({ ...s, graph: newGraph, yaml }));
@@ -988,7 +982,7 @@ function App() {
         {/* Right Navigation Panel */}
         {state.graph && (
           <NavigationPanel
-            nodes={state.graph.nodes}
+            graph={state.graph}
             selectedNodeId={selectedNodeId}
             onNodeSelect={handleNavNodeSelect}
             isOpen={navOpen}
@@ -1097,15 +1091,18 @@ function App() {
       {/* ─── Delete Node Dialog ─── */}
       {deletingNodeId !== null && state.graph && (
         <DeleteNodeDialog
-          nodeName={state.graph.nodes.find(
-            (n: GraphNode) => n.id === deletingNodeId,
-          )?.name ?? ""}
-          hasChildren={(state.graph.nodes.find(
-            (n: GraphNode) => n.id === deletingNodeId,
-          )?.subtask_ids?.length ?? 0) > 0}
-          parentCount={state.graph.nodes.find(
-            (n: GraphNode) => n.id === deletingNodeId,
-          )?.parent_ids?.length ?? 0}
+          nodeName={state.graph.nodes.find((n: GraphNode) =>
+            n.id === deletingNodeId
+          )
+            ?.name ?? ""}
+          hasChildren={(state.graph.nodes.find((n: GraphNode) =>
+            n.id === deletingNodeId
+          )
+            ?.subtask_ids?.length ?? 0) > 0}
+          parentCount={state.graph.nodes.find((n: GraphNode) =>
+            n.id === deletingNodeId
+          )
+            ?.parent_ids?.length ?? 0}
           onConfirm={handleNodeDeleteConfirm}
           onCancel={handleNodeDeleteCancel}
         />
