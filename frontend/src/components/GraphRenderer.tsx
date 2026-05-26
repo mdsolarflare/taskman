@@ -476,6 +476,70 @@ export default function GraphRenderer({
           gap: 4,
         }}
       >
+        {onAddNode && (
+          <button
+            type="button"
+            onClick={() => onAddNode?.(selectedNodeId ?? -1)}
+            title="Add node"
+            style={{
+              padding: "4px 8px",
+              fontSize: 13,
+              fontFamily: "system-ui, sans-serif",
+              background: colors.accent,
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              transition: "filter 0.2s",
+            }}
+            onMouseEnter={(
+              e,
+            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
+            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+          >
+            ＋ Add
+          </button>
+        )}
+        {onNodeEdit && (
+          <button
+            type="button"
+            disabled={selectedNodeId === null}
+            onClick={() => onNodeEdit(selectedNodeId!)}
+            title="Edit node"
+            style={{
+              padding: "4px 8px",
+              fontSize: 13,
+              fontFamily: "system-ui, sans-serif",
+              background: selectedNodeId !== null
+                ? colors.accent
+                : "transparent",
+              color: selectedNodeId !== null ? "#ffffff" : colors.toolbarText,
+              border: "none",
+              borderRadius: 4,
+              cursor: selectedNodeId !== null ? "pointer" : "default",
+              transition: "filter 0.2s",
+              opacity: selectedNodeId !== null ? 1 : 0.4,
+            }}
+            onMouseEnter={selectedNodeId !== null
+              ? (e) => (e.currentTarget.style.filter = "brightness(0.85)")
+              : undefined}
+            onMouseLeave={selectedNodeId !== null
+              ? (e) => (e.currentTarget.style.filter = "none")
+              : undefined}
+          >
+            ✎ Edit
+          </button>
+        )}
+
+        <div
+          style={{
+            width: 1,
+            height: 20,
+            background: colors.toolbarBorder,
+            margin: "0 4px",
+          }}
+        />
+
         {/* Zoom controls */}
         <button
           type="button"
@@ -590,16 +654,36 @@ export default function GraphRenderer({
 
         <div style={{ flex: 1 }} />
 
-        {/* Node count */}
-        <span
-          style={{
-            fontSize: 12,
-            color: colors.textSubtle,
-            userSelect: "none",
-          }}
-        >
-          {graph.nodes.length} nodes
-        </span>
+        {onDeleteNode && (
+          <button
+            type="button"
+            disabled={selectedNodeId === null}
+            onClick={() => onDeleteNode(selectedNodeId!)}
+            title="Delete node (roots cannot be deleted)"
+            style={{
+              padding: "4px 8px",
+              fontSize: 13,
+              fontFamily: "system-ui, sans-serif",
+              background: selectedNodeId !== null
+                ? colors.overdue
+                : "transparent",
+              color: selectedNodeId !== null ? "#ffffff" : colors.toolbarText,
+              border: "none",
+              borderRadius: 4,
+              cursor: selectedNodeId !== null ? "pointer" : "default",
+              transition: "filter 0.2s",
+              opacity: selectedNodeId !== null ? 1 : 0.4,
+            }}
+            onMouseEnter={selectedNodeId !== null
+              ? (e) => (e.currentTarget.style.filter = "brightness(0.85)")
+              : undefined}
+            onMouseLeave={selectedNodeId !== null
+              ? (e) => (e.currentTarget.style.filter = "none")
+              : undefined}
+          >
+            🗑 Delete
+          </button>
+        )}
       </div>
 
       {/* SVG canvas */}
@@ -843,112 +927,6 @@ export default function GraphRenderer({
           })}
         </g>
       </svg>
-
-      {/* Bottom status bar */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 28,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 12px",
-          background: colors.toolbarBg,
-          borderTop: `1px solid ${colors.toolbarBorder}`,
-          fontSize: 12,
-          color: colors.textSubtle,
-          gap: 16,
-        }}
-      >
-        {selectedNodeId !== null && (
-          <span
-            style={{
-              color: colors.menuTextActive,
-              fontWeight: 500,
-            }}
-          >
-            Selected: {graph.nodes.find((n) => n.id === selectedNodeId)?.name}
-          </span>
-        )}
-        {selectedNodeId !== null && onNodeEdit && (
-          <button
-            type="button"
-            onClick={() => onNodeEdit(selectedNodeId!)}
-            title="Edit node"
-            style={{
-              padding: "2px 10px",
-              fontSize: 12,
-              fontWeight: 500,
-              fontFamily: "system-ui, sans-serif",
-              background: colors.accent,
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              transition: "filter 0.2s",
-            }}
-            onMouseEnter={(
-              e,
-            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
-            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-          >
-            ✎ Edit
-          </button>
-        )}
-        {onAddNode && (
-          <button
-            type="button"
-            onClick={() => onAddNode?.(selectedNodeId ?? -1)}
-            title="Add node"
-            style={{
-              padding: "2px 10px",
-              fontSize: 12,
-              fontWeight: 500,
-              fontFamily: "system-ui, sans-serif",
-              background: colors.accent,
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              transition: "filter 0.2s",
-            }}
-            onMouseEnter={(
-              e,
-            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
-            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-          >
-            ＋ Add
-          </button>
-        )}
-        {selectedNodeId !== null && onDeleteNode && (
-          <button
-            type="button"
-            onClick={() => onDeleteNode(selectedNodeId!)}
-            title="Delete node (roots cannot be deleted)"
-            style={{
-              marginLeft: "auto",
-              padding: "2px 10px",
-              fontSize: 12,
-              fontWeight: 500,
-              fontFamily: "system-ui, sans-serif",
-              background: colors.overdue,
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              transition: "filter 0.2s",
-            }}
-            onMouseEnter={(
-              e,
-            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
-            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-          >
-            🗑 Delete
-          </button>
-        )}
-      </div>
     </div>
   );
 }
