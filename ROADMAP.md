@@ -7,7 +7,10 @@
   - [x] Show Child Nesting in Navigation Pane
 - [ ] Improve Storage Model
 - [ ] YAML Repair Tool
-- [ ] Tech Debt Review
+- [x] Tech Debt Review
+  - [x] Pass one - dead code cleanup (Rust exports, wasm bridge, types, CSS)
+  - [ ] Pass two - App.tsx split (deferred)
+  - [ ] Pass three - initiate a re-review 
 - [ ] Merge bottom and top menu bar to the top
 - [x] Improve Default View
 - [x] Remove NPM Dependency
@@ -50,34 +53,23 @@ have a non-destructive method of auto-repair.
 
 ## Technical Debt — Cleanup Pass (Principle Audit Findings)
 
-**Status:** Ready
-
 The project lives well to its principles (lean dependencies, offline-first,
-static deployable). The remaining debt is organizational cleanup, not
-architectural bloat.
+static deployable). This pass cleaned organizational debt, not architectural
+bloat.
 
 **Items:**
 
 - **Split `App.tsx` (1109 lines)** — Handles 6+ concerns: state management, file
   I/O, menu logic, theme switching, help modals, and node CRUD. Extract custom
-  hooks (file ops, workspace persistence) and narrow components.
-- **Remove `add(left, right)` boilerplate** — Default wasm-pack template stub in
-  `ichor/src/lib.rs:28-30`. Unused.
-- **Consolidate duplicate Rust API exports** — `lib.rs` re-exports both
-  `node_count` (from yaml) and `get_node_count` (from graph), same for
-  `root_names` / `get_root_names`. Keep one of each.
-- **Remove unused Vite template CSS** — `frontend/src/App.css` contains leftover
-  `.counter`, `.hero`, `#center`, `#next-steps` classes from the Vite + React
-  template. Delete or strip.
-- **Sample YAML hierarchy quirk** — `frontend/public/sample.yaml` node 14
-  (`Implement Pan & Zoom`) lists `subtask_ids: [12]` (Integration Tests), which
-  creates an unexpected cross-branch parent-child link. Verify this is
-  intentional or fix. #note its intentional.
+  hooks (file ops, workspace persistence) and narrow components. _(deferred)_
+
 
 ## fact check layout.ts vs Reingold and Tillman
 
 https://williamyaoh.com/posts/2023-04-22-drawing-trees-functionally.html
 
-## fat check do we need node_modules? no right
+## fat check: do we need node_modules?
 
-frontend/node_modules` - This is a leftover from pnpm/nodejs! Deno 2 doesn't use node_modules in the same way (it uses its own cache).
+No — `frontend/node_modules/` is required infrastructure for Deno 2's
+`nodeModulesDir: "auto"` NPM compatibility mode. It's not leftover cruft from
+pnpm/nodejs. See `README.md` > "Deno 2 NPM Compatibility (DO NOT REMOVE)".
