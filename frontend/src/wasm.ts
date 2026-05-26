@@ -11,10 +11,6 @@
 
 // Type definitions for the WASM module exports
 interface WasmExports {
-  parse_yaml: (yaml: string) => string;
-  parse_yaml_to_json: (yaml: string) => string;
-  node_count: (json: string) => number;
-  root_names: (json: string) => string;
   build_graph_from_yaml: (yaml: string) => string;
   get_node_count: (yaml: string) => number;
   get_root_names: (yaml: string) => string;
@@ -71,23 +67,6 @@ export async function initWasm(): Promise<WasmExports> {
 }
 
 /**
- * Check if the WASM module has been initialized and is ready.
- */
-export function isWasmReady(): boolean {
-  return wasmPromise !== null;
-}
-
-/**
- * Parse a YAML string and return the result as a parsed JSON object.
- * This is a convenience wrapper that handles both parsing and deserialization.
- */
-export async function parseYamlToJson(yaml: string): Promise<unknown> {
-  const wasm = await initWasm();
-  const jsonString = wasm.parse_yaml_to_json(yaml);
-  return JSON.parse(jsonString);
-}
-
-/**
  * Build a graph from a YAML string and return the result as a parsed JSON object.
  */
 export async function buildGraphFromYaml(yaml: string): Promise<unknown> {
@@ -111,22 +90,6 @@ export async function getRootNames(yaml: string): Promise<string[]> {
   const wasm = await initWasm();
   const jsonString = wasm.get_root_names(yaml);
   return JSON.parse(jsonString) as string[];
-}
-
-/**
- * Get the raw JSON string of a parsed YAML document.
- */
-export async function getYamlJson(yaml: string): Promise<string> {
-  const wasm = await initWasm();
-  return wasm.parse_yaml_to_json(yaml);
-}
-
-/**
- * Get the raw JSON string of a built graph.
- */
-export async function getGraphJson(yaml: string): Promise<string> {
-  const wasm = await initWasm();
-  return wasm.build_graph_from_yaml(yaml);
 }
 
 /**
