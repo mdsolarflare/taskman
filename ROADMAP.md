@@ -51,6 +51,28 @@ we will auto-save changes async to file.
 if files get corrupted and therefore cannot be loaded into the graph, we should
 have a non-destructive method of auto-repair.
 
+Agent suggested:
+
+To implement a schema-repair engine, we will introduce a **three-tiered mutation pipeline** that intercepts YAML data immediately after parsing. First, the engine will run **automated type coercion and default injection** (e.g., casting stringified numbers and scaffolding missing required blocks) using native schema configuration options like AJV or Pydantic. Second, it will apply a **heuristic-matching layer** using Levenshtein distance algorithms to automatically detect and rename misspelled configuration keys. Finally, the system will execute a **strict structural prune** to strip unresolvable rogue properties, compiling all modifications into a transparent change-log returned to the user alongside the newly compliant, valid document.
+
+```mermaid
+graph TD
+    A[Malformed / Non-Compliant YAML] --> B[YAML Parser]
+    B --> C{Syntactically Valid?}
+    
+    C -->|No| D[Reject / Syntax Error]
+    C -->|Yes| E[Schema Repair Pipeline]
+    
+    subgraph Pipeline [Schema Repair Pipeline]
+        E --> F[Layer 1: Structural Mutation]
+        F -->|Coerce Types & Inject Defaults| G[Layer 2: Heuristic Key Matching]
+        G -->|Rename Misspelled Keys via Distance Algo| H[Layer 3: Strict Pruning]
+        H -->|Strip Unresolvable Rogue Properties| I[Generate Change Log]
+    end
+    
+    I --> J[Valid, Schema-Compliant YAML]
+```    
+
 ## Technical Debt — Cleanup Pass (Principle Audit Findings)
 
 The project lives well to its principles (lean dependencies, offline-first,
