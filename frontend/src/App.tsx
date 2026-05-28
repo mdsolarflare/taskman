@@ -731,18 +731,12 @@ function App() {
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                background: autoSave.saveStatus === "idle"
-                  ? "#4ade80"
-                  : autoSave.saveStatus === "saving"
-                  ? c["--accent"]
-                  : autoSave.saveStatus === "error"
+                background: autoSave.saveStatus === "disabled"
+                  ? c["--border-color"]
+                  : autoSave.saveStatus === "unsupported" ||
+                      autoSave.saveStatus === "error"
                   ? c["--semantic-overdue"]
-                  : autoSave.saveStatus === "unsupported"
-                  ? c["--text-secondary"]
-                  : "#9ca3af",
-                animation: autoSave.saveStatus === "saving"
-                  ? "spin 0.8s linear infinite"
-                  : "none",
+                  : c["--text-primary"],
               }}
             />
 
