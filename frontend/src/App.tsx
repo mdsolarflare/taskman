@@ -12,6 +12,7 @@ import {
 import ThemeModal from "./components/ThemeModal.tsx";
 import NavigationPanel from "./components/NavigationPanel.tsx";
 import { useTheme } from "./hooks/useTheme.ts";
+import { useAutoSave } from "./hooks/useAutoSave.ts";
 import "./themes.css";
 
 // ---------------------------------------------------------------------------
@@ -24,33 +25,6 @@ const SAMPLE_URL = "/sample.yaml";
 // ---------------------------------------------------------------------------
 // App state
 // ---------------------------------------------------------------------------
-
-// Minimal local types for File System Access API (not in standard DOM typings)
-interface FileSystemWritableFileStream {
-  write(data: string): Promise<void>;
-  close(): Promise<void>;
-}
-
-interface FileSystemFileHandle {
-  createWritable(): Promise<FileSystemWritableFileStream>;
-}
-
-interface ShowSaveFilePickerOptions {
-  suggestedName?: string;
-  types?: Array<{ description: string; accept: Record<string, string[]> }>;
-}
-
-interface FilePickerWindow {
-  showSaveFilePicker(
-    options?: ShowSaveFilePickerOptions,
-  ): Promise<FileSystemFileHandle>;
-  showOpenFilePicker(options?: {
-    types?: Array<{
-      description: string;
-      accept: Record<string, string[]>;
-    }>;
-  }): Promise<Array<FileSystemFileHandle>>;
-}
 
 interface AppState {
   graph: Graph | null;
@@ -167,10 +141,11 @@ function App() {
     loadYamlRef.current = loadYaml;
   }, [loadYaml]);
 
-  // Auto-save timer for debounced saves
+  // Auto-save timer for debouncing frequent writes.
   const autoSaveTimer = useRef<number | null>(null);
+  const autoSave = useAutoSave();
 
-  // Debounced auto-save to localStorage
+  // Debounced save to localStorage (always active as a safety net)
   useEffect(() => {
     if (autoSaveTimer.current) {
       clearTimeout(autoSaveTimer.current);
@@ -208,21 +183,33 @@ function App() {
     });
   }, []);
 
-  const handleFileOpen = () => {
+  const handleFileOpen = async () => {
     setMenuOpen(false);
+
+    // Try FS Access API first — tracks handle for auto-save
+    const text = await autoSave.openFile();
+    if (text) {
+      await loadYaml(text);
+      return;
+    }
+
+    // Fallback: legacy file input (no auto-save tracking). Clear any
+    // existing handle so we don't accidentally write to a stale file.
+    await autoSave.clearHandle();
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".yaml,.yml";
     input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      const text = await file.text();
-      loadYaml(text);
+      const fallbackText = await file.text();
+      await loadYaml(fallbackText);
     };
     input.click();
   };
 
-  const handleFileNew = () => {
+  const handleFileNew = async () => {
     setMenuOpen(false);
     // Clear saved workspace on "New"
     try {
@@ -230,6 +217,7 @@ function App() {
     } catch {
       /* noop */
     }
+    await autoSave.clearHandle();
     setState({ graph: null, yaml: null, loading: false, error: null });
   };
 
@@ -273,6 +261,8 @@ function App() {
     try {
       const yaml = await saveGraphToYaml(newGraph);
       saveWorkspace(yaml);
+      // Schedule debounced file write to disk
+      autoSave.scheduleSave(yaml);
       setState((s) => ({ ...s, graph: newGraph, yaml }));
     } catch (err) {
       setState((s) => ({
@@ -283,7 +273,7 @@ function App() {
     setEditingNodeId(null);
     setIsCreating(false);
     setAddParentId(-1);
-  }, []);
+  }, [autoSave]);
 
   const handleNodeSave = useCallback(
     async (updated: GraphNode) => {
@@ -334,6 +324,8 @@ function App() {
       const newGraph = (await deleteNode(state.graph, deletingNodeId)) as Graph;
       const yaml = await saveGraphToYaml(newGraph);
       saveWorkspace(yaml);
+      // Schedule debounced file write to disk
+      autoSave.scheduleSave(yaml);
       setState((s) => ({ ...s, graph: newGraph, yaml }));
     } catch (err) {
       setState((s) => ({
@@ -342,47 +334,11 @@ function App() {
       }));
     }
     setDeletingNodeId(null);
-  }, [state.graph, deletingNodeId]);
+  }, [state.graph, deletingNodeId, autoSave]);
 
   const handleNodeDeleteCancel = useCallback(() => {
     setDeletingNodeId(null);
   }, []);
-
-  // Download a YAML string to disk via File System Access API (with fallback)
-  const downloadYamlFile = async (yaml: string, suggestedName?: string) => {
-    try {
-      // Modern browsers: use showSaveFilePicker for native save dialog
-      if ("showSaveFilePicker" in window) {
-        const handle = await (
-          window as unknown as FilePickerWindow
-        ).showSaveFilePicker({
-          suggestedName: suggestedName || "tasks.yaml",
-          types: [
-            {
-              description: "YAML File",
-              accept: { "text/yaml": [".yaml", ".yml"] },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(yaml);
-        await writable.close();
-      } else {
-        // Fallback: create a blob and trigger download via <a> element
-        const blob = new Blob([yaml], { type: "text/yaml" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = suggestedName || "tasks.yaml";
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      // User likely cancelled the dialog — silently ignore
-      if (err instanceof Error && err.name === "AbortError") return;
-      console.error("Failed to save file:", err);
-    }
-  };
 
   const handleFileSaveAs = async () => {
     setMenuOpen(false);
@@ -392,7 +348,8 @@ function App() {
       // Also persist to localStorage
       saveWorkspace(yaml);
       setState((s) => ({ ...s, yaml }));
-      await downloadYamlFile(yaml, undefined);
+      // Hook handles picker, write, IndexedDB persistence, and handle association
+      await autoSave.saveAs(yaml);
     } catch (err) {
       setState((s) => ({
         ...s,
@@ -722,32 +679,109 @@ function App() {
           }}
         />
 
-        {/* Status */}
-        <span
+        {/* Status + Auto-Save section */}
+        <div
           style={{
-            fontSize: 12,
-            color: c["--text-secondary"],
             flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
-          {state.loading
-            ? (
-              "Loading…"
-            )
-            : state.graph
-            ? (
-              `${state.graph.nodes.length} nodes loaded`
-            )
-            : state.error
-            ? (
-              <span style={{ color: c["--semantic-overdue"] }}>
-                Error: {state.error}
-              </span>
-            )
-            : (
-              "Ready"
-            )}
-        </span>
+          {/* File name + node status (left-aligned, fills space) */}
+          <span
+            style={{
+              fontSize: 12,
+              color: c["--text-secondary"],
+              flex: 1,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {state.loading
+              ? ("Loading…")
+              : state.graph
+              ? (autoSave.fileName
+                ? `${autoSave.fileName} — ${state.graph.nodes.length} nodes`
+                : `${state.graph.nodes.length} nodes (unsaved)`)
+              : state.error
+              ? (
+                <span style={{ color: c["--semantic-overdue"] }}>
+                  Error: {state.error}
+                </span>
+              )
+              : ("Ready")}
+          </span>
+
+          {/* Auto-save status dot + toggle */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
+            }}
+          >
+            {/* Status indicator dot */}
+            <span
+              title={autoSave.tooltip}
+              style={{
+                display: "inline-block",
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: autoSave.saveStatus === "disabled"
+                  ? c["--border-color"]
+                  : autoSave.saveStatus === "unsupported" ||
+                      autoSave.saveStatus === "error"
+                  ? c["--semantic-overdue"]
+                  : c["--text-primary"],
+              }}
+            />
+
+            {/* Auto-save toggle switch */}
+            <button
+              type="button"
+              title={autoSave.tooltip}
+              onClick={() => autoSave.toggleAutoSave()}
+              disabled={!autoSave.supported || !autoSave.fileName}
+              style={{
+                width: 32,
+                height: 18,
+                display: "flex",
+                alignItems: "center",
+                padding: "0 2px",
+                background: autoSave.supported &&
+                    autoSave.autoSaveEnabled &&
+                    autoSave.fileName
+                  ? c["--accent"]
+                  : c["--border-color"],
+                border: "none",
+                borderRadius: 9,
+                cursor: autoSave.supported && autoSave.fileName
+                  ? "pointer"
+                  : "not-allowed",
+                transition: "background 0.15s",
+                opacity: autoSave.supported && autoSave.fileName ? 1 : 0.4,
+              }}
+            >
+              {/* Toggle knob */}
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  transition: "transform 0.15s",
+                  transform: autoSave.autoSaveEnabled
+                    ? "translateX(14px)"
+                    : "translateX(0)",
+                }}
+              />
+            </button>
+          </div>
+        </div>
 
         {/* Nav panel toggle - right aligned */}
         <button

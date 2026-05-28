@@ -50,3 +50,6 @@ jobs:
 
       - name: Build TypeScript
         run: deno check --config frontend/deno.json
+
+      - name: Run Typescript Tests
+        run: deno task --config frontend/deno.json test

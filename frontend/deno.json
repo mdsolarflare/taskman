@@ -34,7 +34,8 @@
     "dev": "deno run -A npm:vite --host",
     "build": "deno check && deno run -A npm:vite build",
     "lint": "deno lint && deno run -A npm:eslint .",
-    "preview": "deno run -A npm:vite preview"
+    "preview": "deno run -A npm:vite preview",
+    "test": "deno test --allow-env=NODE_ENV"
   },
   "dependencies": {
     "@eslint/js": "npm:@eslint/js@^10.0.1",
