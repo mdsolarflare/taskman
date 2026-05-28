@@ -1,55 +1,55 @@
 name: Run project build & tests
 
 on:
-    push:
-        branches: ["main"]
-    pull_request:
-        branches: ["main"]
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            # ─── Rust (ichor) ─────────────────────────────────────────────
+      # ─── Rust (ichor) ─────────────────────────────────────────────
 
-            - name: Lint Rust
-              run: cargo check --manifest-path ichor/Cargo.toml
+      - name: Lint Rust
+        run: cargo check --manifest-path ichor/Cargo.toml
 
-            - name: Build Rust
-              run: cargo build --verbose --manifest-path ichor/Cargo.toml
+      - name: Build Rust
+        run: cargo build --verbose --manifest-path ichor/Cargo.toml
 
-            - name: Test Rust
-              run: cargo test --verbose --manifest-path ichor/Cargo.toml
+      - name: Test Rust
+        run: cargo test --verbose --manifest-path ichor/Cargo.toml
 
-            - name: Install wasm-pack
-              run: cargo install wasm-pack
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
 
-            - name: Build WASM
-              run: wasm-pack build ichor --target web
+      - name: Build WASM
+        run: wasm-pack build ichor --target web
 
-            # ─── TypeScript (frontend) ────────────────────────────────────
+      # ─── TypeScript (frontend) ────────────────────────────────────
 
-            # Install Deno & cache remote modules automatically
-            - name: Setup Deno Environment
-              uses: denoland/setup-deno@v2
-              with:
-                  deno-version: v2.x # Installs the latest stable Deno release
-                  cache: true # Caches downloaded JSR/NPM packages based on your lockfile
+      # Install Deno & cache remote modules automatically
+      - name: Setup Deno Environment
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x # Installs the latest stable Deno release
+          cache: true # Caches downloaded JSR/NPM packages based on your lockfile
 
-            - name: Verify formatting and styles
-              run: deno fmt --check frontend/
+      - name: Verify formatting and styles
+        run: deno fmt --check frontend/
 
-            - name: Lint TypeScript
-              run: deno task --config frontend/deno.json lint
+      - name: Lint TypeScript
+        run: deno task --config frontend/deno.json lint
 
-            - name: Build TypeScript
-              run: deno check --config frontend/deno.json
+      - name: Build TypeScript
+        run: deno check --config frontend/deno.json
 
-            - name: Run Typescript Tests
-              run: deno task --config frontend/deno.json test
+      - name: Run Typescript Tests
+        run: deno task --config frontend/deno.json test
