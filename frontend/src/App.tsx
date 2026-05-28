@@ -26,8 +26,6 @@ const SAMPLE_URL = "/sample.yaml";
 // App state
 // ---------------------------------------------------------------------------
 
-// Minimal local types for File System Access API (not in standard DOM typings)
-
 interface AppState {
   graph: Graph | null;
   yaml: string | null;
@@ -143,26 +141,23 @@ function App() {
     loadYamlRef.current = loadYaml;
   }, [loadYaml]);
 
+  // Auto-save timer for debouncing frequent writes.
+  const autoSaveTimer = useRef<number | null>(null);
   const autoSave = useAutoSave();
-
-  // Remove the old localStorage-only debounced auto-save timer — replaced by
-  // the useAutoSave hook which writes to disk after CRUD actions complete.
-  // Keep localStorage persistence for browser storage backup.
-  const localStorageTimer = useRef<number | null>(null);
 
   // Debounced save to localStorage (always active as a safety net)
   useEffect(() => {
-    if (localStorageTimer.current) {
-      clearTimeout(localStorageTimer.current);
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current);
     }
-    localStorageTimer.current = setTimeout(() => {
+    autoSaveTimer.current = setTimeout(() => {
       if (state.yaml) {
         saveWorkspace(state.yaml);
       }
     }, 1000) as unknown as number;
     return () => {
-      if (localStorageTimer.current) {
-        clearTimeout(localStorageTimer.current);
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
       }
     };
   }, [state.yaml]);
