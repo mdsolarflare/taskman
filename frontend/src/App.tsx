@@ -725,7 +725,7 @@ function App() {
           >
             {/* Status indicator dot */}
             <span
-              title={autoSave.statusTooltip}
+              title={autoSave.tooltip}
               style={{
                 display: "inline-block",
                 width: 8,
@@ -749,7 +749,7 @@ function App() {
             {/* Auto-save toggle switch */}
             <button
               type="button"
-              title={autoSave.toggleTooltip}
+              title={autoSave.tooltip}
               onClick={() => autoSave.toggleAutoSave()}
               disabled={!autoSave.supported || !autoSave.fileName}
               style={{

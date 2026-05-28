@@ -67,10 +67,8 @@ export interface UseAutoSaveReturn {
   saveStatus: SaveStatus;
   /** Whether the browser supports the File System Access API */
   supported: boolean;
-  /** Tooltip text for the status indicator */
-  statusTooltip: string;
-  /** Tooltip text for the toggle */
-  toggleTooltip: string;
+  /** Tooltip text for the status indicator and toggle */
+  tooltip: string;
   /** Trigger Save As dialog and persist the handle */
   saveAs: (yaml: string) => Promise<void>;
   /** Open file via showOpenFilePicker and persist the handle (returns file text) */
@@ -577,31 +575,15 @@ export function useAutoSave(): UseAutoSaveReturn {
   );
 
   // ---------------------------------------------------------------------------
-  // Tooltip strings
+  // Tooltip — single string for both status dot and toggle
   // ---------------------------------------------------------------------------
 
-  const statusTooltip = (() => {
+  const tooltip = (() => {
     if (!supported) {
-      return "Auto-save requires the File System Access API (Chrome, Edge, Brave). Firefox is not supported.";
-    }
-    if (saveStatus === "error") {
-      return "Auto-save failed. The file may have lost write permission. Try re-saving manually.";
-    }
-    if (saveStatus === "saving") return "Saving changes to file…";
-    if (saveStatus === "disabled") {
-      return "Auto-save is turned off. Changes are saved to browser storage only.";
-    }
-    // idle
-    if (fileName) return `All changes saved to ${fileName}`;
-    return "No file tracked. Use Save As to enable auto-save.";
-  })();
-
-  const toggleTooltip = (() => {
-    if (!supported) {
-      return "Auto-save requires the File System Access API (Chrome, Edge, Brave). Firefox is not supported.";
+      return "Auto-save requires the File System Access API and secure context. Your scenario is not supported.";
     }
     if (!hasHandle) {
-      return "Auto-save is not available yet. Use Save As to track a file first.";
+      return "Auto-save is not available yet. Use Open / Save As to track a file first.";
     }
     return autoSaveEnabled
       ? "Auto-save is ON. Changes are written to disk automatically after each edit."
@@ -613,8 +595,7 @@ export function useAutoSave(): UseAutoSaveReturn {
     autoSaveEnabled,
     saveStatus,
     supported,
-    statusTooltip,
-    toggleTooltip,
+    tooltip,
     saveAs,
     openFile,
     scheduleSave,
