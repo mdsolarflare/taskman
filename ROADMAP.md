@@ -5,12 +5,15 @@
 - [x] Navigation Pane
   - [x] Implement Navigation Pane
   - [x] Show Child Nesting in Navigation Pane
-- [ ] Improve Storage Model
+- [ ] Improve Local Storage Model
+  - [x] Implement verifiable auto-save on local storage
+  - [ ] Test thoroughly on chromium-base, firefox, and safari
+- [ ] Investigate cloud-backed up storage
 - [ ] YAML Repair Tool
-- [x] Tech Debt Review
+- [ ] Tech Debt Review
   - [x] Pass one - dead code cleanup (Rust exports, wasm bridge, types, CSS)
   - [ ] Pass two - App.tsx split (deferred)
-  - [ ] Pass three - initiate a re-review 
+  - [ ] Pass three - initiate a thorough re-review of tech debt
 - [ ] Merge bottom and top menu bar to the top
 - [x] Improve Default View
 - [x] Remove NPM Dependency
@@ -40,16 +43,10 @@ doesn't re-map children.
 
 When a task is done, it has a "strikethrough" the text
 
-## Improve the storage model
 
-when working from the sample file, no changes are tracked, when working from new
-or opening a pre-existing file, we will clearly indicate the file being tracked.
-we will auto-save changes async to file.
+## build a yaml repair tool - may be delusional or non-issue
 
-## build a yaml repair tool
-
-if files get corrupted and therefore cannot be loaded into the graph, we should
-have a non-destructive method of auto-repair.
+if files get corrupted and therefore cannot be loaded into the graph, we should have a non-destructive method of auto-repair.
 
 Agent suggested:
 
