@@ -21,6 +21,8 @@
 - [x] Improve dev experience around linting
 - [ ] Fact Check: Graph Algo
 - [ ] Fact Check: node_modules decomm
+- [ ] Manually re-review all tests for quality and purpose, smh
+- [ ] Move compact.md to a dev env skill, not related to repo
 
 ## Handle Task Completion — Done vs Delete
 
