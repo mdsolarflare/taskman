@@ -88,7 +88,7 @@ export interface UseAutoSaveReturn {
 // ---------------------------------------------------------------------------
 
 const AUTO_SAVE_STORAGE_KEY = "taskman_autosave";
-const DEBOUNCE_MS = 1500;
+const DEBOUNCE_MS = 2000;
 const DB_NAME = "TaskmanAutoSave";
 const DB_VERSION = 1;
 const STORE_NAME = "handles";
