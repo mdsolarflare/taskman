@@ -1,102 +1,72 @@
 /**
  * Tests for useAutoSave hook.
  *
- * The hook itself depends on React hooks and browser APIs (File System Access),
- * which are hard to unit-test outside a DOM environment. These tests cover the
- * exported types, constants, and helper behavior that are testable in Deno's
- * test runner.
+ * What we CAN test in Deno:
+ *   - deriveBaseStatus() — pure function that maps supported/enabled/handle
+ *     to a SaveStatus. All 8 input combinations covered.
+ *
+ * What we CANNOT test in Deno (no browser):
+ *   - The React hook lifecycle (useEffect, useState, useCallback).
+ *     Would need JSDOM + react-testing-library to mount the hook.
+ *   - IndexedDB persistence — Deno's test runner lacks a working IndexedDB
+ *     backend for object stores with structured clones of FileHandle-like
+ *     objects. Tested manually via browser dev tools.
+ *   - File System Access API (showSaveFilePicker, showOpenFilePicker) —
+ *     browser-only, requires user gesture + secure context.
+ *   - Permission flow (queryPermission / requestPermission) — requires
+ *     real browser permission prompts.
+ *   - Debounce timing behavior — relies on setTimeout inside React callbacks;
+ *     can't observe without rendering the component.
+ *   - Download fallback — requires document.createElement and
+ *     URL.createObjectURL.
+ *   - localStorage helpers — work trivially but testing them here just
+ *     verifies Deno's localStorage shim, not our logic.
+ *
+ * Manual testing checklist:
+ *   1. Save As writes file and persists handle to IndexedDB.
+ *   2. Reload restores handle and resumes auto-save.
+ *   3. File Open tracks the opened file for auto-save.
+ *   4. CRUD actions trigger debounced writes.
+ *   5. "New" clears the handle.
+ *   6. Toggle persists to localStorage.
+ *   7. Unsupported browsers show disabled toggle + tooltip.
+ *   8. Save As falls back to download when showSaveFilePicker is missing.
  */
 
 import { assertEquals } from "@std/assert";
+import { deriveBaseStatus } from "../useAutoSave.ts";
 
-// We can test the exported SaveStatus union by verifying that the hook file
-// exports are importable and have the expected shape. We test constants and
-// type-level correctness indirectly through the module structure.
+// ----- deriveBaseStatus — pure state machine -----
+// Tests all 8 combinations of (supported, autoSaveEnabled, hasHandle).
 
-// Re-export the storage key so we can test it without importing the hook
-// (which depends on React).
-const AUTO_SAVE_STORAGE_KEY = "taskman_autosave";
-
-Deno.test("useAutoSave - STORAGE_KEY is correct", () => {
-  assertEquals(AUTO_SAVE_STORAGE_KEY, "taskman_autosave");
+Deno.test("deriveBaseStatus — unsupported when API not available", () => {
+  assertEquals(deriveBaseStatus(false, true, true), "unsupported");
 });
 
-Deno.test("useAutoSave - STORAGE_KEY differs from workspace key", () => {
-  // Ensure the autosave key doesn't collide with the workspace key
-  assertEquals(AUTO_SAVE_STORAGE_KEY, "taskman_autosave");
+Deno.test("deriveBaseStatus — disabled when auto-save is off", () => {
+  assertEquals(deriveBaseStatus(true, false, true), "disabled");
 });
 
-// SaveStatus union members
-const VALID_STATUSES = [
-  "idle",
-  "saving",
-  "error",
-  "disabled",
-  "unsupported",
-];
-
-Deno.test("useAutoSave - SaveStatus has 5 variants", () => {
-  assertEquals(VALID_STATUSES.length, 5);
+Deno.test("deriveBaseStatus — disabled when no handle tracked", () => {
+  assertEquals(deriveBaseStatus(true, true, false), "disabled");
 });
 
-Deno.test("useAutoSave - SaveStatus includes idle", () => {
-  assertEquals(VALID_STATUSES.includes("idle"), true);
+Deno.test("deriveBaseStatus — idle when everything is ready", () => {
+  assertEquals(deriveBaseStatus(true, true, true), "idle");
 });
 
-Deno.test("useAutoSave - SaveStatus includes saving", () => {
-  assertEquals(VALID_STATUSES.includes("saving"), true);
+Deno.test("deriveBaseStatus — unsupported takes priority over enabled=false", () => {
+  assertEquals(deriveBaseStatus(false, false, true), "unsupported");
 });
 
-Deno.test("useAutoSave - SaveStatus includes error", () => {
-  assertEquals(VALID_STATUSES.includes("error"), true);
+Deno.test("deriveBaseStatus — unsupported takes priority over all false", () => {
+  assertEquals(deriveBaseStatus(false, false, false), "unsupported");
 });
 
-Deno.test("useAutoSave - SaveStatus includes disabled", () => {
-  assertEquals(VALID_STATUSES.includes("disabled"), true);
+Deno.test("deriveBaseStatus — disabled when enabled=false and no handle", () => {
+  assertEquals(deriveBaseStatus(true, false, false), "disabled");
 });
 
-Deno.test("useAutoSave - SaveStatus includes unsupported", () => {
-  assertEquals(VALID_STATUSES.includes("unsupported"), true);
-});
-
-// Test localStorage persistence behavior
-Deno.test(
-  "useAutoSave - localStorage toggle preference round-trips",
-  () => {
-    // Use a test key to avoid polluting actual localStorage
-    const TEST_KEY = "taskman_autosave_test";
-
-    // Simulate: enabled = true → stored as "1"
-    localStorage.setItem(TEST_KEY, "1");
-    assertEquals(localStorage.getItem(TEST_KEY), "1");
-
-    // Simulate: enabled = false → stored as "0"
-    localStorage.setItem(TEST_KEY, "0");
-    assertEquals(localStorage.getItem(TEST_KEY), "0");
-
-    // Cleanup
-    localStorage.removeItem(TEST_KEY);
-  },
-);
-
-// Test that debounce constant is reasonable
-Deno.test("useAutoSave - debounce duration is between 1-3 seconds", () => {
-  const DEBOUNCE_MS = 1500;
-  assertEquals(DEBOUNCE_MS >= 1000 && DEBOUNCE_MS <= 3000, true);
-});
-
-// Test IndexedDB configuration
-Deno.test("useAutoSave - DB_NAME is correct", () => {
-  const DB_NAME = "TaskmanAutoSave";
-  assertEquals(DB_NAME, "TaskmanAutoSave");
-});
-
-Deno.test("useAutoSave - DB_VERSION is 1", () => {
-  const DB_VERSION = 1;
-  assertEquals(DB_VERSION, 1);
-});
-
-Deno.test("useAutoSave - STORE_NAME is correct", () => {
-  const STORE_NAME = "handles";
-  assertEquals(STORE_NAME, "handles");
+Deno.test("deriveBaseStatus — unsupported when enabled=true, handle=false", () => {
+  assertEquals(deriveBaseStatus(false, true, false), "unsupported");
 });

@@ -190,7 +190,7 @@ function isFsAccessSupported(): boolean {
  * Derive the base status from state. Used as the default when no async
  * operation ("saving") or error is in progress.
  */
-function deriveBaseStatus(
+export function deriveBaseStatus(
   supported: boolean,
   autoSaveEnabled: boolean,
   hasHandle: boolean,
