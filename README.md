@@ -36,9 +36,11 @@ Our key design imperatives:
   required.
 - ⚡ **Near-Native Speed:** WASM allows complex graph algorithms to run at
   speeds impossible with pure JavaScript.
-- 💾 **Persistent Workspace:** Your data can be yours. Taskman supports tracking
-  local files with auto-saving. Later, we may support online storage of your
-  choice.
+- 💾 **Auto-Save to Local Files:** Changes are automatically written to disk
+  after each completed edit. Uses the File System Access API with IndexedDB
+  handle persistence so your file association survives browser reloads.
+  Works on Chromium-based browsers (Chrome, Edge, Brave); see
+  [Auto-Save](#-auto-save) for requirements and fallbacks.
 - 📋 **Sample Data:** First-time users get a sample graph demonstrating the full
   data model hierarchy (parent nodes, leaf nodes, nesting).
 - 🎨 **Fast UI:** A clean, responsive interface using inline styles for a
@@ -146,11 +148,44 @@ When making changes to the application:
 4. **Refresh:** The Vite dev server will automatically reflect UI changes; a
    browser refresh may be needed after updating the WASM binary.
 
+## 💾 Auto-Save
+
+In supported browsers, Taskman can write changes to disk automatically after each completed node edit, creation, or deletion. A debounce prevents excessive writes while keeping your local file current.
+
+### How It Works
+
+1. **File Tracking** — Open and Save As dialogs trigger a native file picker via 
+   the File System Access API. The chosen file handle is persisted in IndexedDB so 
+   it survives browser reloads.
+2. **Session Restore** — On mount, Taskman restores the handle from IndexedDB,
+   re-requests write permission if needed, and resumes auto-save.
+
+### Browser Requirements
+
+| Browser | Auto-Save | Notes |
+|---|---|---|
+| Chrome, Edge, Brave | ✅ | Requires **secure context** (HTTPS or `localhost`). Chrome Dev/Canary builds may need `chrome://flags/#file-system-access-api` enabled. |
+| Firefox | ⚠️ | Not yet tested.. |
+| Safari | ⚠️ | Not yet tested.. |
+
+### Troubleshooting
+
+When the File System Access API is unavailable:
+
+- The header shows a **grey status dot** and **disabled toggle** with a
+  tooltip explaining the limitation.
+
+If auto-save shows as unsupported in a Chromium browser:
+
+1. Open the browser console and look for the `[autoSave] diagnostics` group.
+2. If `showSaveFilePicker: undefined`, check `chrome://flags/#file-system-access-api`.
+3. Ensure you're on HTTPS or `localhost` — the API requires a secure context.
+4. Firefox and Safari are not yet tested; behavior is unknown.
+
 ## 🚀 Deployment
 
 This is a Offline-First app, it can be deployed as a static site on any hosting
-provider (GitHub Pages, Vercel, Netlify) without the need for a dedicated
-backend server.
+provider without the need for a dedicated backend server.
 
 ### Guidance for Future Work - Agent Friendly
 
