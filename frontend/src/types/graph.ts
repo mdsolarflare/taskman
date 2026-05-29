@@ -32,6 +32,9 @@ export interface GraphNode {
   /** Flag for highlighting important nodes (optional) */
   important?: boolean;
 
+  /** Flag marking the node as completed (optional) */
+  done?: boolean;
+
   /** IDs of child nodes (optional — absent on leaf nodes) */
   subtask_ids?: number[];
 

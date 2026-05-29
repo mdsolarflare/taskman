@@ -22,6 +22,8 @@ pub struct GraphNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub important: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub done: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub subtask_ids: Option<Vec<i64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_ids: Option<Vec<i64>>,
@@ -310,6 +312,7 @@ impl Graph {
         details: Option<String>,
         deadline: Option<String>,
         important: Option<bool>,
+        done: Option<bool>,
         subtask_ids: Option<Vec<i64>>,
     ) -> Result<i64, String> {
         // Generate new ID: max existing ID + 1
@@ -336,6 +339,7 @@ impl Graph {
             details,
             deadline,
             important,
+            done,
             subtask_ids,
             parent_ids: node_parent_ids,
             collapsed: Some(false),
@@ -395,6 +399,7 @@ impl GraphBuilder {
                 details: node.details,
                 deadline: node.deadline,
                 important: node.important,
+                done: node.done,
                 subtask_ids: if node.subtask_ids.is_empty() {
                     None
                 } else {
@@ -482,6 +487,7 @@ pub fn add_node(
     details: &str,
     deadline: &str,
     important: bool,
+    done: bool,
     subtask_ids_json: &str,
 ) -> Result<JsValue, JsValue> {
     let mut graph = Graph::from_json(graph_json)
@@ -518,6 +524,7 @@ pub fn add_node(
                 Some(deadline.to_string())
             },
             Some(important),
+            Some(done),
             sub_ids,
         )
         .map_err(|e| JsValue::from_str(&e))?;
@@ -550,6 +557,7 @@ pub fn graph_to_yaml(graph_json: &str) -> Result<String, String> {
             details: node.details.clone(),
             deadline: node.deadline.clone(),
             important: node.important,
+            done: node.done,
             subtask_ids: node.subtask_ids.clone().unwrap_or_default(),
         })
         .collect();
@@ -573,6 +581,7 @@ mod tests {
             details: None,
             deadline: None,
             important: None,
+            done: None,
             subtask_ids: if subtasks.is_empty() {
                 None
             } else {
@@ -1011,7 +1020,7 @@ nodes:
         };
 
         let id = graph
-            .add_node(None, "First task".into(), None, None, None, None)
+            .add_node(None, "First task".into(), None, None, None, None, None)
             .expect("Adding first node should succeed");
 
         assert_eq!(id, 1, "First node should get id 1");
@@ -1036,7 +1045,7 @@ nodes:
         let mut graph = Graph::from_nodes(graph_nodes);
 
         let id = graph
-            .add_node(Some(1), "Sibling".into(), None, None, None, None)
+            .add_node(Some(1), "Sibling".into(), None, None, None, None, None)
             .expect("Adding child should succeed");
 
         assert_eq!(id, 3, "New child should get auto-incremented id 3");
@@ -1081,6 +1090,7 @@ nodes:
                 Some("2025-12-31".into()),
                 Some(true),
                 None,
+                None,
             )
             .expect("Adding full node should succeed");
 
@@ -1097,7 +1107,7 @@ nodes:
         let graph_nodes = vec![make_node(1, "Root", vec![2]), make_node(2, "Child", vec![])];
         let mut graph = Graph::from_nodes(graph_nodes);
 
-        let result = graph.add_node(Some(999), "Orphan".into(), None, None, None, None);
+        let result = graph.add_node(Some(999), "Orphan".into(), None, None, None, None, None);
         assert!(
             result.is_err(),
             "Adding node with nonexistent parent should fail"
@@ -1122,7 +1132,7 @@ nodes:
         let mut graph = Graph::from_nodes(graph_nodes);
 
         let id = graph
-            .add_node(None, "B".into(), None, None, None, None)
+            .add_node(None, "B".into(), None, None, None, None, None)
             .expect("Should succeed");
 
         assert_eq!(id, 4, "New id should be max_existing + 1, ignoring gaps");
@@ -1138,7 +1148,15 @@ nodes:
         let mut graph = Graph::from_nodes(graph_nodes);
 
         let id = graph
-            .add_node(Some(1), "Middle".into(), None, None, None, Some(vec![2, 3]))
+            .add_node(
+                Some(1),
+                "Middle".into(),
+                None,
+                None,
+                None,
+                None,
+                Some(vec![2, 3]),
+            )
             .expect("Should succeed");
 
         let middle = graph.get_node(id).expect("Middle should exist");
@@ -1370,5 +1388,50 @@ nodes:
             .find(|n| n.id == 2)
             .expect("Node 2 should exist");
         assert_eq!(node_2.name, "Rust Core");
+    }
+
+    // =====================================================================
+    // CRUD: done field round-trips through YAML
+    // =====================================================================
+
+    #[test]
+    fn test_done_field_roundtrip() {
+        let yaml = r#"
+nodes:
+  - id: 1
+    name: Completed task
+    done: true
+  - id: 2
+    name: In progress
+    done: false
+  - id: 3
+    name: Not flagged
+"#;
+        let graph = build_graph_from_yaml_str(yaml);
+
+        // Verify parsed state
+        let n1 = graph.get_node(1).expect("Node 1");
+        assert_eq!(n1.done, Some(true));
+
+        let n2 = graph.get_node(2).expect("Node 2");
+        assert_eq!(n2.done, Some(false));
+
+        let n3 = graph.get_node(3).expect("Node 3");
+        assert_eq!(n3.done, None);
+
+        // Round-trip through YAML
+        let roundtripped =
+            graph_to_yaml(&graph.to_json().unwrap()).expect("YAML serialization should succeed");
+        let doc: crate::yaml::TaskDocument =
+            serde_yaml::from_str(&roundtripped).expect("Roundtripped YAML should be valid");
+
+        let rt_1 = doc.nodes.iter().find(|n| n.id == 1).expect("Node 1");
+        assert_eq!(rt_1.done, Some(true));
+
+        let rt_2 = doc.nodes.iter().find(|n| n.id == 2).expect("Node 2");
+        assert_eq!(rt_2.done, Some(false));
+
+        let rt_3 = doc.nodes.iter().find(|n| n.id == 3).expect("Node 3");
+        assert_eq!(rt_3.done, None);
     }
 }

@@ -23,6 +23,8 @@ pub struct Node {
     pub deadline: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub important: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub done: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub subtask_ids: Vec<i64>,
 }

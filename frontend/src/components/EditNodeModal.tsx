@@ -50,6 +50,7 @@ interface FormState {
   details: string;
   deadline: string; // datetime-local format "YYYY-MM-DDTHH:mm"
   important: boolean;
+  done: boolean;
   subtask_ids: number[];
 }
 
@@ -122,6 +123,7 @@ export default function EditNodeModal({
     details: node.details ?? "",
     deadline: isoToDatetimeLocal(node.deadline),
     important: node.important ?? false,
+    done: node.done ?? false,
     subtask_ids: node.subtask_ids ? [...node.subtask_ids] : [],
   });
 
@@ -166,6 +168,7 @@ export default function EditNodeModal({
       details: form.details.trim() || undefined,
       deadline: datetimeLocalToIso(form.deadline),
       important: form.important,
+      done: form.done,
       subtask_ids: form.subtask_ids.length > 0
         ? [...form.subtask_ids]
         : undefined,
@@ -387,6 +390,49 @@ export default function EditNodeModal({
           </button>
           <span style={{ fontSize: 13, color: colors.text }}>
             Important
+          </span>
+        </div>
+
+        {/* Done toggle */}
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, done: !f.done }))}
+            style={{
+              width: 44,
+              height: 24,
+              borderRadius: 12,
+              border: "none",
+              cursor: "pointer",
+              background: form.done ? "#10b981" : colors.border,
+              position: "relative",
+              transition: "background 0.2s",
+              flexShrink: 0,
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: 2,
+                left: form.done ? 22 : 2,
+                width: 20,
+                height: 20,
+                borderRadius: "50%",
+                background: colors.surface,
+                transition: "left 0.2s",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+              }}
+            />
+          </button>
+          <span style={{ fontSize: 13, color: colors.text }}>
+            Done
           </span>
         </div>
 

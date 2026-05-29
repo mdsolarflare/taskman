@@ -23,6 +23,7 @@ interface WasmExports {
     details: string,
     deadline: string,
     important: boolean,
+    done: boolean,
     subtaskIdsJson: string,
   ) => string;
   __wbindgen_malloc: (size: number, alignment: number) => number;
@@ -129,6 +130,7 @@ export async function addNode(
   details: string,
   deadline: string,
   important: boolean,
+  done: boolean,
   subtaskIds: number[],
 ): Promise<{ graph: unknown; new_id: number }> {
   const wasm = await initWasm();
@@ -143,6 +145,7 @@ export async function addNode(
     details,
     deadline,
     important,
+    done,
     subtaskIdsJson,
   );
   return JSON.parse(result);

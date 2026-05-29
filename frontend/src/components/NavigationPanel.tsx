@@ -116,6 +116,7 @@ export default function NavigationPanel({
   const [searchText, setSearchText] = useState("");
   const [filterImportant, setFilterImportant] = useState(false);
   const [filterDeadline, setFilterDeadline] = useState(false);
+  const [filterDone, setFilterDone] = useState(false);
 
   // Cached DFS tree order
   const treeOrder = useMemo(() => buildTreeOrder(graph), [graph]);
@@ -135,14 +136,18 @@ export default function NavigationPanel({
         const status = getDeadlineStatus(node.deadline);
         if (status === "ok") return false;
       }
+      if (filterDone && node.done) {
+        return false;
+      }
       return true;
     });
-  }, [treeOrder, searchText, filterImportant, filterDeadline]);
+  }, [treeOrder, searchText, filterImportant, filterDeadline, filterDone]);
 
   const c = colors;
 
   // Active filter count (for showing clear button)
-  const hasActiveFilters = searchText || filterImportant || filterDeadline;
+  const hasActiveFilters = searchText || filterImportant || filterDeadline ||
+    filterDone;
 
   return (
     <aside
@@ -272,6 +277,13 @@ export default function NavigationPanel({
             title="Filter near-deadline / overdue tasks"
             colors={c}
           />
+          <ToggleBtn
+            active={filterDone}
+            onClick={() => setFilterDone((v) => !v)}
+            label="✓"
+            title="Filter completed tasks"
+            colors={c}
+          />
         </div>
       </div>
 
@@ -378,6 +390,8 @@ export default function NavigationPanel({
                 style={{
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  textDecoration: node.done ? "line-through" : "none",
+                  opacity: node.done ? 0.5 : 1,
                 }}
               >
                 {node.name}
