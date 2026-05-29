@@ -4,6 +4,8 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
+enable-beta-ecosystems: true # Allows the use of the "deno" ecosystem
+
 updates:
   # Configuration for Deno dependencies
   - package-ecosystem: "deno"
