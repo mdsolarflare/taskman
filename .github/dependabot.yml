@@ -5,7 +5,14 @@
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # Configuration for Deno dependencies
+  - package-ecosystem: "deno"
+    directory: "/frontend/" # Adjust if your Deno files are in a subdirectory
+    schedule:
+      interval: "weekly"
+
+  # Configuration for Rust/Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/ichor/" # Adjust if your Cargo.toml is in a subdirectory
     schedule:
       interval: "weekly"
