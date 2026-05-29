@@ -290,6 +290,7 @@ function App() {
           updated.details ?? "",
           updated.deadline ?? "",
           updated.important ?? false,
+          updated.done ?? false,
           updated.subtask_ids ?? [],
         )) as { graph: Graph; new_id: number };
         newGraph = result.graph;

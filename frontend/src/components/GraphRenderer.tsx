@@ -870,9 +870,11 @@ export default function GraphRenderer({
                   fontSize={13}
                   fontWeight={600}
                   fill={colors.text}
+                  opacity={node.done ? 0.5 : 1}
                   style={{
                     userSelect: "none",
                     pointerEvents: "none",
+                    textDecoration: node.done ? "line-through" : "none",
                   }}
                 >
                   {truncateText(
@@ -890,9 +892,11 @@ export default function GraphRenderer({
                     dominantBaseline="middle"
                     fontSize={10}
                     fill={colors.textSubtle}
+                    opacity={node.done ? 0.5 : 1}
                     style={{
                       userSelect: "none",
                       pointerEvents: "none",
+                      textDecoration: node.done ? "line-through" : "none",
                     }}
                   >
                     {truncatedDetails}
@@ -907,9 +911,11 @@ export default function GraphRenderer({
                     dominantBaseline="middle"
                     fontSize={10}
                     fill={colors.textSubtle}
+                    opacity={node.done ? 0.5 : 1}
                     style={{
                       userSelect: "none",
                       pointerEvents: "none",
+                      textDecoration: node.done ? "line-through" : "none",
                     }}
                   >
                     {formatDeadline(node.deadline)}

@@ -59,6 +59,7 @@ optional — a "leaf" node simply omits `details`, `important`, and `subtask_ids
 - `details` (string, max 1024 chars, optional): Detailed description.
 - `deadline` (datetime, optional): ISO 8601 date/time.
 - `important` (bool, optional): Flag for highlighting.
+- `done` (bool, optional): Flag marking the node as completed. Done nodes are visually rendered with strikethrough text but remain in the active graph.
 - `subtask_ids` (list[int], optional): IDs of child nodes. Empty or absent on
   leaf nodes.
 
