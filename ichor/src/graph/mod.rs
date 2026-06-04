@@ -431,32 +431,6 @@ pub fn build_graph_from_yaml(yaml: &str) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_str(&json))
 }
 
-/// Parse YAML and return node count.
-#[wasm_bindgen]
-pub fn get_node_count(yaml: &str) -> Result<i64, String> {
-    let doc: crate::yaml::TaskDocument =
-        serde_yaml::from_str(yaml).map_err(|e| format!("YAML error: {}", e))?;
-    Ok(doc.nodes.len() as i64)
-}
-
-/// Get root node names from YAML.
-#[wasm_bindgen]
-pub fn get_root_names(yaml: &str) -> Result<JsValue, JsValue> {
-    let doc: crate::yaml::TaskDocument =
-        serde_yaml::from_str(yaml).map_err(|e| JsValue::from_str(&e.to_string()))?;
-
-    let graph_nodes = GraphBuilder::nodes_from_yaml(doc.nodes);
-    let graph = Graph::from_nodes(graph_nodes);
-
-    let names: Vec<String> = graph
-        .get_root_nodes()
-        .iter()
-        .map(|n| n.name.clone())
-        .collect();
-    let json = serde_json::to_string(&names).map_err(|e| JsValue::from_str(&e.to_string()))?;
-    Ok(JsValue::from_str(&json))
-}
-
 /// Delete a node from the graph.
 ///
 /// Returns the updated graph as JSON, or an error string.
