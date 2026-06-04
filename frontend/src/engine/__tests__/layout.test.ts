@@ -302,3 +302,196 @@ Deno.test("LayoutEngine - deep nesting", () => {
   assertEquals(l2.x, 280 * 2);
   assertEquals(l3.x, 280 * 3);
 });
+
+/** Shifts propagate to grandchildren when a sibling is shifted. */
+Deno.test("LayoutEngine - shift propagation to grandchildren", () => {
+  const engine = createLayoutEngine();
+  // Root -> A, B, C where B has children B1, B2
+  // When B is shifted to avoid A, B1 and B2 must also shift.
+  const graph = buildGraph(
+    [
+      { id: 1, name: "Root", subtask_ids: [2, 3, 4], collapsed: false },
+      { id: 2, name: "A" },
+      { id: 3, name: "B", subtask_ids: [5, 6], collapsed: false },
+      { id: 4, name: "C" },
+      { id: 5, name: "B1" },
+      { id: 6, name: "B2" },
+    ],
+    [1],
+  );
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  assertEquals(layout.nodes.size, 6);
+
+  const b = layout.nodes.get(3)!;
+  const b1 = layout.nodes.get(5)!;
+  const b2 = layout.nodes.get(6)!;
+
+  // B1 and B2 must be below A
+  const a = layout.nodes.get(2)!;
+  assert(b1.y >= a.y + a.height, "B1 should be below A");
+  assert(b2.y >= a.y + a.height, "B2 should be below A");
+
+  // B centered on B1 and B2
+  const b1Center = b1.y + b1.height / 2;
+  const b2Center = b2.y + b2.height / 2;
+  const expectedB = (b1Center + b2Center) / 2;
+  assertEquals(b.y, expectedB);
+
+  // All grandchildren at depth 2
+  assertEquals(b1.x, 280 * 2);
+  assertEquals(b2.x, 280 * 2);
+});
+
+/** Exhaustive overlap check: no two nodes at the same depth should overlap on Y. */
+Deno.test("LayoutEngine - no same-depth overlaps (many siblings)", () => {
+  const engine = createLayoutEngine();
+  // Root -> P1(leaf), P2(has Q1..Q5), P3(has R1,R2)
+  // This creates many depth=2 nodes from multiple parents
+  const graph = buildGraph(
+    [
+      { id: 1, name: "Root", subtask_ids: [2, 3, 4], collapsed: false },
+      { id: 2, name: "P1" }, // leaf at depth=1
+      {
+        id: 3,
+        name: "P2",
+        subtask_ids: [5, 6, 7, 8, 9],
+        collapsed: false,
+      }, // 5 children at depth=2
+      { id: 4, name: "P3", subtask_ids: [10, 11], collapsed: false }, // 2 children at depth=2
+      { id: 5, name: "Q1" },
+      { id: 6, name: "Q2" },
+      { id: 7, name: "Q3" },
+      { id: 8, name: "Q4" },
+      { id: 9, name: "Q5" },
+      { id: 10, name: "R1" },
+      { id: 11, name: "R2" },
+    ],
+    [1],
+  );
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  // Group nodes by depth (x / horizontalSpacing)
+  const byDepth = new Map<number, typeof layout.nodes>();
+  for (const node of layout.nodes.values()) {
+    const depth = Math.round(node.x / 280);
+    if (!byDepth.has(depth)) byDepth.set(depth, new Map());
+    byDepth.get(depth)!.set(node.id, node);
+  }
+
+  // Check all pairs at each depth for Y-axis overlaps
+  for (const [depth, nodes] of byDepth) {
+    const arr = Array.from(nodes.values()).sort((a, b) => a.y - b.y);
+    for (let i = 0; i < arr.length - 1; i++) {
+      const a = arr[i];
+      const b = arr[i + 1];
+      const gap = b.y - (a.y + a.height);
+      assert(
+        gap >= 0,
+        `Depth ${depth}: node ${a.id} (y=${a.y}, h=${a.height}) overlaps node ${b.id} (y=${b.y}), gap=${gap}`,
+      );
+    }
+  }
+});
+
+/** First child of many: when a parent has many children, the first should not overlap with previous siblings' subtrees. */
+Deno.test("LayoutEngine - first child of many no overlap", () => {
+  const engine = createLayoutEngine();
+  // Root -> A(leaf), B(has C1..C6)
+  // C1 is the "first child of many" — must not overlap with A
+  const graph = buildGraph(
+    [
+      { id: 1, name: "Root", subtask_ids: [2, 3], collapsed: false },
+      { id: 2, name: "A" }, // leaf at depth=1
+      {
+        id: 3,
+        name: "B",
+        subtask_ids: [4, 5, 6, 7, 8, 9],
+        collapsed: false,
+      },
+      { id: 4, name: "C1" },
+      { id: 5, name: "C2" },
+      { id: 6, name: "C3" },
+      { id: 7, name: "C4" },
+      { id: 8, name: "C5" },
+      { id: 9, name: "C6" },
+    ],
+    [1],
+  );
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  const a = layout.nodes.get(2)!;
+  const c1 = layout.nodes.get(4)!;
+
+  // C1 must be below A with at least verticalSpacing gap
+  assert(
+    c1.y >= a.y + a.height + 32,
+    `C1 (y=${c1.y}) should be below A (ends at ${a.y + a.height}), got gap=${
+      c1.y - (a.y + a.height)
+    }`,
+  );
+
+  // All C-nodes must not overlap with each other
+  const cNodes = [4, 5, 6, 7, 8, 9].map((id) => layout.nodes.get(id)!);
+  cNodes.sort((a, b) => a.y - b.y);
+  for (let i = 0; i < cNodes.length - 1; i++) {
+    const gap = cNodes[i + 1].y - (cNodes[i].y + cNodes[i].height);
+    assert(
+      gap >= 0,
+      `C-node ${cNodes[i].id} overlaps C-node ${cNodes[i + 1].id}, gap=${gap}`,
+    );
+  }
+});
+
+/** Parent bounding box must include the parent's own height, not just children. */
+Deno.test("LayoutEngine - parent bounds include self height", () => {
+  const engine = createLayoutEngine();
+  // Root -> A(leaf), B(has C1)
+  // B is tall (has details+deadline) but its only child C1 is short.
+  // Without including B's own height in its bounding box, sibling spacing
+  // would underestimate B's extent and let the next sibling overlap with B.
+  const graph = buildGraph(
+    [
+      {
+        id: 1,
+        name: "Root",
+        subtask_ids: [2, 3],
+        collapsed: false,
+      },
+      { id: 2, name: "A" }, // leaf at depth=1
+      {
+        id: 3,
+        name: "B",
+        details: "Tall node with lots of content",
+        deadline: "2026-05-01",
+        subtask_ids: [4],
+        collapsed: false,
+      }, // tall at depth=1
+      { id: 4, name: "C1" }, // short child at depth=2
+    ],
+    [1],
+  );
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  const a = layout.nodes.get(2)!;
+  const b = layout.nodes.get(3)!;
+  const c1 = layout.nodes.get(4)!;
+
+  // B must be below A with gap (B is tall, so its bounding box should reflect that)
+  assert(
+    b.y >= a.y + a.height + 32,
+    `B (y=${b.y}) should be below A (ends at ${a.y + a.height}), got gap=${
+      b.y - (a.y + a.height)
+    }`,
+  );
+
+  // C1 must not overlap with A either
+  assert(
+    c1.y >= a.y + a.height,
+    `C1 (y=${c1.y}) should be below A (ends at ${a.y + a.height})`,
+  );
+});

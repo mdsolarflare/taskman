@@ -29,9 +29,6 @@ pub struct Node {
     pub subtask_ids: Vec<i64>,
 }
 
-/// Legacy alias — kept for import compatibility.
-pub type Task = Node;
-
 /// The root document structure for tasks.yaml.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskDocument {

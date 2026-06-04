@@ -12,8 +12,7 @@
 // Type definitions for the WASM module exports
 interface WasmExports {
   build_graph_from_yaml: (yaml: string) => string;
-  get_node_count: (yaml: string) => number;
-  get_root_names: (yaml: string) => string;
+
   graph_to_yaml: (graphJson: string) => string;
   delete_node: (graphJson: string, nodeId: bigint) => string;
   add_node: (
@@ -74,23 +73,6 @@ export async function buildGraphFromYaml(yaml: string): Promise<unknown> {
   const wasm = await initWasm();
   const jsonString = wasm.build_graph_from_yaml(yaml);
   return JSON.parse(jsonString);
-}
-
-/**
- * Get the number of nodes in a YAML document.
- */
-export async function getNodeCount(yaml: string): Promise<number> {
-  const wasm = await initWasm();
-  return wasm.get_node_count(yaml);
-}
-
-/**
- * Get the names of root nodes from a YAML document.
- */
-export async function getRootNames(yaml: string): Promise<string[]> {
-  const wasm = await initWasm();
-  const jsonString = wasm.get_root_names(yaml);
-  return JSON.parse(jsonString) as string[];
 }
 
 /**
