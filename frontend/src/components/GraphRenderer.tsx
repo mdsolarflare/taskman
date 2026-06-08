@@ -761,7 +761,7 @@ export default function GraphRenderer({
               fontFamily="system-ui, sans-serif"
               pointerEvents="none"
             >
-              Click "+ Add" or press Shift+\u002B to create your first task
+              Click "+ Add" or press Shift and '+' to create your first task
             </text>
           )}
           {/* Edges */}
