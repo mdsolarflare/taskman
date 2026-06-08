@@ -260,10 +260,12 @@ export default function GraphRenderer({
         onDeleteNode(selectedNodeId);
       }
 
-      // "+" key triggers add node (only when node selected)
-      if (e.key === "+" && selectedNodeId !== null && onAddNode) {
-        e.preventDefault();
-        onAddNode(selectedNodeId);
+      // "+" key triggers add node (root when nothing selected, child of selected otherwise)
+      if (e.key === "+") {
+        if (onAddNode) {
+          e.preventDefault();
+          onAddNode(selectedNodeId ?? -1);
+        }
       } // "=" key triggers edit node (only when node selected)
       else if (e.key === "=" && selectedNodeId !== null && onNodeEdit) {
         e.preventDefault();
@@ -375,12 +377,20 @@ export default function GraphRenderer({
 
   const handleResetView = useCallback(() => {
     if (!svgRef.current || !layout) return;
+
+    // Empty graph: center on origin where the instruction text lives
+    if (graph?.nodes.length === 0) {
+      const rect = svgRef.current.getBoundingClientRect();
+      setViewport({ x: rect.width / 2, y: rect.height / 2, zoom: 1 });
+      return;
+    }
+
     const targetId = selectedNodeId ?? layout.graph.root_ids[0];
     const targetPos = layout.nodes.get(targetId);
     if (targetPos && svgRef.current) {
       setViewport(computeViewportForNode(svgRef.current, targetPos));
     }
-  }, [selectedNodeId, layout]);
+  }, [selectedNodeId, layout, graph]);
 
   // -----------------------------------------------------------------------
   // Render helpers
@@ -739,6 +749,21 @@ export default function GraphRenderer({
         <g
           transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.zoom})`}
         >
+          {/* Empty graph guidance */}
+          {graph.nodes.length === 0 && (
+            <text
+              x="0"
+              y="0"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={colors.textSubtle}
+              fontSize="14"
+              fontFamily="system-ui, sans-serif"
+              pointerEvents="none"
+            >
+              Click "+ Add" or press Shift and '+' to create your first task
+            </text>
+          )}
           {/* Edges */}
           {layout.edges.map(({ from, to }) => {
             const fromPos = layout.nodes.get(from);
