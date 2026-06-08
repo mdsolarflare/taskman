@@ -55,3 +55,15 @@ export const COLOR_LABELS: Record<ColorVariable, string> = {
 };
 
 export type ColorMap = Record<ColorVariable, string>;
+
+/**
+ * Resolve a human-readable label for a theme id.
+ *
+ * Pure function — no React dependency so it can be tested in Deno.
+ */
+export function getThemeLabel(id: ThemeId | "custom"): string {
+  const found = THEMES.find((t) => t.id === id);
+  if (found) return found.label;
+  if (id === "custom") return "Custom";
+  return "Banana Crisis";
+}

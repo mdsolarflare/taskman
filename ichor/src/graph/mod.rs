@@ -1008,6 +1008,11 @@ nodes:
             node.parent_ids.is_none(),
             "Root node should have no parents"
         );
+        assert_eq!(
+            node.collapsed,
+            Some(false),
+            "Newly created node should default to collapsed=false"
+        );
     }
 
     #[test]
@@ -1045,6 +1050,31 @@ nodes:
                 .map_or(false, |ids| ids.contains(&1)),
             "New child should reference parent"
         );
+        assert_eq!(
+            child.collapsed,
+            Some(false),
+            "Child node should default to collapsed=false"
+        );
+
+        // Adjacency maps must be updated (parent -> child)
+        let adj = graph
+            .adjacency
+            .get(&1)
+            .expect("Parent adjacency entry should exist");
+        assert!(
+            adj.contains(&3),
+            "Adjacency map should list new child under parent"
+        );
+
+        // Reverse adjacency must be updated (child -> parent)
+        let rev = graph
+            .reverse_adjacency
+            .get(&3)
+            .expect("Child reverse_adjacency should exist");
+        assert!(
+            rev.contains(&1),
+            "Reverse adjacency should link child back to parent"
+        );
     }
 
     #[test]
@@ -1074,6 +1104,10 @@ nodes:
         assert_eq!(node.deadline, Some("2025-12-31".into()));
         assert_eq!(node.important, Some(true));
         assert_eq!(node.collapsed, Some(false));
+
+        // done field is not passed — verify it defaults to None
+        let node = graph.get_node(id).expect("Node should exist");
+        assert_eq!(node.done, None, "done should be None when not provided");
     }
 
     #[test]
@@ -1155,6 +1189,112 @@ nodes:
             rev.contains(&id),
             "Child B reverse_adjacency should include Middle"
         );
+
+        // Adjacency map for the new node must also exist
+        let adj = graph
+            .adjacency
+            .get(&id)
+            .expect("Middle adjacency entry should exist");
+        assert!(
+            adj.contains(&2),
+            "Adjacency should list Child A under Middle"
+        );
+        assert!(
+            adj.contains(&3),
+            "Adjacency should list Child B under Middle"
+        );
+    }
+
+    #[test]
+    fn test_create_node_with_done_field() {
+        let mut graph = Graph {
+            nodes: vec![],
+            adjacency: std::collections::HashMap::new(),
+            reverse_adjacency: std::collections::HashMap::new(),
+            root_ids: vec![],
+        };
+
+        // Create with done=true
+        let id_done = graph
+            .add_node(None, "Done task".into(), None, None, None, Some(true), None)
+            .expect("Should succeed");
+        let node = graph.get_node(id_done).expect("Node should exist");
+        assert_eq!(node.done, Some(true));
+
+        // Create with done=false
+        let id_not_done = graph
+            .add_node(None, "Not done".into(), None, None, None, Some(false), None)
+            .expect("Should succeed");
+        let node = graph.get_node(id_not_done).expect("Node should exist");
+        assert_eq!(node.done, Some(false));
+
+        // Create with done=None (default)
+        let id_undecided = graph
+            .add_node(None, "Undecided".into(), None, None, None, None, None)
+            .expect("Should succeed");
+        let node = graph.get_node(id_undecided).expect("Node should exist");
+        assert_eq!(node.done, None);
+    }
+
+    #[test]
+    fn test_create_multiple_roots() {
+        let mut graph = Graph {
+            nodes: vec![],
+            adjacency: std::collections::HashMap::new(),
+            reverse_adjacency: std::collections::HashMap::new(),
+            root_ids: vec![],
+        };
+
+        // Add two root nodes (no parent)
+        let id1 = graph
+            .add_node(None, "Root A".into(), None, None, None, None, None)
+            .expect("Should succeed");
+        let id2 = graph
+            .add_node(None, "Root B".into(), None, None, None, None, None)
+            .expect("Should succeed");
+
+        assert_eq!(id1, 1);
+        assert_eq!(id2, 2);
+        assert_eq!(graph.nodes.len(), 2);
+        assert!(graph.root_ids.contains(&1), "Root A should be in root_ids");
+        assert!(graph.root_ids.contains(&2), "Root B should be in root_ids");
+
+        // Neither should have parents
+        let node_a = graph.get_node(1).expect("Root A should exist");
+        assert!(node_a.parent_ids.is_none());
+        let node_b = graph.get_node(2).expect("Root B should exist");
+        assert!(node_b.parent_ids.is_none());
+    }
+
+    #[test]
+    fn test_create_with_nonexistent_subtask_ids() {
+        // add_node does NOT validate that subtask_ids reference existing nodes.
+        // It blindly updates reverse_adjacency. This is documented behavior —
+        // the caller may be creating a node ahead of its children (e.g. from YAML).
+        let graph_nodes = vec![make_node(1, "Root", vec![])];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        let id = graph
+            .add_node(
+                Some(1),
+                "Middle".into(),
+                None,
+                None,
+                None,
+                None,
+                Some(vec![99, 100]), // IDs that don't exist yet
+            )
+            .expect("Should succeed — no validation of subtask targets");
+
+        let middle = graph.get_node(id).expect("Middle should exist");
+        assert_eq!(middle.subtask_ids, Some(vec![99, 100]));
+
+        // reverse_adjacency is updated even though nodes 99/100 don't exist
+        let rev_99 = graph
+            .reverse_adjacency
+            .get(&99)
+            .expect("reverse_adjacency entry created for nonexistent node");
+        assert!(rev_99.contains(&id));
     }
 
     // =====================================================================
@@ -1280,16 +1420,23 @@ nodes:
         let graph_nodes = vec![make_node(1, "Old Name", vec![])];
         let mut graph = Graph::from_nodes(graph_nodes);
 
+        // Mutate all scalar fields in one pass
         let node = graph.get_node_mut(1).expect("Node 1 should exist");
         node.name = "New Name".into();
         node.details = Some("Updated details".into());
+        node.deadline = Some("2026-06-30".into());
         node.important = Some(true);
+        node.done = Some(false);
+        node.collapsed = Some(true);
 
         // Verify the mutation persisted
         let node = graph.get_node(1).expect("Node 1 should still exist");
         assert_eq!(node.name, "New Name");
         assert_eq!(node.details, Some("Updated details".into()));
+        assert_eq!(node.deadline, Some("2026-06-30".into()));
         assert_eq!(node.important, Some(true));
+        assert_eq!(node.done, Some(false));
+        assert_eq!(node.collapsed, Some(true));
     }
 
     #[test]
@@ -1301,7 +1448,7 @@ nodes:
         ];
         let mut graph = Graph::from_nodes(graph_nodes);
 
-        // Initially no parents
+        // Initially no parents for C
         let c = graph.get_node(3).expect("C should exist");
         assert!(c.parent_ids.is_none());
 
@@ -1309,11 +1456,54 @@ nodes:
         let a = graph.get_node_mut(1).expect("A should exist");
         a.subtask_ids = Some(vec![3]);
 
-        // Note: adjacency lists won't update automatically — that's the
-        // caller's responsibility. `add_node` does it, raw mutation doesn't.
-        // This test just enforces that the field itself is writable.
+        // Field is writable and persisted
         let a = graph.get_node(1).expect("A should still exist");
         assert_eq!(a.subtask_ids, Some(vec![3]));
+
+        // Adjacency lists are NOT updated by raw mutation — this is the caller's responsibility.
+        // `add_node` does it; direct mutation via `get_node_mut` does not.
+        assert!(
+            !graph.adjacency.contains_key(&1),
+            "Adjacency should NOT be auto-updated by field mutation"
+        );
+    }
+
+    #[test]
+    fn test_update_mutation_then_delete_uses_stale_adjacency() {
+        // A -> B (via YAML, adjacency is correct)
+        // Mutate A to also claim C via raw mutation (adjacency NOT updated for C)
+        // Delete B — should only remap based on adjacency, not the mutated subtask_ids
+        let yaml = r#"
+nodes:
+  - id: 1
+    name: A
+    subtask_ids: [2]
+  - id: 2
+    name: B
+  - id: 3
+    name: C
+"#;
+        let mut graph = build_graph_from_yaml_str(yaml);
+
+        // Raw-mutate A to also list C as a subtask (adjacency won't update)
+        let a = graph.get_node_mut(1).expect("A should exist");
+        a.subtask_ids = Some(vec![2, 3]);
+
+        // Adjacency for A still only has B (the mutation didn't touch it)
+        let adj_a = graph.adjacency.get(&1).expect("A adjacency should exist");
+        assert_eq!(adj_a.len(), 1, "Adjacency should still only list B");
+        assert!(adj_a.contains(&2));
+
+        // Delete B — C is NOT a child in adjacency, so it won't be remapped
+        graph.delete_node(2).expect("Delete B should succeed");
+
+        // A's subtask_ids field still says [2, 3] but adjacency only had [2]
+        // After delete, adjacency for A is cleaned up. C remains independent.
+        let c = graph.get_node(3).expect("C should exist");
+        assert!(
+            c.parent_ids.as_ref().map_or(true, Vec::is_empty),
+            "C should have no parents — it was never in adjacency"
+        );
     }
 
     // =====================================================================
@@ -1407,5 +1597,371 @@ nodes:
 
         let rt_3 = doc.nodes.iter().find(|n| n.id == 3).expect("Node 3");
         assert_eq!(rt_3.done, None);
+    }
+
+    // =====================================================================
+    // GraphBuilder::nodes_from_yaml — direct conversion tests
+    // =====================================================================
+
+    #[test]
+    fn test_nodes_from_yaml_empty_subtask_vec_becomes_none() {
+        let yaml_nodes = vec![crate::yaml::Node {
+            id: 1,
+            name: "Leaf".into(),
+            details: None,
+            deadline: None,
+            important: None,
+            done: None,
+            subtask_ids: vec![], // empty vec
+        }];
+        let graph_nodes = GraphBuilder::nodes_from_yaml(yaml_nodes);
+        assert_eq!(graph_nodes.len(), 1);
+        assert!(
+            graph_nodes[0].subtask_ids.is_none(),
+            "Empty subtask_ids vec should become None in GraphNode"
+        );
+    }
+
+    #[test]
+    fn test_nodes_from_yaml_non_empty_subtask_preserved() {
+        let yaml_nodes = vec![crate::yaml::Node {
+            id: 1,
+            name: "Parent".into(),
+            details: None,
+            deadline: None,
+            important: None,
+            done: None,
+            subtask_ids: vec![2, 3],
+        }];
+        let graph_nodes = GraphBuilder::nodes_from_yaml(yaml_nodes);
+        assert_eq!(graph_nodes[0].subtask_ids, Some(vec![2, 3]));
+    }
+
+    #[test]
+    fn test_nodes_from_yaml_collapsed_always_defaults_to_false() {
+        // The YAML schema has no `collapsed` field — it's always set by the converter.
+        let yaml_nodes = vec![crate::yaml::Node {
+            id: 1,
+            name: "Test".into(),
+            details: None,
+            deadline: None,
+            important: None,
+            done: None,
+            subtask_ids: vec![],
+        }];
+        let graph_nodes = GraphBuilder::nodes_from_yaml(yaml_nodes);
+        assert_eq!(
+            graph_nodes[0].collapsed,
+            Some(false),
+            "Collapsed should always default to false on conversion"
+        );
+    }
+
+    #[test]
+    fn test_nodes_from_yaml_all_fields_mapped() {
+        let yaml_nodes = vec![crate::yaml::Node {
+            id: 42,
+            name: "Full node".into(),
+            details: Some("Build it".into()),
+            deadline: Some("2026-12-31".into()),
+            important: Some(true),
+            done: Some(false),
+            subtask_ids: vec![5, 6],
+        }];
+        let graph_nodes = GraphBuilder::nodes_from_yaml(yaml_nodes);
+        let node = &graph_nodes[0];
+
+        assert_eq!(node.id, 42);
+        assert_eq!(node.name, "Full node");
+        assert_eq!(node.details, Some("Build it".into()));
+        assert_eq!(node.deadline, Some("2026-12-31".into()));
+        assert_eq!(node.important, Some(true));
+        assert_eq!(node.done, Some(false));
+        assert_eq!(node.subtask_ids, Some(vec![5, 6]));
+        assert_eq!(node.parent_ids, None); // Always None from YAML; filled by Graph::from_nodes
+        assert_eq!(node.collapsed, Some(false));
+    }
+
+    // =====================================================================
+    // YAML parsing edge cases — error handling
+    // =====================================================================
+
+    #[test]
+    fn test_yaml_parse_empty_string_fails() {
+        let result: Result<crate::yaml::TaskDocument, _> = serde_yaml::from_str("");
+        assert!(
+            result.is_err(),
+            "Empty string should fail to parse as TaskDocument"
+        );
+    }
+
+    #[test]
+    fn test_yaml_parse_missing_nodes_key_fails() {
+        let yaml = r#"garbage: true"#;
+        let result: Result<crate::yaml::TaskDocument, _> = serde_yaml::from_str(yaml);
+        assert!(
+            result.is_err(),
+            "YAML without 'nodes' key should fail to parse"
+        );
+    }
+
+    #[test]
+    fn test_yaml_parse_malformed_fails() {
+        let yaml = r#"
+nodes:
+  - id: 1
+    name: Good
+  - bad indentation here
+"#;
+        let result: Result<crate::yaml::TaskDocument, _> = serde_yaml::from_str(yaml);
+        assert!(result.is_err(), "Malformed YAML should fail to parse");
+    }
+
+    #[test]
+    fn test_yaml_parse_empty_nodes_list_succeeds() {
+        let yaml = r#"
+nodes: []
+"#;
+        let doc: crate::yaml::TaskDocument =
+            serde_yaml::from_str(yaml).expect("Empty nodes list should parse successfully");
+        assert!(doc.nodes.is_empty());
+
+        // Building a graph from empty nodes should produce an empty graph
+        let graph_nodes = GraphBuilder::nodes_from_yaml(doc.nodes);
+        let graph = Graph::from_nodes(graph_nodes);
+        assert_eq!(graph.nodes.len(), 0);
+        assert!(graph.root_ids.is_empty());
+    }
+
+    #[test]
+    fn test_yaml_parse_node_missing_name_fails() {
+        // serde will fail to deserialize a Node without `name` (required field)
+        let yaml = r#"
+nodes:
+  - id: 1
+"#;
+        let result: Result<crate::yaml::TaskDocument, _> = serde_yaml::from_str(yaml);
+        assert!(
+            result.is_err(),
+            "Node missing 'name' field should fail to parse"
+        );
+    }
+
+    // =====================================================================
+    // YAML parsing edge cases — data integrity
+    // =====================================================================
+
+    #[test]
+    fn test_yaml_parse_duplicate_node_ids() {
+        // Serde allows duplicate IDs in the parsed list. The graph layer may handle dedup,
+        // but the parser itself should not reject this.
+        let yaml = r#"
+nodes:
+  - id: 1
+    name: First
+  - id: 1
+    name: Duplicate
+"#;
+        let doc: crate::yaml::TaskDocument =
+            serde_yaml::from_str(yaml).expect("Duplicate IDs should parse successfully");
+        assert_eq!(
+            doc.nodes.len(),
+            2,
+            "Both nodes should be in the parsed list"
+        );
+    }
+
+    #[test]
+    fn test_yaml_parse_subtask_refs_nonexistent_node() {
+        // A node references a subtask ID that doesn't exist in the document.
+        // This is valid YAML — validation belongs to the graph layer, not parsing.
+        let yaml = r#"
+nodes:
+  - id: 1
+    name: Parent
+    subtask_ids: [999]
+"#;
+        let doc: crate::yaml::TaskDocument =
+            serde_yaml::from_str(yaml).expect("Missing subtask target should parse successfully");
+        assert_eq!(doc.nodes.len(), 1);
+        assert!(doc.nodes[0].subtask_ids.contains(&999));
+    }
+
+    #[test]
+    fn test_yaml_parse_large_subtask_list() {
+        // Node with many subtask_ids — no truncation or overflow.
+        let ids: Vec<String> = (1..=100).map(|i| i.to_string()).collect();
+        let yaml = format!(
+            r#"
+nodes:
+  - id: 0
+    name: Mega parent
+    subtask_ids: [{}]"#,
+            ids.join(", ")
+        );
+        let doc: crate::yaml::TaskDocument =
+            serde_yaml::from_str(&yaml).expect("Large subtask list should parse successfully");
+        assert_eq!(doc.nodes[0].subtask_ids.len(), 100);
+    }
+
+    #[test]
+    fn test_delete_child_then_add_replacement() {
+        // Build: A(1) → B(2), C(3)
+        let graph_nodes = vec![
+            make_node(1, "A", vec![2, 3]),
+            make_node(2, "B", vec![]),
+            make_node(3, "C", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        // Delete B(2)
+        graph.delete_node(2).expect("Deleting B should succeed");
+
+        // A should no longer reference B in adjacency
+        assert!(
+            !graph.adjacency.get(&1).unwrap().contains(&2),
+            "A's adjacency must not contain deleted B"
+        );
+        assert!(!graph.nodes.iter().any(|n| n.id == 2));
+
+        // Add replacement D under A
+        let new_id = graph
+            .add_node(Some(1), "D".into(), None, None, None, None, None)
+            .expect("Adding D should succeed");
+
+        // Verify clean state: no ghost references to B anywhere
+        assert!(!graph.adjacency.get(&1).unwrap().contains(&2));
+        assert!(graph.adjacency.get(&1).unwrap().contains(&new_id));
+
+        // A's subtask_ids should contain C and D but not B
+        let a = graph.get_node(1).expect("A exists");
+        let subs = a.subtask_ids.as_ref().expect("A has subtasks");
+        assert!(!subs.contains(&2), "B must be gone from A's subtask_ids");
+        assert!(subs.contains(&3), "C should still be in A's subtask_ids");
+        assert!(subs.contains(&new_id), "D should be in A's subtask_ids");
+    }
+
+    #[test]
+    fn test_delete_and_create_in_diamond() {
+        // Diamond: Root(1) → A(2), B(3); both → D(4)
+        let graph_nodes = vec![
+            make_node(1, "Root", vec![2, 3]),
+            make_node(2, "A", vec![4]),
+            make_node(3, "B", vec![4]),
+            make_node(4, "D", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        // Delete A(2)
+        graph.delete_node(2).expect("Deleting A should succeed");
+
+        // D should now be remapped to Root (A's parent) in addition to B.
+        // Verify via reverse_adjacency which is the source of truth for delete.
+        let d_parents = graph.reverse_adjacency.get(&4).expect("D has parents");
+        assert!(
+            d_parents.contains(&1),
+            "D should have Root as parent after A deleted"
+        );
+        assert!(d_parents.contains(&3), "D should still have B as parent");
+
+        // Add E under D
+        let e_id = graph
+            .add_node(Some(4), "E".into(), None, None, None, None, None)
+            .expect("Adding E should succeed");
+
+        // Verify reverse_adjacency for E points to D
+        assert!(
+            graph.reverse_adjacency.get(&e_id).unwrap().contains(&4),
+            "E's reverse adjacency must include D"
+        );
+
+        // D's subtask_ids should contain E
+        let d_after = graph.get_node(4).expect("D exists");
+        assert!(
+            d_after.subtask_ids.as_ref().unwrap().contains(&e_id),
+            "D must list E as subtask"
+        );
+    }
+
+    #[test]
+    fn test_add_node_after_delete_preserves_root_ids() {
+        // Build: Root(1) → Child(2)
+        let graph_nodes = vec![make_node(1, "Root", vec![2]), make_node(2, "Child", vec![])];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        assert!(graph.root_ids.contains(&1));
+        assert!(!graph.root_ids.contains(&2));
+
+        // Delete the only child
+        graph.delete_node(2).expect("Deleting Child should succeed");
+
+        // Root must still be a root
+        assert_eq!(
+            graph.root_ids,
+            vec![1],
+            "Root IDs unchanged after child deletion"
+        );
+
+        // Add new child under Root
+        let new_id = graph
+            .add_node(Some(1), "NewChild".into(), None, None, None, None, None)
+            .expect("Adding NewChild should succeed");
+
+        // Root IDs must still be exactly [1]
+        assert_eq!(
+            graph.root_ids,
+            vec![1],
+            "Root IDs unchanged after adding child"
+        );
+
+        // Graph structure is valid: Root → NewChild
+        let root = graph.get_node(1).expect("Root exists");
+        assert!(
+            root.subtask_ids.as_ref().unwrap().contains(&new_id),
+            "Root must list NewChild"
+        );
+        let child = graph.get_node(new_id).expect("NewChild exists");
+        assert!(
+            child.parent_ids.as_ref().unwrap().contains(&1),
+            "NewChild must point back to Root"
+        );
+    }
+
+    #[test]
+    fn test_delete_with_concurrent_field_mutations() {
+        // Build: A(1) → B(2), C(3)
+        let graph_nodes = vec![
+            make_node(1, "A", vec![2, 3]),
+            make_node(2, "B", vec![]),
+            make_node(3, "C", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        // Raw-mutate A to add a phantom subtask D(4) that doesn't exist yet.
+        // This simulates the dangerous pattern of mutating fields directly.
+        let a = graph.get_node_mut(1).expect("A exists");
+        a.subtask_ids = Some(vec![2, 3, 4]);
+
+        // Adjacency for A still only has [2, 3] — D is not in adjacency.
+        let adj_a = graph.adjacency.get(&1).expect("A adjacency exists");
+        assert_eq!(adj_a.len(), 2, "Adjacency should only list B and C");
+
+        // Delete B(2) while A's subtask_ids field is stale (lists phantom D)
+        graph.delete_node(2).expect("Deleting B should succeed");
+
+        // After delete: adjacency for A should have [3] only (C remapped, B removed).
+        // The phantom D in the raw-mutated subtask_ids must NOT appear in adjacency.
+        let adj_a_after = graph.adjacency.get(&1).expect("A adjacency exists");
+        assert!(!adj_a_after.contains(&2), "B must be gone from adjacency");
+        assert!(adj_a_after.contains(&3), "C should still be in adjacency");
+        assert!(!adj_a_after.contains(&4), "Phantom D must not appear in adjacency");
+
+        // A's raw-mutated subtask_ids field is cleaned up by delete_node's cleanup pass.
+        let a_after = graph.get_node(1).expect("A exists");
+        let subs = a_after.subtask_ids.as_ref().expect("A has subtasks");
+        assert!(!subs.contains(&2), "B must be gone from A's subtask_ids after delete cleanup");
+        // Note: phantom D(4) is NOT cleaned up by delete_node because it only
+        // removes the *deleted* node ID (2). The stale mutation of D remains —
+        // this documents that raw mutations are not self-healing.
     }
 }
