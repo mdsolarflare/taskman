@@ -1926,4 +1926,42 @@ nodes:
             "NewChild must point back to Root"
         );
     }
+
+    #[test]
+    fn test_delete_with_concurrent_field_mutations() {
+        // Build: A(1) → B(2), C(3)
+        let graph_nodes = vec![
+            make_node(1, "A", vec![2, 3]),
+            make_node(2, "B", vec![]),
+            make_node(3, "C", vec![]),
+        ];
+        let mut graph = Graph::from_nodes(graph_nodes);
+
+        // Raw-mutate A to add a phantom subtask D(4) that doesn't exist yet.
+        // This simulates the dangerous pattern of mutating fields directly.
+        let a = graph.get_node_mut(1).expect("A exists");
+        a.subtask_ids = Some(vec![2, 3, 4]);
+
+        // Adjacency for A still only has [2, 3] — D is not in adjacency.
+        let adj_a = graph.adjacency.get(&1).expect("A adjacency exists");
+        assert_eq!(adj_a.len(), 2, "Adjacency should only list B and C");
+
+        // Delete B(2) while A's subtask_ids field is stale (lists phantom D)
+        graph.delete_node(2).expect("Deleting B should succeed");
+
+        // After delete: adjacency for A should have [3] only (C remapped, B removed).
+        // The phantom D in the raw-mutated subtask_ids must NOT appear in adjacency.
+        let adj_a_after = graph.adjacency.get(&1).expect("A adjacency exists");
+        assert!(!adj_a_after.contains(&2), "B must be gone from adjacency");
+        assert!(adj_a_after.contains(&3), "C should still be in adjacency");
+        assert!(!adj_a_after.contains(&4), "Phantom D must not appear in adjacency");
+
+        // A's raw-mutated subtask_ids field is cleaned up by delete_node's cleanup pass.
+        let a_after = graph.get_node(1).expect("A exists");
+        let subs = a_after.subtask_ids.as_ref().expect("A has subtasks");
+        assert!(!subs.contains(&2), "B must be gone from A's subtask_ids after delete cleanup");
+        // Note: phantom D(4) is NOT cleaned up by delete_node because it only
+        // removes the *deleted* node ID (2). The stale mutation of D remains —
+        // this documents that raw mutations are not self-healing.
+    }
 }

@@ -1,21 +1,21 @@
 # Test Coverage Inventory
 
-Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, delete+create sequencing)
+Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, delete+create sequencing, concurrent mutations)
 
 ## Summary
 
 | Module | File | Count | What it covers |
 |--------|------|-------|----------------|
-| **Rust Graph Logic** | `ichor/src/graph/mod.rs` | 46 tests | CRUD operations, YAML parsing edge cases, GraphBuilder conversion, adjacency invariants, delete+create sequencing |
+| **Rust Graph Logic** | `ichor/src/graph/mod.rs` | 47 tests | CRUD operations, YAML parsing edge cases, GraphBuilder conversion, adjacency invariants, delete+create sequencing, concurrent mutations |
 | **Layout Engine** | `frontend/src/engine/__tests__/layout.test.ts` | 21 tests | Tree layout algorithm — positioning, spacing, overlap avoidance, empty graph, mixed collapse states, DAG shared children, re-computation |
 | **useAutoSave Hook** | `frontend/src/hooks/__tests__/useAutoSave.test.ts` | 8 tests | Pure helper `deriveBaseStatus()` only (all 8 boolean input combos) |
 | **useTheme Logic** | `frontend/src/hooks/__tests__/useTheme.test.ts` | 13 tests | Theme configuration constants, data integrity, `getThemeLabel` pure function, cycling order |
 
-**Total: 88 tests across 4 files.**
+**Total: 89 tests across 4 files.**
 
 ---
 
-## Rust Graph Logic (`ichor/src/graph/mod.rs`) — 43 Tests
+## Rust Graph Logic (`ichor/src/graph/mod.rs`) — 47 Tests
 
 ### Delete (8 tests)
 
@@ -109,6 +109,7 @@ Compound operations that verify graph integrity after delete followed by create:
 | 42 | `test_delete_child_then_add_replacement` *(new)* | Delete child B from parent A, then add replacement D under A. Verifies no ghost references to B in adjacency or subtask_ids; C and D both present. |
 | 43 | `test_delete_and_create_in_diamond` *(new)* | Diamond DAG (Root→{A,B}→D): delete A, verify D remapped to Root via reverse_adjacency, then add E under D. Confirms adjacency stays consistent through compound ops. |
 | 44 | `test_add_node_after_delete_preserves_root_ids` *(new)* | Delete only child of a root → root_ids unchanged → add new child → root_ids still `[1]`. Verifies bidirectional links (parent→child, child→parent) are correct after the sequence. |
+| 45 | `test_delete_with_concurrent_field_mutations` *(new)* | Raw-mutate A's subtask_ids to include a phantom D(4), then delete B(2). Confirms adjacency operates on maps not mutated fields — phantom D never appears in adjacency, deleted B is cleaned from both adjacency and the raw-mutated field. Documents that stale mutations are NOT self-healing (phantom D persists in the field but not in graph structure). |
 
 ---
 
@@ -199,10 +200,20 @@ The following React components have zero test coverage. Testing them would requi
 - **Integration / end-to-end flows** — no tests for YAML→graph→layout→render pipeline or user interaction sequences.
 - **useAutoSave hook lifecycle** — only the pure `deriveBaseStatus()` helper is tested; actual React hook behavior (effects, debouncing, IndexedDB) is untested.
 
+### Deferred Until Infrastructure Investment
+
+The following areas are intentionally deferred. Each requires new tooling or test harnesses that don't exist in the project today:
+
+| Area | What's needed | Effort |
+|------|---------------|-------|
+| **React components** (`GraphRenderer`, `EditNodeModal`, `DeleteNodeDialog`, `NavigationPanel`, `ThemeModal`) | JSDOM + react-testing-library configured for Deno. Non-trivial setup — ROADMAP says "deferred." | High |
+| **WASM bridge** (`#[wasm_bindgen]` boundary) | `wasm-bindgen-test` crate + separate test harness to verify Rust→JS interop, not just Rust internals. | Medium-High |
+| **useAutoSave hook lifecycle** | DOM mocks for IndexedDB, File System Access API, and debounce timing. Can't run in Deno without these. | Medium |
+| **Integration / E2E flows** | Playwright or similar to test YAML→graph→layout→render pipeline and user interaction sequences. | High |
+
 ### Partial Coverage
 
 - **useTheme hook lifecycle** — `getThemeLabel` and constants are now tested; the actual React hook (localStorage read/write, theme switching via DOM effects) is untested but requires JSDOM to exercise.
-- **Delete tests** — compound delete+create sequencing covered; delete with concurrent field mutations not yet tested.
 
 ### Now Covered (was previously a gap)
 
@@ -214,3 +225,4 @@ The following React components have zero test coverage. Testing them would requi
 - ~~**Update + delete interaction**~~ — new test documents the stale adjacency behavior when raw mutation precedes deletion.
 - ~~**Layout engine edge cases**~~ — empty graph layout, mixed collapsed/expanded subtrees, re-computation after mutation, and DAG shared-child (diamond) are now covered (4 new tests).
 - ~~**useTheme pure logic**~~ — `getThemeLabel` moved to `themeConstants.ts` and fully tested: all theme labels, custom label, unknown fallback, cycling order (4 new tests).
+- ~~**Delete with concurrent field mutations**~~ — raw-mutate + delete interaction now covered. Documents that adjacency maps are the source of truth and stale field mutations don't corrupt graph operations.
