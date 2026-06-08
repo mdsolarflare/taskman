@@ -379,7 +379,7 @@ export default function GraphRenderer({
     if (!svgRef.current || !layout) return;
 
     // Empty graph: center on origin where the instruction text lives
-    if (graph.nodes.length === 0) {
+    if (graph?.nodes.length === 0) {
       const rect = svgRef.current.getBoundingClientRect();
       setViewport({ x: rect.width / 2, y: rect.height / 2, zoom: 1 });
       return;
@@ -390,7 +390,7 @@ export default function GraphRenderer({
     if (targetPos && svgRef.current) {
       setViewport(computeViewportForNode(svgRef.current, targetPos));
     }
-  }, [selectedNodeId, layout, graph.nodes.length]);
+  }, [selectedNodeId, layout, graph]);
 
   // -----------------------------------------------------------------------
   // Render helpers
