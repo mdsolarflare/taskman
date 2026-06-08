@@ -218,7 +218,17 @@ function App() {
       /* noop */
     }
     await autoSave.clearHandle();
-    setState({ graph: null, yaml: null, loading: false, error: null });
+    setState({
+      graph: {
+        nodes: [],
+        adjacency: {},
+        reverse_adjacency: {},
+        root_ids: [],
+      },
+      yaml: "nodes: []",
+      loading: false,
+      error: null,
+    });
   };
 
   const handleLoadSample = async () => {
@@ -956,7 +966,7 @@ function App() {
               />
             )
             : (
-              // Empty state — shown briefly on mount before auto-load, or after "New"
+              // Briefly shown during initial load before sample/workspace restores
               <div
                 style={{
                   display: "flex",
@@ -966,7 +976,7 @@ function App() {
                   fontSize: 13,
                 }}
               >
-                No graph loaded
+                Loading...
               </div>
             )}
 

@@ -22,7 +22,7 @@
 - [x] Fact Check: Graph Algo
 - [x] Fact Check: node_modules decomm not possible
 - [ ] Manually re-review all tests for quality and purpose, smh
-- [ ] New experience is broken, no graph is loaded. Need to start with one node.
+- [x] New experience is broken, no graph is loaded. Need to start with one node.
 - [ ] Navigation pane isn't working when not at 100% zoom
 
 
@@ -53,13 +53,6 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
      inline JSX/styles)
   4. `AboutModal` component — standalone help modal (~75 lines)
   Target: reduce App.tsx to ~400–500 lines. _(deferred)_
-
-- **Test coverage gaps** — Rust graph logic (24 tests) and layout engine (13
-  tests) are well-covered. Hook tests (`useAutoSave`, `useTheme`) cover only pure
-  helpers due to Deno lacking DOM/IndexedDB. No component-level tests exist for
-  `GraphRenderer`, `EditNodeModal`, `DeleteNodeDialog`, `NavigationPanel`, or
-  `ThemeModal`. Would require JSDOM + react-testing-library in Deno — non-trivial
-  setup. _(deferred)_
 
 - **Inline style duplication** — Hover toggle pattern and modal backdrop pattern
   repeat across ~5 components. Known trade-off of zero-CSS design; shared
