@@ -446,6 +446,110 @@ Deno.test("LayoutEngine - first child of many no overlap", () => {
   }
 });
 
+/** Empty graph produces empty layout without crashing. */
+Deno.test("LayoutEngine - empty graph layout", () => {
+  const engine = createLayoutEngine();
+  const graph = buildGraph([], []);
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  assertEquals(layout.nodes.size, 0);
+  assertEquals(layout.edges.length, 0);
+});
+
+/** Mixed collapsed/expanded subtrees: only visible nodes are positioned. */
+Deno.test("LayoutEngine - mixed collapsed/expanded subtrees", () => {
+  const engine = createLayoutEngine();
+  // Root expanded → A collapsed (hides A1,A2) + B expanded (shows B1,B2)
+  const graph = buildGraph(
+    [
+      { id: 1, name: "Root", subtask_ids: [2, 3], collapsed: false },
+      { id: 2, name: "A", subtask_ids: [4, 5], collapsed: true },
+      { id: 3, name: "B", subtask_ids: [6, 7], collapsed: false },
+      { id: 4, name: "A1" },
+      { id: 5, name: "A2" },
+      { id: 6, name: "B1" },
+      { id: 7, name: "B2" },
+    ],
+    [1],
+  );
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  // Root + A (collapsed but visible) + B + B1 + B2 = 5 nodes
+  // A1 and A2 are hidden because A is collapsed
+  assertEquals(layout.nodes.size, 5);
+  assert(layout.nodes.has(1)); // Root
+  assert(layout.nodes.has(2)); // A (visible itself)
+  assert(layout.nodes.has(3)); // B
+  assert(layout.nodes.has(6)); // B1
+  assert(layout.nodes.has(7)); // B2
+  assert(!layout.nodes.has(4), "A1 should be hidden");
+  assert(!layout.nodes.has(5), "A2 should be hidden");
+});
+
+/** Re-computation after graph mutation clears stale state. */
+Deno.test("LayoutEngine - re-computation after graph mutation", () => {
+  const engine = createLayoutEngine();
+
+  // First layout: single root with two children
+  const graph1 = buildGraph(
+    [
+      { id: 1, name: "Root", subtask_ids: [2, 3], collapsed: false },
+      { id: 2, name: "A" },
+      { id: 3, name: "B" },
+    ],
+    [1],
+  );
+  engine.setGraph(graph1);
+  const layout1 = engine.computeLayout();
+  assertEquals(layout1.nodes.size, 3);
+
+  // Second layout: completely different graph — single root only
+  const graph2 = buildGraph(
+    [
+      { id: 10, name: "New Root" },
+    ],
+    [10],
+  );
+  engine.setGraph(graph2);
+  const layout2 = engine.computeLayout();
+
+  assertEquals(layout2.nodes.size, 1);
+  assert(!layout2.nodes.has(1), "Old node should be gone");
+  assert(!layout2.nodes.has(2), "Old child A should be gone");
+  assert(!layout2.nodes.has(3), "Old child B should be gone");
+  assert(layout2.nodes.has(10));
+
+  // Edges from first layout must also be cleared
+  assertEquals(layout2.edges.length, 0);
+});
+
+/** DAG shared child: diamond pattern positions each node once. */
+Deno.test("LayoutEngine - DAG shared child (diamond)", () => {
+  const engine = createLayoutEngine();
+  // Diamond: Root → A, B; both A and B → C
+  const graph = buildGraph(
+    [
+      { id: 1, name: "Root", subtask_ids: [2, 3], collapsed: false },
+      { id: 2, name: "A", subtask_ids: [4], collapsed: false },
+      { id: 3, name: "B", subtask_ids: [4], collapsed: false },
+      { id: 4, name: "C" },
+    ],
+    [1],
+  );
+  engine.setGraph(graph);
+  const layout = engine.computeLayout();
+
+  // All 4 nodes positioned — C appears once despite two parents
+  assertEquals(layout.nodes.size, 4);
+  assert(layout.nodes.has(4), "Shared child C should be in layout");
+
+  // C is at depth 2 (child of A and B)
+  const c = layout.nodes.get(4)!;
+  assertEquals(c.x, 280 * 2);
+});
+
 /** Parent bounding box must include the parent's own height, not just children. */
 Deno.test("LayoutEngine - parent bounds include self height", () => {
   const engine = createLayoutEngine();

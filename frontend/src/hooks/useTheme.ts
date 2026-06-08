@@ -14,6 +14,7 @@ import {
   COLOR_VARIABLES,
   type ColorMap,
   type ColorVariable,
+  getThemeLabel,
   STORAGE_KEY_CUSTOM,
   STORAGE_KEY_THEME,
   type ThemeId,
@@ -26,6 +27,7 @@ export {
   COLOR_VARIABLES,
   type ColorMap,
   type ColorVariable,
+  getThemeLabel,
   STORAGE_KEY_CUSTOM,
   STORAGE_KEY_THEME,
   type ThemeId,
@@ -277,15 +279,4 @@ export function useTheme(): UseThemeReturn {
     cancelDraft,
     setDraftColor,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Label helper
-// ---------------------------------------------------------------------------
-
-function getThemeLabel(id: ThemeId | "custom"): string {
-  const found = THEMES.find((t) => t.id === id);
-  if (found) return found.label;
-  if (id === "custom") return "Custom";
-  return "Banana Crisis";
 }
