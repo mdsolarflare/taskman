@@ -23,7 +23,7 @@
 - [x] Fact Check: node_modules decomm not possible
 - [ ] Manually re-review all tests for quality and purpose, smh
 - [x] New experience is broken, no graph is loaded. Need to start with one node.
-- [ ] Navigation pane isn't working when not at 100% zoom
+- [x] Navigation pane isn't working when not at 100% zoom
 
 
 ## build a yaml repair tool - may be delusional or non-issue
