@@ -8,7 +8,6 @@ import { getLayoutBounds, LayoutEngine } from "../engine/layout.ts";
 
 const NODE_WIDTH = 200;
 const NODE_RADIUS = 6;
-const VIEWPORT_X_OFFSET = 40; // Pixels from left edge of viewport to target node's left edge
 
 // Graph color roles - mapped from CSS theme variables
 interface GraphColors {
@@ -102,14 +101,19 @@ interface Viewport {
 function computeViewportForNode(
   svgEl: SVGSVGElement,
   nodePos: { x: number; y: number; height: number },
+  zoom: number,
 ): Viewport {
   const rect = svgEl.getBoundingClientRect();
-  // X axis: pin node's left edge to a fixed offset from viewport's left edge.
-  // Y axis: vertically center the node.
+  // Center the node in the viewport, accounting for current zoom.
+  // SVG transform: translate(viewport.x, viewport.y) scale(zoom)
+  // So screen position = viewport.x + graphCoord * zoom
+  // To center: viewport.x = rect.width/2 - nodeCenterX * zoom
+  const nodeCenterX = nodePos.x + NODE_WIDTH / 2;
+  const nodeCenterY = nodePos.y + nodePos.height / 2;
   return {
-    x: VIEWPORT_X_OFFSET - nodePos.x,
-    y: rect.height / 2 - (nodePos.y + nodePos.height / 2),
-    zoom: 1,
+    x: rect.width / 2 - nodeCenterX * zoom,
+    y: rect.height / 2 - nodeCenterY * zoom,
+    zoom,
   };
 }
 
@@ -203,10 +207,7 @@ export default function GraphRenderer({
       const nodePos = layout.nodes.get(centerTargetNodeId);
       if (nodePos) {
         const svg = svgRef.current;
-        setViewport((v) => ({
-          ...computeViewportForNode(svg, nodePos),
-          zoom: v.zoom, // preserve current zoom level
-        }));
+        setViewport((v) => computeViewportForNode(svg, nodePos, v.zoom));
       }
     }
   }, [centerTargetNodeId, layout]);
@@ -233,7 +234,7 @@ export default function GraphRenderer({
       const firstRootId = layout.graph.root_ids[0];
       const rootPos = layout.nodes.get(firstRootId);
       if (rootPos && svgRef.current) {
-        setViewport(computeViewportForNode(svgRef.current, rootPos));
+        setViewport(computeViewportForNode(svgRef.current, rootPos, 1));
       }
     }
   }, [layout]);
@@ -388,7 +389,7 @@ export default function GraphRenderer({
     const targetId = selectedNodeId ?? layout.graph.root_ids[0];
     const targetPos = layout.nodes.get(targetId);
     if (targetPos && svgRef.current) {
-      setViewport(computeViewportForNode(svgRef.current, targetPos));
+      setViewport(computeViewportForNode(svgRef.current, targetPos, 1));
     }
   }, [selectedNodeId, layout, graph]);
 
