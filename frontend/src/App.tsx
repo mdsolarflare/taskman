@@ -80,33 +80,7 @@ function App() {
 
   const theme = useTheme();
 
-  // Stabilize loadYaml across renders so it's safe to call from useEffect
-  const loadYamlRef = useRef<
-    ((yaml: string, isSample?: boolean) => Promise<void>) | null
-  >(null);
-
-  // Restore saved workspace on mount (or fall back to sample on first visit)
-  useEffect(() => {
-    const saved = loadSavedWorkspace();
-    if (saved) {
-      loadYamlRef.current?.(saved);
-    } else {
-      fetch(SAMPLE_URL)
-        .then((res) => res.text())
-        .then((yaml) => loadYamlRef.current?.(yaml, true))
-        .catch((err) =>
-          setState({
-            graph: null,
-            yaml: null,
-            loading: false,
-            error: `Failed to load sample: ${
-              err instanceof Error ? err.message : "Unknown error"
-            }`,
-          })
-        );
-    }
-  }, []);
-
+  // Load YAML into a graph via WASM.
   const loadYaml = useCallback(async (yaml: string, isSample?: boolean) => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
@@ -136,9 +110,31 @@ function App() {
     }
   }, []);
 
-  // Expose loadYaml via ref for the mount effect
+  // Restore saved workspace on mount (or fall back to sample on first visit).
+  // WASM is guaranteed initialized by the time React mounts, so we can call
+  // buildGraphFromYaml directly without a ref indirection.
   useEffect(() => {
-    loadYamlRef.current = loadYaml;
+    const load = async () => {
+      const saved = loadSavedWorkspace();
+      if (saved) {
+        await loadYaml(saved);
+      } else {
+        try {
+          const yaml = await fetch(SAMPLE_URL).then((res) => res.text());
+          await loadYaml(yaml, true);
+        } catch (err) {
+          setState({
+            graph: null,
+            yaml: null,
+            loading: false,
+            error: `Failed to load sample: ${
+              err instanceof Error ? err.message : "Unknown error"
+            }`,
+          });
+        }
+      }
+    };
+    load();
   }, [loadYaml]);
 
   // Auto-save timer for debouncing frequent writes.

@@ -11,3 +11,12 @@ wasm-bindgen = "0.2.122"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1

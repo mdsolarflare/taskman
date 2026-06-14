@@ -20,7 +20,5 @@ target
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-frontend/public/ichor_bg.wasm
-frontend/.vite/
-frontend/dist/
+frontend/public/dist/
 humans.md
