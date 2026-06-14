@@ -30,7 +30,8 @@
   "tasks": {
     "serve": "deno run --allow-net --allow-read jsr:@std/http/file-server public/",
     "clean": "rm -rf public/dist/* 2>/dev/null",
-    "build": "deno task clean; cp ../ichor/pkg/* public/dist/ && deno check && deno run --allow-env --allow-run npm:esbuild src/main.tsx --bundle --minify --jsx=automatic --format=esm --outdir=public/dist --out-extension:.js=.js",
+    "vendor-wasm": "cp ../ichor/pkg/* public/dist/",
+    "build": "deno task clean; deno task vendor-wasm && deno check && deno run --allow-env --allow-run npm:esbuild src/main.tsx --bundle --minify --jsx=automatic --format=esm --outdir=public/dist --out-extension:.js=.js",
     "lint": "deno lint && deno run --allow-read --allow-env npm:eslint .",
     "test": "deno test --allow-env=NODE_ENV"
   },

@@ -33,7 +33,7 @@ jobs:
       #- name: Install audit
       #  run: cargo install cargo-audit
       #
-      #- name: Run audit
+      #- name: Run audit TODO manifest-path doesn't work
       #  run: cargo audit --manifest-path ichor/Cargo.toml
 
       - name: Build WASM
@@ -48,17 +48,17 @@ jobs:
           deno-version: v2.x # Installs the latest stable Deno release
           cache: true # Caches downloaded JSR/NPM packages based on your lockfile
 
+      - name: Vendor WASM glue files
+        run: deno task --config frontend/deno.json vendor-wasm
+
       - name: Verify formatting and styles
         run: deno fmt --check frontend/
 
       - name: Lint TypeScript
         run: deno task --config frontend/deno.json lint
 
-      - name: Build TypeScript
-        run: deno check --config frontend/deno.json
-
       - name: Run Typescript Tests
         run: deno task --config frontend/deno.json test
 
-      - name: Build Frontend (production)
+      - name: Build Frontend - Includes type checking
         run: deno task --config frontend/deno.json build
