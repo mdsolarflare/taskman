@@ -17,9 +17,9 @@ The project is broken into modules
 - **The Brain (`/ichor`):** Written in **Rust**. Handles YAML parsing, graph
   theory calculations, and data processing. Compiled to WASM for browser
   execution. Our goal is near native speed.
-- **The Face (`/frontend`):** Built with **React**, **TypeScript**, and
-  **Vite**. Styled with inline JavaScript style objects for a lightweight,
-  dependency-free approach.
+- **The Face (`/frontend`):** Built with **React** and **TypeScript**.
+  Bundled with **esbuild** via Deno tasks. Styled with inline JavaScript
+  style objects for a lightweight, dependency-free approach.
 - **The Bridge:** `wasm-bindgen` and `wasm-pack` facilitate the communication
   between Rust logic and the TypeScript frontend.
 
@@ -27,7 +27,7 @@ Our key design imperatives:
 
 - As much idomatic rust as possible
 - As simple as possible
-- As few dependencies as possible, currently rust, typescript, deno, vite, and react. If opportunities arise to aim lower, I will.
+- As few dependencies as possible, currently rust, typescript, deno, esbuild, and react. If opportunities arise to aim lower, I will.
 - Minimal design, highly opinionated styling
 
 ## ✨ Key Features
@@ -90,7 +90,7 @@ can import.
 cargo check --manifest-path ichor/Cargo.toml
 cargo build --verbose --manifest-path ichor/Cargo.toml
 cargo test --verbose --manifest-path ichor/Cargo.toml
-wasm-pack build ichor --target web
+wasm-pack build --release --target web
 ```
 
 #### Step B: Build up the Frontend
@@ -108,11 +108,11 @@ deno task build
 
 ### 3. Running the App
 
-To start the development server with Hot Module Replacement (HMR):
+Build and serve locally with a static file server:
 
 ```bash
 # From root
-deno task --cwd frontend dev
+cd frontend && deno task build && deno task serve
 ```
 
 On first load, the app automatically serves a sample graph from `/sample.yaml`
@@ -130,9 +130,9 @@ See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
 ├── ichor/                   # Rust WASM project
 │   ├── src/                 # YAML parsing, graph builder, layout algorithms
 │   └── Cargo.toml           # Rust dependencies & WASM configuration
-└── frontend/                # React + Vite project
+└── frontend/                # React + esbuild project
     ├── src/                 # UI components and WASM integration glue
-    ├── public/              # Static assets served by the dev server
+    ├── public/              # Static assets served by the file server
     │   └── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
     └── deno.json            # Frontend dependencies (Deno 2)
 ```
@@ -142,11 +142,11 @@ See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
 When making changes to the application:
 
 1. **Modify Logic:** Edit files in `ichor/src/`.
-2. **Recompile:** Run `wasm-pack build --target web` inside the `/ichor`
+2. **Recompile:** Run `wasm-pack build --release --target web` inside the `/ichor`
    directory.
 3. **Update UI:** Modify components in `frontend/src/`.
-4. **Refresh:** The Vite dev server will automatically reflect UI changes; a
-   browser refresh may be needed after updating the WASM binary.
+4. **Rebuild:** Run `deno task build` in `frontend/` to bundle with esbuild,
+   then refresh the browser.
 
 ## 💾 Auto-Save
 
@@ -194,5 +194,5 @@ provider without the need for a dedicated backend server.
 - Prefer fixing over silencing — i.e. remove dead code instead adding suppression comments.
 - Use idiomatic rust
 - Use idiomatic typescript
-- **Dual Linting (DO NOT REMOVE):** We use Deno's built-in linter AND ESLint for the frontend project. Both are mandatory and run together via `deno task lint`. Never disable, bypass, or modify either linter. ESLint handles React-specific and TypeScript-aware rules that Deno's linter cannot cover; Deno's linter catches Deno/JavaScript ecosystem issues. Removing one creates blind spots. The `eslint.config.js` file and its dependencies in `deno.json` are required project infrastructure.
-- **Deno 2 NPM Compatibility (DO NOT REMOVE):** The frontend uses Deno 2's `nodeModulesDir: "auto"` NPM compatibility mode to work with Vite and React. `frontend/node_modules/` is created automatically by Deno for npm package resolution and is NOT leftover cruft from pnpm — it's required infrastructure. The `deno.json` tasks use `npm:` specifiers (`npm:vite`, `npm:eslint`) to run npm binaries. Do not attempt to remove `node_modules/`, switch to pure JSR imports, or otherwise "clean up" NPM compatibility. While Deno may eventually provide cleaner integration with Vite, this is the current working setup.
+- **Dual Linting (DO NOT REMOVE):** We use Deno's built-in linter AND ESLint for the frontend project. Both are mandatory and run together via `deno task lint`. Deno lint covers general JS/TS issues (unused vars, unreachable code). ESLint is required specifically for `eslint-plugin-react-hooks` — it catches Rules of Hooks violations and missing `useEffect` dependencies that Deno lint cannot detect. Removing ESLint leaves React-specific bugs undetected.
+- **Deno 2 NPM Compatibility (DO NOT REMOVE):** The frontend uses Deno 2's `nodeModulesDir: "auto"` NPM compatibility mode to work with esbuild and React. `frontend/node_modules/` is created automatically by Deno for npm package resolution and is NOT leftover cruft from pnpm — it's required infrastructure. The `deno.json` tasks use `npm:` specifiers (`npm:esbuild`, `npm:eslint`) to run npm binaries. Do not attempt to remove `node_modules/`, switch to pure JSR imports, or otherwise "clean up" NPM compatibility.

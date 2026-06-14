@@ -189,7 +189,9 @@ impl Graph {
 
         // Roots cannot be deleted
         if self.root_ids.contains(&node_id) {
-            let node = self.nodes.iter().find(|n| n.id == node_id).unwrap();
+            let node = self.nodes.iter().find(|n| n.id == node_id).expect(
+                "Node must exist (checked by contains above)",
+            );
             return Err(format!(
                 "Cannot delete root node '{}'. Root nodes cannot be removed.",
                 node.name
@@ -242,7 +244,9 @@ impl Graph {
                     parent_node.subtask_ids = Some(subtasks);
                 }
                 self.adjacency.entry(*parent_id).or_default();
-                let parent_children = self.adjacency.get_mut(parent_id).unwrap();
+                let parent_children = self.adjacency.get_mut(parent_id).expect(
+                    "Adjacency entry must exist (created by entry().or_default() above)",
+                );
                 if !parent_children.contains(child_id) {
                     parent_children.push(*child_id);
                 }
@@ -355,10 +359,16 @@ impl Graph {
             }
             // Update adjacency list (parent -> child)
             self.adjacency.entry(pid).or_default();
-            self.adjacency.get_mut(&pid).unwrap().push(new_id);
+            self.adjacency
+                .get_mut(&pid)
+                .expect("Adjacency entry must exist (created by entry().or_default() above)")
+                .push(new_id);
             // Update reverse adjacency (child -> parent)
             self.reverse_adjacency.entry(new_id).or_default();
-            self.reverse_adjacency.get_mut(&new_id).unwrap().push(pid);
+            self.reverse_adjacency
+                .get_mut(&new_id)
+                .expect("Reverse adjacency entry must exist (created by entry().or_default() above)")
+                .push(pid);
             // New node is not a root - remove from root_ids if somehow present
             self.root_ids.retain(|&id| id != new_id);
         } else {
@@ -371,7 +381,10 @@ impl Graph {
             for sub_id in sub_ids {
                 // Update reverse adjacency for each subtask
                 self.reverse_adjacency.entry(*sub_id).or_default();
-                self.reverse_adjacency.get_mut(sub_id).unwrap().push(new_id);
+                self.reverse_adjacency
+                    .get_mut(sub_id)
+                    .expect("Reverse adjacency entry must exist (created by entry().or_default() above)")
+                    .push(new_id);
             }
             self.adjacency.insert(new_id, sub_ids.clone());
         }

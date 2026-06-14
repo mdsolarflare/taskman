@@ -30,8 +30,14 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack
 
+      #- name: Install audit
+      #  run: cargo install cargo-audit
+      #
+      #- name: Run audit
+      #  run: cargo audit --manifest-path ichor/Cargo.toml
+
       - name: Build WASM
-        run: wasm-pack build ichor --target web
+        run: wasm-pack build --release ichor --target web
 
       # ─── TypeScript (frontend) ────────────────────────────────────
 
@@ -53,3 +59,6 @@ jobs:
 
       - name: Run Typescript Tests
         run: deno task --config frontend/deno.json test
+
+      - name: Build Frontend (production)
+        run: deno task --config frontend/deno.json build
