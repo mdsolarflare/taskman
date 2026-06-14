@@ -49,16 +49,16 @@ jobs:
           cache: true # Caches downloaded JSR/NPM packages based on your lockfile
 
       - name: Vendor WASM glue files
-        run: deno task --config frontend/deno.json vendor-wasm
+        run: deno task --cwd frontend vendor-wasm
 
       - name: Verify formatting and styles
         run: deno fmt --check frontend/
 
       - name: Lint TypeScript
-        run: deno task --config frontend/deno.json lint
+        run: deno task --cwd frontend lint
 
       - name: Run Typescript Tests
-        run: deno task --config frontend/deno.json test
+        run: deno task --cwd frontend test
 
-      - name: Build Frontend - Includes type checking
-        run: deno task --config frontend/deno.json build
+      - name: Build Frontend (production)
+        run: deno task --cwd frontend build
