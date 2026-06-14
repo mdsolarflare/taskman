@@ -184,8 +184,46 @@ If auto-save shows as unsupported in a Chromium browser:
 
 ## 🚀 Deployment
 
-This is a Offline-First app, it can be deployed as a static site on any hosting
-provider without the need for a dedicated backend server.
+This is an Offline-First app that deploys as a static site — no backend server
+required. The build outputs self-contained HTML, CSS, JS, and WASM to
+`frontend/public/`, ready for any static host.
+
+### Deploying to GitHub Pages
+
+A GitHub Actions workflow (`.github/workflows/static.yml`) builds and deploys
+automatically on every push to `main`:
+
+1. **Enable Pages:** In your repo, go to **Settings → Pages**.
+2. **Set source:** Under "Build and deployment" → "Source", select **GitHub Actions**.
+3. **Push to `main`:** The workflow runs automatically — it builds the Rust WASM
+   brain, bundles the frontend, and uploads `frontend/public/` as a Pages artifact.
+4. **Access your app:**
+   - User/org repo: `https://<username>.github.io/<repo-name>/`
+   - Project site (`gh-pages` branch): `https://<username>.github.io/`
+
+The workflow handles the full build pipeline:
+```
+Rust → wasm-pack → WASM bundle
+         ↓
+TypeScript → esbuild → JS/CSS bundle
+         ↓
+All assets vendored into frontend/public/dist/
+         ↓
+Uploaded to GitHub Pages
+```
+
+**Manual trigger:** You can also run the workflow on demand from the **Actions**
+tab → "Deploy static content to Pages" → **Run workflow**.
+
+### Other Static Hosts
+
+Build locally and upload `frontend/public/` to any static host (Netlify,
+Vercel, Cloudflare Pages, S3 + CloudFront, etc.):
+
+```bash
+cd frontend && deno task build
+# Serve the contents of frontend/public/
+```
 
 ### Guidance for Future Work - Agent Friendly
 
