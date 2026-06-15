@@ -20,7 +20,7 @@ import "./themes.css";
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = "taskman_workspace";
-const SAMPLE_URL = "/sample.yaml";
+const SAMPLE_URL = "./sample.yaml";
 
 // ---------------------------------------------------------------------------
 // App state
