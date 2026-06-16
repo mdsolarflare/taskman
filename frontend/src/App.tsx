@@ -686,108 +686,131 @@ function App() {
           }}
         />
 
-        {/* Status + Auto-Save section */}
-        <div
+        {/* File name + node status (left-aligned, fills space) */}
+        <span
           style={{
+            fontSize: 12,
+            color: c["--text-secondary"],
             flex: 1,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          {/* File name + node status (left-aligned, fills space) */}
-          <span
-            style={{
-              fontSize: 12,
-              color: c["--text-secondary"],
-              flex: 1,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {state.loading
-              ? ("Loading…")
-              : state.graph
-              ? (autoSave.fileName
-                ? `${autoSave.fileName} — ${state.graph.nodes.length} nodes`
-                : `${state.graph.nodes.length} nodes (unsaved)`)
-              : state.error
-              ? (
-                <span style={{ color: c["--semantic-overdue"] }}>
-                  Error: {state.error}
-                </span>
-              )
-              : ("Ready")}
-          </span>
+          {state.loading
+            ? ("Loading…")
+            : state.graph
+            ? (autoSave.fileName
+              ? `${autoSave.fileName} — ${state.graph.nodes.length} nodes`
+              : `${state.graph.nodes.length} nodes (unsaved)`)
+            : state.error
+            ? (
+              <span style={{ color: c["--semantic-overdue"] }}>
+                Error: {state.error}
+              </span>
+            )
+            : ("Ready")}
+        </span>
 
-          {/* Auto-save status dot + toggle */}
-          <div
+        {/* GitHub link */}
+        <a
+          href="https://github.com/mdsolarflare/taskman"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="View source on GitHub"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+            color: c["--text-primary"],
+            textDecoration: "none",
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87
+                2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59
+                .82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18
+                1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44
+                1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87
+                3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01
+                2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+          </svg>
+        </a>
+
+        {/* Auto-save status dot + toggle */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
+          {/* Status indicator dot */}
+          <span
+            title={autoSave.tooltip}
             style={{
+              display: "inline-block",
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: autoSave.saveStatus === "disabled"
+                ? c["--border-color"]
+                : autoSave.saveStatus === "unsupported" ||
+                    autoSave.saveStatus === "error"
+                ? c["--semantic-overdue"]
+                : c["--text-primary"],
+            }}
+          />
+
+          {/* Auto-save toggle switch */}
+          <button
+            type="button"
+            title={autoSave.tooltip}
+            onClick={() => autoSave.toggleAutoSave()}
+            disabled={!autoSave.supported || !autoSave.fileName}
+            style={{
+              width: 32,
+              height: 18,
               display: "flex",
               alignItems: "center",
-              gap: 4,
-              flexShrink: 0,
+              padding: "0 2px",
+              background: autoSave.supported &&
+                  autoSave.autoSaveEnabled &&
+                  autoSave.fileName
+                ? c["--accent"]
+                : c["--border-color"],
+              border: "none",
+              borderRadius: 9,
+              cursor: autoSave.supported && autoSave.fileName
+                ? "pointer"
+                : "not-allowed",
+              transition: "background 0.15s",
+              opacity: autoSave.supported && autoSave.fileName ? 1 : 0.4,
             }}
           >
-            {/* Status indicator dot */}
+            {/* Toggle knob */}
             <span
-              title={autoSave.tooltip}
               style={{
-                display: "inline-block",
-                width: 8,
-                height: 8,
+                width: 14,
+                height: 14,
                 borderRadius: "50%",
-                background: autoSave.saveStatus === "disabled"
-                  ? c["--border-color"]
-                  : autoSave.saveStatus === "unsupported" ||
-                      autoSave.saveStatus === "error"
-                  ? c["--semantic-overdue"]
-                  : c["--text-primary"],
+                background: "#fff",
+                transition: "transform 0.15s",
+                transform: autoSave.autoSaveEnabled
+                  ? "translateX(14px)"
+                  : "translateX(0)",
               }}
             />
-
-            {/* Auto-save toggle switch */}
-            <button
-              type="button"
-              title={autoSave.tooltip}
-              onClick={() => autoSave.toggleAutoSave()}
-              disabled={!autoSave.supported || !autoSave.fileName}
-              style={{
-                width: 32,
-                height: 18,
-                display: "flex",
-                alignItems: "center",
-                padding: "0 2px",
-                background: autoSave.supported &&
-                    autoSave.autoSaveEnabled &&
-                    autoSave.fileName
-                  ? c["--accent"]
-                  : c["--border-color"],
-                border: "none",
-                borderRadius: 9,
-                cursor: autoSave.supported && autoSave.fileName
-                  ? "pointer"
-                  : "not-allowed",
-                transition: "background 0.15s",
-                opacity: autoSave.supported && autoSave.fileName ? 1 : 0.4,
-              }}
-            >
-              {/* Toggle knob */}
-              <span
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: "50%",
-                  background: "#fff",
-                  transition: "transform 0.15s",
-                  transform: autoSave.autoSaveEnabled
-                    ? "translateX(14px)"
-                    : "translateX(0)",
-                }}
-              />
-            </button>
-          </div>
+          </button>
         </div>
 
         {/* Nav panel toggle - right aligned */}
