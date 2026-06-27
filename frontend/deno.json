@@ -4,7 +4,7 @@
     "@eslint/js": "npm:@eslint/js@^10.0.1",
     "eslint": "npm:eslint@^10.5.0",
     "eslint-plugin-react-hooks": "npm:eslint-plugin-react-hooks@^7.1.1",
-    "globals": "npm:globals@^17.6.0",
+    "globals": "npm:globals@^17.7.0",
     "ichor": "../ichor/pkg/ichor.js",
     "react": "npm:react@^19.2.7",
     "react/": "npm:react@^19.2.7/",
