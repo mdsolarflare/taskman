@@ -11,7 +11,7 @@
     "react-dom": "npm:react-dom@^19.2.7",
     "react-dom/client": "npm:react-dom@^19.2.7/client",
     "@std/assert": "jsr:@std/assert@^1.0.19",
-    "typescript-eslint": "npm:typescript-eslint@^8.61.1"
+    "typescript-eslint": "npm:typescript-eslint@^8.62.0"
   },
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "deno.ns"],
