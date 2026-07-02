@@ -3,16 +3,16 @@
   "specifiers": {
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.14",
-    "npm:@eslint/js@^10.0.1": "10.0.1_eslint@10.5.0",
+    "npm:@eslint/js@^10.0.1": "10.0.1_eslint@10.6.0",
     "npm:@types/node@22": "22.19.19",
     "npm:@types/react@^19.2.14": "19.2.15",
     "npm:esbuild@*": "0.28.0",
-    "npm:eslint-plugin-react-hooks@^7.1.1": "7.1.1_eslint@10.5.0",
-    "npm:eslint@^10.5.0": "10.5.0",
+    "npm:eslint-plugin-react-hooks@^7.1.1": "7.1.1_eslint@10.6.0",
+    "npm:eslint@^10.6.0": "10.6.0",
     "npm:globals@^17.6.0": "17.6.0",
     "npm:react-dom@^19.2.7": "19.2.7_react@19.2.7",
     "npm:react@^19.2.7": "19.2.7",
-    "npm:typescript-eslint@^8.61.1": "8.61.1_eslint@10.5.0"
+    "npm:typescript-eslint@^8.61.1": "8.61.1_eslint@10.6.0"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -276,7 +276,7 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
-    "@eslint-community/eslint-utils@4.9.1_eslint@10.5.0": {
+    "@eslint-community/eslint-utils@4.9.1_eslint@10.6.0": {
       "integrity": "sha512-phrYmNiYppR7znFEdqgfWHXR6NCkZEK7hwWDHZUjit/2/U0r6XvkDl0SYnoM51Hq7FhCGdLDT6zxCCOY1hexsQ==",
       "dependencies": [
         "eslint",
@@ -306,7 +306,7 @@
         "@types/json-schema"
       ]
     },
-    "@eslint/js@10.0.1_eslint@10.5.0": {
+    "@eslint/js@10.0.1_eslint@10.6.0": {
       "integrity": "sha512-zeR9k5pd4gxjZ0abRoIaxdc7I3nDktoXZk2qOv9gCNWx3mVwEn32VRhyLaRsDiJjTs0xq/T8mfPtyuXu7GWBcA==",
       "dependencies": [
         "eslint"
@@ -396,7 +396,7 @@
         "csstype"
       ]
     },
-    "@typescript-eslint/eslint-plugin@8.61.1_@typescript-eslint+parser@8.61.1__eslint@10.5.0__typescript@6.0.3_eslint@10.5.0_typescript@6.0.3": {
+    "@typescript-eslint/eslint-plugin@8.61.1_@typescript-eslint+parser@8.61.1__eslint@10.6.0__typescript@6.0.3_eslint@10.6.0_typescript@6.0.3": {
       "integrity": "sha512-ZPlVl3PB3et/59Ne0fv/sci6ZXz4T4Hp4nTJ56i/Y0gR89ARb+KphojTq6j+56E5PIezmOIOOWyY+aWQFd+IkQ==",
       "dependencies": [
         "@eslint-community/regexpp",
@@ -412,7 +412,7 @@
         "typescript"
       ]
     },
-    "@typescript-eslint/parser@8.61.1_eslint@10.5.0_typescript@6.0.3": {
+    "@typescript-eslint/parser@8.61.1_eslint@10.6.0_typescript@6.0.3": {
       "integrity": "sha512-PJ5vePq5/ognBbrIcoC5+SHO5dfpeLPzP9FpLkzWrguoYQEeeSjlJpVwOpo1JRSTEi7dRcwNy4h4dzV70PqHcg==",
       "dependencies": [
         "@typescript-eslint/scope-manager",
@@ -446,7 +446,7 @@
         "typescript"
       ]
     },
-    "@typescript-eslint/type-utils@8.61.1_eslint@10.5.0_typescript@6.0.3": {
+    "@typescript-eslint/type-utils@8.61.1_eslint@10.6.0_typescript@6.0.3": {
       "integrity": "sha512-GYRicKmVK0C4fsKgaACaknOUAq9Oa2kwsjnpFhFcS/5p4Ht5IP9OVLbgIgcK4SRk92nVHFluurg1lumD9dBcLw==",
       "dependencies": [
         "@typescript-eslint/types",
@@ -476,7 +476,7 @@
         "typescript"
       ]
     },
-    "@typescript-eslint/utils@8.61.1_eslint@10.5.0_typescript@6.0.3": {
+    "@typescript-eslint/utils@8.61.1_eslint@10.6.0_typescript@6.0.3": {
       "integrity": "sha512-1+P/3Dj6jvtybE1q0HQ6yBt/gq+oKJyLdEv4HdnqasaEXRSYCAsD59mXEVQnM/ULNdQxbX77tdG4jPRjIS6knA==",
       "dependencies": [
         "@eslint-community/eslint-utils",
@@ -605,7 +605,7 @@
     "escape-string-regexp@4.0.0": {
       "integrity": "sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA=="
     },
-    "eslint-plugin-react-hooks@7.1.1_eslint@10.5.0": {
+    "eslint-plugin-react-hooks@7.1.1_eslint@10.6.0": {
       "integrity": "sha512-f2I7Gw6JbvCexzIInuSbZpfdQ44D7iqdWX01FKLvrPgqxoE7oMj8clOfto8U6vYiz4yd5oKu39rRSVOe1zRu0g==",
       "dependencies": [
         "@babel/core",
@@ -631,8 +631,8 @@
     "eslint-visitor-keys@5.0.1": {
       "integrity": "sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA=="
     },
-    "eslint@10.5.0": {
-      "integrity": "sha512-1y+7C+vi12bUK1IpZeaV3gsH9fHLBmPvYmPx42pvT/E9yG0IC8g3PUZZgp0+JLJl7ZDK0flc2gc+Aw9dpCvIsQ==",
+    "eslint@10.6.0": {
+      "integrity": "sha512-6lVbcqSodALYo+4ELD0heG6lFiFxnLMuLkiMi2qV8LMp54N8tE8FT1GMH+ev4Ti00nFjNze2+Su6DsV5OQW3Dg==",
       "dependencies": [
         "@eslint-community/eslint-utils",
         "@eslint-community/regexpp",
@@ -926,7 +926,7 @@
         "prelude-ls"
       ]
     },
-    "typescript-eslint@8.61.1_eslint@10.5.0": {
+    "typescript-eslint@8.61.1_eslint@10.6.0": {
       "integrity": "sha512-V7PayAfJokV3pEHgN7/v03D1SpujhRfQtYLbLIiBfDDncdg4PAiRBfoS4cnCANK4jmAPncczi59QO3afiXUlNw==",
       "dependencies": [
         "@typescript-eslint/eslint-plugin",
@@ -991,7 +991,7 @@
       "npm:@eslint/js@^10.0.1",
       "npm:@types/react@^19.2.14",
       "npm:eslint-plugin-react-hooks@^7.1.1",
-      "npm:eslint@^10.5.0",
+      "npm:eslint@^10.6.0",
       "npm:globals@^17.6.0",
       "npm:react-dom@^19.2.7",
       "npm:react@^19.2.7",
