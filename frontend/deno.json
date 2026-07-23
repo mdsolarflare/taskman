@@ -8,8 +8,8 @@
     "ichor": "../ichor/pkg/ichor.js",
     "react": "npm:react@^19.2.7",
     "react/": "npm:react@^19.2.7/",
-    "react-dom": "npm:react-dom@^19.2.7",
-    "react-dom/client": "npm:react-dom@^19.2.7/client",
+    "react-dom": "npm:react-dom@^19.2.8",
+    "react-dom/client": "npm:react-dom@^19.2.8/client",
     "@std/assert": "jsr:@std/assert@^1.0.19",
     "typescript-eslint": "npm:typescript-eslint@^8.62.1"
   },
