@@ -1,0 +1,6 @@
+# Pin the exact Rust toolchain so local builds, CI, and wasm-pack all use
+# the same compiler. Bump deliberately (and re-verify `cargo test` +
+# `wasm-pack build`) rather than letting rustup drift to a newer stable.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
