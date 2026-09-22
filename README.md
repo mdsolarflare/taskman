@@ -78,6 +78,13 @@ deno --version
 
 If any of these commands fail, double-check your installation before proceeding.
 
+This project pins exact toolchain versions for reproducible builds: Rust
+`1.95.0` (via `rust-toolchain.toml`, rustup switches to it automatically),
+Deno `2.9.7` and wasm-pack `0.15.0` (pinned in the CI workflows). All
+dependency versions are pinned exactly in `frontend/deno.json` and
+`ichor/Cargo.toml` — no caret/tilde ranges — so refreshing dependencies is a
+no-op unless a pin is deliberately changed.
+
 ### 2. Installation & Build Process
 
 #### Step A: Build the Rust Ichor

@@ -66,7 +66,7 @@ passes.
 
 - **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) — Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
 
-- **Pin exact dependency versions in `deno.json`** — All npm deps use caret (`^`) ranges. The `deno.lock` file is committed and CI uses it, so this is mitigated in practice. Pinning to exact versions would prevent accidental resolution of newer (potentially vulnerable) versions if someone runs `deno install --reinstall`. _(low priority)_
+- **Pin exact dependency versions in `deno.json`** — DONE (2026-09): all npm/JSR specifiers in `frontend/deno.json` are now exact pins (no `^`/`~`, no unversioned `npm:`/`jsr:` refs), matching the committed `deno.lock`. Also pinned: `ichor/Cargo.toml` direct deps (`=` exact, matching `Cargo.lock`), CI tool versions in both workflows (Deno `2.9.7`, wasm-pack `0.15.0`, GitHub Actions by commit SHA), and the Rust compiler via `rust-toolchain.toml` (`1.95.0`). A refresh is now a no-op unless a pin is deliberately changed.
 
 - **Add `robots.txt`** (`frontend/public/`) — Search engines may index the GitHub Pages deployment. Low risk for a public tool, but worth considering if you don't want it indexed. _(low priority)_
 
