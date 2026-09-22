@@ -2,7 +2,7 @@
   "nodeModulesDir": "auto",
   "imports": {
     "@eslint/js": "npm:@eslint/js@10.0.1",
-    "eslint": "npm:eslint@10.5.0",
+    "eslint": "npm:eslint@10.11.0",
     "eslint-plugin-react-hooks": "npm:eslint-plugin-react-hooks@7.1.1",
     "globals": "npm:globals@17.7.0",
     "ichor": "../ichor/pkg/ichor.js",
@@ -40,7 +40,7 @@
     "@types/react": "npm:@types/react@19.2.15",
     "@types/react-dom": "npm:@types/react-dom@19.2.5",
     "esbuild": "npm:esbuild@0.28.0",
-    "eslint": "npm:eslint@10.5.0",
+    "eslint": "npm:eslint@10.11.0",
     "eslint-plugin-react-hooks": "npm:eslint-plugin-react-hooks@7.1.1",
     "globals": "npm:globals@17.7.0",
     "react": "npm:react@19.2.7",
