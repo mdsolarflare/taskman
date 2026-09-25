@@ -66,17 +66,13 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
   repeat across ~5 components. Known trade-off of zero-CSS design; shared
   primitives would emerge naturally during App.tsx split. _(low priority)_
 
-## Security Hardening — Unresolved Items (SecOps Audit Findings)
+## Security Hardening — Unresolved ?Low? Risk Items (SecOps Audit Findings)
 
-All critical and high-severity findings from the GitHub Pages deployment audit
-have been resolved. The following low-risk items remain tracked for future
-passes.
+- [ ] **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) — Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
 
-- ~~**Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374)~~ — **RESOLVED/STALE (verified 2026-09-18):** zero `unwrap()` calls remain in non-test code (lines 1–560); the ones listed at those line numbers now use `.expect()`. Remaining `unwrap()` calls are inside `#[cfg(test)] mod tests` (line 561+), where panicking on broken test fixtures is the correct behavior. No action needed.
+- [x] **Pin exact dependency versions in `deno.json`** — DONE (2026-09): all npm/JSR specifiers in `frontend/deno.json` are now exact pins (no `^`/`~`, no unversioned `npm:`/`jsr:` refs), matching the committed `deno.lock`. Also pinned: `ichor/Cargo.toml` direct deps (`=` exact, matching `Cargo.lock`), CI tool versions in both workflows (Deno `2.9.7`, wasm-pack `0.15.0`, GitHub Actions by commit SHA), and the Rust compiler via `rust-toolchain.toml` (`1.95.0`). A refresh is now a no-op unless a pin is deliberately changed.
 
-- **Pin exact dependency versions in `deno.json`** — All npm deps use caret (`^`) ranges. The `deno.lock` file is committed and CI uses it, so this is mitigated in practice. Pinning to exact versions would prevent accidental resolution of newer (potentially vulnerable) versions if someone runs `deno install --reinstall`. _(low priority)_
-
-- **Add `robots.txt`** (`frontend/public/`) — Search engines may index the GitHub Pages deployment. Low risk for a public tool, but worth considering if you don't want it indexed. _(low priority)_
+- [ ] **Add `robots.txt`** (`frontend/public/`) — Search engines may index the GitHub Pages deployment. Low risk for a public tool, but worth considering if you don't want it indexed. _(low priority)_
 
 - **Add `ichor/pkg/` to `.gitignore`** — `wasm-pack build` output (`ichor_bg.wasm`, glue JS) lands in `ichor/pkg/`, which is NOT gitignored (`frontend/public/dist/` is, but the source location isn't). Anyone who builds locally can accidentally commit WASM binaries. One-line fix. _(low priority)_
 

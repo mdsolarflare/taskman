@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # ─── Rust (ichor) ─────────────────────────────────────────────
 
       - name: Lint Rust
@@ -43,7 +43,7 @@ jobs:
         run: cargo test --verbose --manifest-path ichor/Cargo.toml
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        run: cargo install wasm-pack --version 0.15.0
 
       #- name: Install audit
       #  run: cargo install cargo-audit
@@ -58,9 +58,9 @@ jobs:
 
       # Install Deno & cache remote modules automatically
       - name: Setup Deno Environment
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
         with:
-          deno-version: v2.x # Installs the latest stable Deno release
+          deno-version: 2.9.7 # Pinned exact version (was "v2.x" = latest stable)
           cache: true # Caches downloaded JSR/NPM packages based on your lockfile
 
       - name: Vendor WASM glue files
@@ -78,12 +78,12 @@ jobs:
       - name: Build Frontend - Includes type checking
         run: deno task --config frontend/deno.json build
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           # Upload entire repository
           path: 'frontend/public'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
