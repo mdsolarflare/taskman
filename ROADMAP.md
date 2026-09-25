@@ -24,13 +24,14 @@
 - [ ] Manually re-review all tests for quality and purpose, smh
 - [x] New experience is broken, no graph is loaded. Need to start with one node.
 - [x] Navigation pane isn't working when not at 100% zoom
-- [ ] Make Taskman installable as a PWA
-  - [ ] Icon set: rasterized PNGs (192/512/maskable + apple-touch) from favicon.svg, committed
-  - [ ] `manifest.webmanifest` with relative `start_url`/`scope` (works under the `/taskman/` Pages subpath)
-  - [ ] Zero-dependency service worker: build-time revision map (SHA-256 via crypto.subtle), precache app shell, stale-while-revalidate
-  - [ ] SW registration + install/update UX (menu entry, update banner)
-  - [ ] Standalone polish: `viewport-fit=cover` + safe-area insets, meta theme-color synced to active theme
-  - [ ] README: PWA/install docs
+- [x] Make Taskman installable as a PWA
+  - [x] Icon set: rasterized PNGs (192/512/maskable + apple-touch) from favicon.svg, committed
+  - [x] `manifest.webmanifest` with relative `start_url`/`scope` (works under the `/taskman/` Pages subpath)
+  - [x] Zero-dependency service worker: build-time revision map (SHA-256 via crypto.subtle), precache app shell, cache-first with runtime fill
+  - [x] SW registration + install/update UX (menu entry, update toast)
+  - [x] Standalone polish: `viewport-fit=cover` + safe-area insets, meta theme-color synced to active theme
+  - [x] README: PWA/install docs
+  - [x] E2E: CDP-driven install/offline tests in `frontend/e2e/` (boot, localStorage, SW precache, offline reload)
 
 
 ## build a yaml repair tool - may be delusional or non-issue
@@ -90,4 +91,4 @@ passes.
 
 - `docs/REINGOLD-TILFORD.md` is background reading, **not** a spec for the current layout engine. Describes the academic version (contours, threaded pointers, two-pass with `shift`/`change` bookkeeping). The actual TS implementation uses a bounding-box heuristic — justified by the constraint that X=depth means nodes in different columns can't overlap. The June bugfix doc (`records-pain/layout-y-axis-spacing.md`) is the authoritative reference. One-line pointer clarification would prevent future agent confusion.
 
-- The test-coverage inventory (`docs/records-pain/test-coverage-inventory.md`) accurately tracks 89 tests across 4 files. Its "Coverage Gaps" section is the authoritative source for what is NOT tested (React components, WASM boundary, E2E). **PWA implication:** the SW/install work will add a large untestable-surface area (browser APIs, DOM-rendered UI); manual browser verification remains the project's stated E2E strategy and should be noted in the PWA section's acceptance criteria.
+- The test-coverage inventory (`docs/records-pain/test-coverage-inventory.md`) accurately tracks 89 tests across 4 files. Its "Coverage Gaps" section is the authoritative source for what is NOT tested (React components, WASM boundary). **PWA implication (resolved 2026-09-25):** the SW/install surface now HAS automated coverage — `frontend/e2e/` runs 3 CDP-driven tests in headless Edge (boot, localStorage persistence, SW precache + offline reload). React component rendering remains the untested gap.

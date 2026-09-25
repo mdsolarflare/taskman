@@ -1,7 +1,12 @@
 /**
  * E2E Test Suite — CDP-driven tests against the live app
+ *
  * Reliable because: fresh instance per test, waits on DOM state, no simulated
  * environments, no test frameworks beyond Deno.
+ *
+ * Environment overrides:
+ *   E2E_PUBLIC     — root dir to serve (default: <this-file>/../public)
+ *   E2E_CHROME_WS  — WebSocket URL of an existing browser to reuse
  */
 
 import { assert, assertEquals } from "@std/assert";
@@ -12,12 +17,30 @@ import { serveStaticDir } from "./serve.ts";
 // Configuration
 // ---------------------------------------------------------------------------
 
-const PUBLIC = Deno.env.get("E2E_PUBLIC") ??
-  new URL("../frontend/public/", import.meta.url).pathname
-    .replace(/^\/([A-Za-z]:\/)/, "$1");
+/** Convert a URL pathname (MSYS-style) to a Windows-native absolute path. */
+function toWindowsPath(p: string): string {
+  // /c/Users/x/... → C:\Users\x\...   (MSYS/git-bash form)
+  const m = p.match(/^\/([c-z])\/(.*)/i);
+  if (m) return `${m[1].toUpperCase()}:${m[2].replace(/\//g, "\\")}`;
+  // /C:/Users/x/... → C:\Users\x\...  (file:// URL pathname form — the
+  // leading slash is an artifact of URL.pathname, not a real path segment)
+  const w = p.match(/^\/([a-z]):\/(.*)/i);
+  if (w) return `${w[1].toUpperCase()}:\\${w[2].replace(/\//g, "\\")}`;
+  return p;
+}
 
-// No timeout on Edge launch detection — we take as long as needed.
-// This is a *test* helper, not a runtime concern.
+const PUBLIC = Deno.env.get("E2E_PUBLIC") ??
+  toWindowsPath(
+    new URL("../public/", import.meta.url).pathname,
+  );
+
+/** buildId from the build's cache-manifest.js — the SW cache name embeds it. */
+function cacheManifestBuildId(): string {
+  const src = Deno.readTextFileSync(`${PUBLIC}\\dist\\cache-manifest.js`);
+  const m = src.match(/self\.CACHE_MANIFEST = (\{[\s\S]*?\});/);
+  if (!m) throw new Error("cache-manifest.js has no CACHE_MANIFEST object");
+  return (JSON.parse(m[1]) as { buildId: string }).buildId;
+}
 
 // ---------------------------------------------------------------------------
 // Test harness: one browser, fresh tab per test, auto-launch if needed
@@ -26,16 +49,16 @@ const PUBLIC = Deno.env.get("E2E_PUBLIC") ??
 interface TestSession {
   conn: CdpSession;
   close: () => Promise<void>;
+  /** Simulate network loss: every subsequent server request fails. */
+  goOffline: () => void;
 }
 
 async function startTestSession(): Promise<TestSession> {
   const server = serveStaticDir(PUBLIC);
-  let ownLaunch = false;
   let browserWs = Deno.env.get("E2E_CHROME_WS") ??
-    (await tryGetExistingDebugger());
+    (await tryGetExistingDebugger(9222));
 
   if (!browserWs) {
-    ownLaunch = true;
     const launchedPort = await launchEdgeHeadless();
     browserWs = await tryGetExistingDebugger(launchedPort);
     if (!browserWs) {
@@ -53,6 +76,7 @@ async function startTestSession(): Promise<TestSession> {
       // If we spawned our own Edge we leave it running — the profile dir is
       // trade-off for 0-dependency test isolation (reuse is safe).
     },
+    goOffline: () => server.goOffline(),
   };
 }
 
@@ -94,8 +118,9 @@ async function launchEdgeHeadless(): Promise<number> {
   // We do NOT pass 'about:blank'. Passing a URL makes Edge enter '--dump-dom'
   // behavior (single-page exit: the debug port vanishes).
   const stamp = Date.now();
-  const profileDir =
-    `${Deno.env.get("LOCALAPPDATA")}\\taskman-e2e-edge-${stamp}`;
+  const localAppData = Deno.env.get("LOCALAPPDATA") ??
+    `C:\\Users\\${Deno.env.get("USERNAME")}\\AppData\\Local`;
+  const profileDir = `${localAppData}\\taskman-e2e-edge-${stamp}`;
 
   // Pipe stderr so we can capture the log for diagnostics if launch fails.
   const proc = new Deno.Command(
@@ -123,7 +148,11 @@ async function launchEdgeHeadless(): Promise<number> {
       if (res.ok) {
         // Small grace period after the debug URL is readable before cancel.
         await new Promise((r) => setTimeout(r, 200));
-        await stderrReader.cancel();
+        try {
+          await stderrReader.cancel();
+        } catch {
+          /* reader may already be closed */
+        }
         return port;
       }
     } catch {
@@ -149,39 +178,47 @@ async function launchEdgeHeadless(): Promise<number> {
 // Tests
 // ---------------------------------------------------------------------------
 
-Deno.test("app boots, WASM ready, sample graph renders", async (t) => {
-  await t.step("boot browser target and attach CDP session", async () => {
-    const { conn, close } = await startTestSession();
-    try {
-      await waitForApp(conn, { wasmReady: true });
+Deno.test("app boots, WASM ready, sample graph renders", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
 
-      const nodeCount = (await conn.evaluate(
-        "document.querySelectorAll('svg > g').length",
-      )) as number;
-      assert(nodeCount > 0, "no <g> elements in the SVG — no graph rendered");
+    const nodeCount = (await conn.evaluate(
+      "document.querySelectorAll('svg > g').length",
+    )) as number;
+    assert(nodeCount > 0, "no <g> elements in the SVG — no graph rendered");
 
-      const wasmAvailable = (await conn.evaluate(
-        "(async () => { const r = await fetch('./dist/ichor_bg.wasm', {method: 'HEAD'}); return r.ok; })()",
-      )) as boolean;
-      assert(wasmAvailable, "WASM binary not present at ./dist/ichor_bg.wasm");
-    } finally {
-      await close();
-    }
-  });
+    const wasmAvailable = (await conn.evaluate(
+      "(async () => { const r = await fetch('./dist/ichor_bg.wasm', {method: 'HEAD'}); return r.ok; })()",
+    )) as boolean;
+    assert(wasmAvailable, "WASM binary not present at ./dist/ichor_bg.wasm");
+  } finally {
+    await close();
+  }
 });
 
-Deno.test("sample graph persisted to localStorage matches the source file", async (t) => {
-  await t.step("visit app in fresh browser tab, trigger WASM init, then verify localStorage workspace matches sample.yaml", async () => {
+Deno.test(
+  "sample graph persisted to localStorage matches the source file",
+  async () => {
     const { conn, close } = await startTestSession();
     try {
       await waitForApp(conn, { wasmReady: true });
 
-      const sampleFetch = await conn.evaluate(
+      const sampleFetch = (await conn.evaluate(
         "fetch('./sample.yaml').then(r => r.text())",
-      ) as string;
-      const fromStorage = await conn.evaluate(
-        "localStorage.getItem('taskman_workspace')",
-      ) as string | null;
+      )) as string;
+
+      // App persists the workspace to localStorage on a 1-second debounce —
+      // wait until the key shows up (up to 3s), then compare.
+      let fromStorage: string | null = null;
+      const deadline = Date.now() + 3000;
+      while (Date.now() < deadline) {
+        fromStorage = (await conn.evaluate(
+          "localStorage.getItem('taskman_workspace')",
+        )) as string | null;
+        if (fromStorage !== null) break;
+        await new Promise((r) => setTimeout(r, 250));
+      }
 
       assertEquals(
         fromStorage,
@@ -191,5 +228,66 @@ Deno.test("sample graph persisted to localStorage matches the source file", asyn
     } finally {
       await close();
     }
-  });
-});
+  },
+);
+
+Deno.test(
+  "service worker registers, precaches the shell, and serves offline",
+  async () => {
+    const { conn, close, goOffline } = await startTestSession();
+    try {
+      await waitForApp(conn, { wasmReady: true });
+
+      // Wait for the SW to be active AND controlling the page. `ready`
+      // resolves on activation, but control only transfers after
+      // clients.claim() lands — poll for the controller instead of a
+      // single-shot check (races on first install).
+      const controlled = (await conn.evaluate(
+        "(async () => { " +
+          "  await navigator.serviceWorker.ready; " +
+          "  for (let i = 0; i < 100; i++) { " +
+          "    if (navigator.serviceWorker.controller) return true; " +
+          "    await new Promise((r) => setTimeout(r, 100)); " +
+          "  } " +
+          "  return false; " +
+          "})()",
+      )) as boolean;
+      assert(controlled, "page is not controlled by an active service worker");
+
+      // The cache name embeds the buildId the app was built with.
+      const buildId = cacheManifestBuildId();
+      const cacheKeys = (await conn.evaluate(
+        "(async () => { " +
+          "  await navigator.serviceWorker.ready; " +
+          "  return (await caches.keys()).sort(); " +
+          "})()",
+      )) as string[];
+      assert(
+        cacheKeys.includes(`taskman-shell-${buildId}`),
+        `expected cache 'taskman-shell-${buildId}', got: ${JSON.stringify(cacheKeys)}`,
+      );
+
+      // Precache completeness: every manifest file plus the app URL ('./')
+      // must be cached, so the first run after install works offline.
+      const cachedPaths = (await conn.evaluate(
+        "(async () => { " +
+          `  const c = await caches.open('taskman-shell-${buildId}'); ` +
+          "  const keys = await c.keys(); " +
+          "  return keys.map((r) => new URL(r.url).pathname).sort(); " +
+          "})()",
+      )) as string[];
+      assert(
+        cachedPaths.length >= 12,
+        `expected >=12 precached entries, got ${cachedPaths.length}: ${JSON.stringify(cachedPaths)}`,
+      );
+
+      // Offline: cut the server, reload, and the app must still boot from the
+      // service worker cache (React mounts + graph renders).
+      goOffline();
+      await conn.evaluate("location.reload()");
+      await waitForApp(conn, { wasmReady: true });
+    } finally {
+      await close();
+    }
+  },
+);

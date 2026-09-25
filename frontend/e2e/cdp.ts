@@ -8,7 +8,6 @@
  *   (Promise resolution with per-message-id queues via `pending`)
  */
 
-type Json = Record<string, unknown> | unknown[];
 interface CdpMessage {
   id?: number;
   method?: string;
@@ -81,7 +80,13 @@ export class CdpSession {
     predicate: string | (() => boolean),
     timeoutMs: number,
   ): Promise<void> {
-    const expr = `(${predicate.toString()})()`;
+    // A string predicate is a bare expression ("x > 0"), NOT a function —
+    // wrapping it as `(...)()` evaluates e.g. `true()` → TypeError, and the
+    // resulting exceptionDetails make every poll return undefined, so the
+    // wait times out. Only function predicates get the call wrapper.
+    const expr = typeof predicate === "string"
+      ? predicate
+      : `(${predicate.toString()})()`;
     const start = Date.now();
     while (true) {
       const done = await this.evaluate(expr);
@@ -164,7 +169,8 @@ export async function openBrowserPage(
   );
   conn.sessionId = sessionId;
 
-  // Enable Page events so we can flush after navigation
+  // Enable the runtime, and page lifecycle, so we can evaluate JS.
+  await conn.send("Runtime.enable");
   await conn.send("Page.enable");
 
   // Navigate to the target URL
