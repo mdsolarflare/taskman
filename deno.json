@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "deno.ns"]
+  },
+  "environment": "development",
+  "tasks": {
+    "test": "deno task --config frontend/e2e/deno.json test",
+    "gen-icons": "deno task --config frontend/e2e/deno.json gen-icons"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^1.0.19"
+  }
+}
