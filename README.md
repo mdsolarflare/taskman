@@ -48,7 +48,7 @@ Our key design imperatives:
 - 📱 **Installable PWA:** Works offline after the first visit — the whole
   shell (including the WASM brain) is precached by a zero-dependency service
   worker with build-time cache revisioning. See
-  [PWA — Install Taskman](#-pwa--install-taskman).
+  [Installing Taskman as an App](./docs/PWA.md).
 
 ## 🛠️ Development Setup
 
@@ -199,14 +199,8 @@ Taskman is an installable Progressive Web App. After the first visit, the
 entire app shell — HTML, JS, CSS, the Rust/WASM binary, the sample data, and
 icons — is precached by a service worker, so it boots with no network at all.
 
-### Installing
-
-| Browser | How to install | Notes |
-|---|---|---|
-| Chrome / Edge / Brave (desktop) | Menu (☰) → **Install Taskman…** (appears only when the browser offers an install prompt), or the install icon in the address bar. | Chromium fires `beforeinstallprompt`; the menu entry defers it until clicked. |
-| Chrome / Edge (Android) | Browser menu → **Add to Home screen** / **Install app**. | Installs with a maskable icon (logo inside the safe zone). |
-| Safari (macOS) | **File → Add to Dock** (Safari 17+), or drag the URL to the Dock. | No install prompt API; the menu entry stays hidden. |
-| Safari (iOS) | **Share → Add to Home Screen**. | Uses `apple-touch-icon`; standalone display works. |
+**How to install it on your browser/device: see
+[Installing Taskman as an App](./docs/PWA.md).**
 
 Once installed the app opens in its own window (no browser chrome), and the
 system title bar / taskbar swatch follows the active theme via
