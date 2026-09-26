@@ -51,9 +51,12 @@ export class CdpSession {
       } catch {
         return;
       }
-      if (m.id !== undefined) {
+      if (typeof m.id === "number" && Number.isInteger(m.id)) {
+        // Guard the dispatch: m.id is wire-controlled (the browser under
+        // test crafts it), so only invoke an entry that is actually our
+        // own registered callback function — never an unexpected value.
         const res = this.pending.get(m.id);
-        if (res) {
+        if (typeof res === "function") {
           this.pending.delete(m.id);
           res(m);
         }

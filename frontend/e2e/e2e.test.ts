@@ -102,7 +102,9 @@ async function waitForApp(
 // Browser plumbing: CDP discovery + auto-launch
 // ---------------------------------------------------------------------------
 
-async function tryGetExistingDebugger(port: number = 9222): Promise<string | null> {
+async function tryGetExistingDebugger(
+  port: number = 9222,
+): Promise<string | null> {
   try {
     const res = await fetch(`http://127.0.0.1:${port}/json/version`);
     if (!res.ok) return null;
@@ -264,7 +266,9 @@ Deno.test(
       )) as string[];
       assert(
         cacheKeys.includes(`taskman-shell-${buildId}`),
-        `expected cache 'taskman-shell-${buildId}', got: ${JSON.stringify(cacheKeys)}`,
+        `expected cache 'taskman-shell-${buildId}', got: ${
+          JSON.stringify(cacheKeys)
+        }`,
       );
 
       // Precache completeness: every manifest file plus the app URL ('./')
@@ -278,7 +282,9 @@ Deno.test(
       )) as string[];
       assert(
         cachedPaths.length >= 12,
-        `expected >=12 precached entries, got ${cachedPaths.length}: ${JSON.stringify(cachedPaths)}`,
+        `expected >=12 precached entries, got ${cachedPaths.length}: ${
+          JSON.stringify(cachedPaths)
+        }`,
       );
 
       // Offline: cut the server, reload, and the app must still boot from the
