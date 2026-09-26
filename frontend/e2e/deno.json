@@ -8,7 +8,7 @@
     "gen-icons": "deno run --no-check --allow-net=127.0.0.1 --allow-env --allow-read=../public --allow-write=../public/icons --allow-run gen_icons.ts"
   },
   "imports": {
-    "@std/assert": "jsr:@std/assert@^1.0.19"
+    "@std/assert": "jsr:@std/assert@1.0.19"
   },
   "lint": {
     "rules": {
