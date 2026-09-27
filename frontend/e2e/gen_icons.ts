@@ -109,18 +109,22 @@ await send("Page.enable");
 await send("Page.navigate", { url: server.url });
 await new Promise((r) => setTimeout(r, 1000));
 
-// Serve favicon over http so the canvas isn't tainted; draw + export PNGs
+// Rasterize favicon.svg. Background rules:
+//   - "any" icons keep the logo's transparent background (no fill first).
+//   - maskable and apple-touch icons paint a solid background first:
+//     Android circle-crops maskable icons (transparent renders as black),
+//     and iOS composites apple-touch icons over black.
 const expr = `(async () => {
   const img = new Image();
   img.src = ${JSON.stringify(`${server.url}favicon.svg`)};
   await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-  const BG = "#fffde7";
-  function draw(size, maskable) {
+  const BG = "#fff9c4"; // banana-crisis --bg-secondary / manifest theme_color
+  function draw(size, mode) {
     const c = document.createElement("canvas");
     c.width = size; c.height = size;
     const x = c.getContext("2d");
-    x.fillStyle = BG; x.fillRect(0, 0, size, size);
-    const inset = maskable ? size * 0.10 : 0;
+    if (mode !== "transparent") x.fillStyle = BG, x.fillRect(0, 0, size, size);
+    const inset = mode === "maskable" ? size * 0.10 : 0;
     const box = size - 2 * inset;
     const s = Math.min(box / img.width, box / img.height);
     const w = img.width * s, h = img.height * s;
@@ -128,10 +132,10 @@ const expr = `(async () => {
     return c.toDataURL("image/png");
   }
   return {
-    "icon-192.png": draw(192, false),
-    "icon-512.png": draw(512, false),
-    "icon-512-maskable.png": draw(512, true),
-    "apple-touch-icon.png": draw(180, false),
+    "icon-192.png": draw(192, "transparent"),
+    "icon-512.png": draw(512, "transparent"),
+    "icon-512-maskable.png": draw(512, "maskable"),
+    "apple-touch-icon.png": draw(180, "apple"),
   };
 })()`;
 

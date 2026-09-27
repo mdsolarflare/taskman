@@ -21,6 +21,7 @@
     "npm:esbuild@0.28.0": "0.28.0",
     "npm:eslint-plugin-react-hooks@7.1.1": "7.1.1_eslint@10.11.0",
     "npm:eslint@10.11.0": "10.11.0",
+    "npm:eslint@10.5.0": "10.5.0",
     "npm:globals@17.12.0": "17.12.0",
     "npm:react-dom@19.3.0": "19.3.0_react@19.3.0",
     "npm:react@19.3.0": "19.3.0",
@@ -208,14 +209,14 @@
         "@cacheable/utils",
         "@keyv/bigmap",
         "hookified@1.15.1",
-        "keyv"
+        "keyv@5.6.0"
       ]
     },
     "@cacheable/utils@2.5.0": {
       "integrity": "sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==",
       "dependencies": [
         "hashery",
-        "keyv"
+        "keyv@5.6.0"
       ]
     },
     "@esbuild/aix-ppc64@0.28.0": {
@@ -351,7 +352,7 @@
     "@eslint-community/eslint-utils@4.9.1_eslint@10.11.0": {
       "integrity": "sha512-phrYmNiYppR7znFEdqgfWHXR6NCkZEK7hwWDHZUjit/2/U0r6XvkDl0SYnoM51Hq7FhCGdLDT6zxCCOY1hexsQ==",
       "dependencies": [
-        "eslint",
+        "eslint@10.11.0",
         "eslint-visitor-keys@3.4.3"
       ]
     },
@@ -364,6 +365,12 @@
         "@eslint/object-schema",
         "debug",
         "minimatch"
+      ]
+    },
+    "@eslint/config-helpers@0.6.0": {
+      "integrity": "sha512-ii6Bw9jJ2zi2cWA2Z+9/QZ/+3DX6kwaV5Q986D/CdP3Lap3w/pgQZ373FV7byY/i7L4IRH/G43I5dz1ClsCbpA==",
+      "dependencies": [
+        "@eslint/core"
       ]
     },
     "@eslint/config-helpers@0.7.0": {
@@ -381,10 +388,10 @@
     "@eslint/js@10.0.1_eslint@10.11.0": {
       "integrity": "sha512-zeR9k5pd4gxjZ0abRoIaxdc7I3nDktoXZk2qOv9gCNWx3mVwEn32VRhyLaRsDiJjTs0xq/T8mfPtyuXu7GWBcA==",
       "dependencies": [
-        "eslint"
+        "eslint@10.11.0"
       ],
       "optionalPeers": [
-        "eslint"
+        "eslint@10.11.0"
       ]
     },
     "@eslint/object-schema@3.0.5": {
@@ -452,7 +459,7 @@
       "dependencies": [
         "hashery",
         "hookified@1.15.1",
-        "keyv"
+        "keyv@5.6.0"
       ]
     },
     "@keyv/serialize@1.1.1": {
@@ -479,7 +486,7 @@
         "csstype"
       ]
     },
-    "@typescript-eslint/eslint-plugin@8.70.0_@typescript-eslint+parser@8.70.0__eslint@10.11.0__typescript@6.0.3_eslint@10.11.0_typescript@6.0.3": {
+    "@typescript-eslint/eslint-plugin@8.70.0_@typescript-eslint+parser@8.70.0_eslint@10.11.0_typescript@6.0.3": {
       "integrity": "sha512-/v8HZt6RlyIZxB3ntehELOcUcfxKPVGWXnQdJuHRmzrqgF8nQypcC/oxGW+Ot4VGKDq81XugPKxx0n5PBtf9PA==",
       "dependencies": [
         "@eslint-community/regexpp",
@@ -488,7 +495,7 @@
         "@typescript-eslint/type-utils",
         "@typescript-eslint/utils",
         "@typescript-eslint/visitor-keys",
-        "eslint",
+        "eslint@10.11.0",
         "ignore@7.0.9",
         "natural-compare",
         "ts-api-utils",
@@ -503,7 +510,7 @@
         "@typescript-eslint/typescript-estree",
         "@typescript-eslint/visitor-keys",
         "debug",
-        "eslint",
+        "eslint@10.11.0",
         "typescript"
       ]
     },
@@ -536,7 +543,7 @@
         "@typescript-eslint/typescript-estree",
         "@typescript-eslint/utils",
         "debug",
-        "eslint",
+        "eslint@10.11.0",
         "ts-api-utils",
         "typescript"
       ]
@@ -566,7 +573,7 @@
         "@typescript-eslint/scope-manager",
         "@typescript-eslint/types",
         "@typescript-eslint/typescript-estree",
-        "eslint",
+        "eslint@10.11.0",
         "typescript"
       ]
     },
@@ -626,7 +633,7 @@
         "@cacheable/memory",
         "@cacheable/utils",
         "hookified@1.15.1",
-        "keyv",
+        "keyv@5.6.0",
         "qified"
       ]
     },
@@ -703,7 +710,7 @@
       "dependencies": [
         "@babel/core",
         "@babel/parser",
-        "eslint",
+        "eslint@10.11.0",
         "hermes-parser",
         "zod",
         "zod-validation-error"
@@ -730,7 +737,7 @@
         "@eslint-community/eslint-utils",
         "@eslint-community/regexpp",
         "@eslint/config-array",
-        "@eslint/config-helpers",
+        "@eslint/config-helpers@0.7.0",
         "@eslint/core",
         "@eslint/plugin-kit",
         "@humanfs/node",
@@ -747,7 +754,43 @@
         "esquery",
         "esutils",
         "fast-deep-equal",
-        "file-entry-cache",
+        "file-entry-cache@11.1.5",
+        "find-up",
+        "glob-parent",
+        "ignore@5.3.2",
+        "imurmurhash",
+        "is-glob",
+        "json-stable-stringify-without-jsonify",
+        "minimatch",
+        "natural-compare",
+        "optionator"
+      ],
+      "bin": true
+    },
+    "eslint@10.5.0": {
+      "integrity": "sha512-1y+7C+vi12bUK1IpZeaV3gsH9fHLBmPvYmPx42pvT/E9yG0IC8g3PUZZgp0+JLJl7ZDK0flc2gc+Aw9dpCvIsQ==",
+      "dependencies": [
+        "@eslint-community/eslint-utils",
+        "@eslint-community/regexpp",
+        "@eslint/config-array",
+        "@eslint/config-helpers@0.6.0",
+        "@eslint/core",
+        "@eslint/plugin-kit",
+        "@humanfs/node",
+        "@humanwhocodes/module-importer",
+        "@humanwhocodes/retry",
+        "@types/estree",
+        "ajv",
+        "cross-spawn",
+        "debug",
+        "escape-string-regexp",
+        "eslint-scope",
+        "eslint-visitor-keys@5.0.1",
+        "espree",
+        "esquery",
+        "esutils",
+        "fast-deep-equal",
+        "file-entry-cache@8.0.0",
         "find-up",
         "glob-parent",
         "ignore@5.3.2",
@@ -807,7 +850,13 @@
     "file-entry-cache@11.1.5": {
       "integrity": "sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q==",
       "dependencies": [
-        "flat-cache"
+        "flat-cache@6.1.23"
+      ]
+    },
+    "file-entry-cache@8.0.0": {
+      "integrity": "sha512-XXTUwCvisa5oacNGRP9SfNtYBNAMi+RPwBFmblZEF7N7swHYQS6/Zfk7SRwx4D5j3CH211YNRco1DEMNVfZCnQ==",
+      "dependencies": [
+        "flat-cache@4.0.1"
       ]
     },
     "find-up@5.0.0": {
@@ -815,6 +864,13 @@
       "dependencies": [
         "locate-path",
         "path-exists"
+      ]
+    },
+    "flat-cache@4.0.1": {
+      "integrity": "sha512-f7ccFPK3SXFHpx15UIGyRJ/FJQctuKZ0zVuN3frBo4HnK3cay9VEW0R6yPYFHC0AgqhukPzKjq22t5DmAyqGyw==",
+      "dependencies": [
+        "flatted",
+        "keyv@4.5.4"
       ]
     },
     "flat-cache@6.1.23": {
@@ -889,6 +945,9 @@
       "integrity": "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==",
       "bin": true
     },
+    "json-buffer@3.0.1": {
+      "integrity": "sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ=="
+    },
     "json-schema-traverse@0.4.1": {
       "integrity": "sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg=="
     },
@@ -898,6 +957,12 @@
     "json5@2.2.3": {
       "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
       "bin": true
+    },
+    "keyv@4.5.4": {
+      "integrity": "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==",
+      "dependencies": [
+        "json-buffer"
+      ]
     },
     "keyv@5.6.0": {
       "integrity": "sha512-CYDD3SOtsHtyXeEORYRx2qBtpDJFjRTGXUtmNEMGyzYOKj1TE3tycdlho7kA1Ufx9OYWZzg52QFBGALTirzDSw==",
@@ -1042,7 +1107,7 @@
         "@typescript-eslint/parser",
         "@typescript-eslint/typescript-estree",
         "@typescript-eslint/utils",
-        "eslint",
+        "eslint@10.11.0",
         "typescript"
       ]
     },

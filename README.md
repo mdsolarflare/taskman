@@ -243,8 +243,12 @@ rebuilt (not patched) on every deploy.
 ### Regenerating icons
 
 The PNG icons in `public/icons/` are committed artifacts derived from
-`public/favicon.svg` (banana-crisp background `#fffde7`, logo centered;
-maskable variant inset 10% per edge). If the logo changes, regenerate them:
+`public/favicon.svg`. The 192/512 `any` icons keep the logo's transparent
+background; the maskable and apple-touch variants paint a solid
+`#fff9c4` (the banana-crisis `--bg-secondary`, also the manifest
+`theme_color`/`background_color`) — Android circle-crops maskable icons and
+iOS composites apple-touch icons over black, so those two must be opaque.
+If the logo changes, regenerate them:
 
 ```bash
 # from repo root
