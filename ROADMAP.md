@@ -74,7 +74,7 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
 
 - [ ] **Add `robots.txt`** (`frontend/public/`) — Search engines may index the GitHub Pages deployment. Low risk for a public tool, but worth considering if you don't want it indexed. _(low priority)_
 
-- **Add `ichor/pkg/` to `.gitignore`** — `wasm-pack build` output (`ichor_bg.wasm`, glue JS) lands in `ichor/pkg/`, which is NOT gitignored (`frontend/public/dist/` is, but the source location isn't). Anyone who builds locally can accidentally commit WASM binaries. One-line fix. _(low priority)_
+- ~~**Add `ichor/pkg/` to `.gitignore`**~~ — **Resolved (2026-09-26):** `ichor/pkg/` is now in the root `.gitignore`. (The audit claim that it was "NOT gitignored" was itself stale — wasm-pack auto-generates a self-ignoring `ichor/pkg/.gitignore` on every build — but that file is transient, so the root-level rule is the durable fix.)
 
 - ~~**Document WASM build as deploy prerequisite**~~ — **Stale (verified 2026-09-18):** the claim "CI now builds WASM but doesn't deploy" is wrong — `.github/workflows/static.yml` builds WASM, vendors it, and deploys `frontend/public/` to Pages. Residual kernel: *manual* deploys to other static hosts still require `wasm-pack build` + `deno task vendor-wasm` first, or the app ships without its brain and fails silently. Worth one line in the README "Other Static Hosts" section. _(low priority)_
 

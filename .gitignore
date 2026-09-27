@@ -21,4 +21,9 @@ target
 .idea/
 
 frontend/public/dist/
+# wasm-pack build output (ichor_bg.wasm + glue JS) — wasm-pack also drops a
+# self-ignoring .gitignore in ichor/pkg/ on every build, but that file is
+# transient (vanishes with `rm -rf ichor/pkg`); pin it here too so a fresh
+# checkout never accidentally commits WASM binaries.
+ichor/pkg/
 humans.md
