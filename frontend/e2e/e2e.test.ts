@@ -42,6 +42,23 @@ function cacheManifestBuildId(): string {
   return (JSON.parse(m[1]) as { buildId: string }).buildId;
 }
 
+/**
+ * The buildId stamped into the SW main script. Chromium only byte-compares
+ * the MAIN sw.js on its update check — if this stamp is missing or stale,
+ * a changed shell never triggers an update and installed apps serve the
+ * old build forever (the bug this assertion guards against).
+ */
+function stampedSwBuildId(): string {
+  const src = Deno.readTextFileSync(`${PUBLIC}\\sw.js`);
+  const m = src.match(/const BUILD_ID =\s*"([0-9a-f]{64})"/);
+  if (!m) {
+    throw new Error(
+      "sw.js has no stamped BUILD_ID — run `deno task build` (gen-revision stamps it)",
+    );
+  }
+  return m[1];
+}
+
 // ---------------------------------------------------------------------------
 // Test harness: one browser, fresh tab per test, auto-launch if needed
 // ---------------------------------------------------------------------------
@@ -258,6 +275,14 @@ Deno.test(
 
       // The cache name embeds the buildId the app was built with.
       const buildId = cacheManifestBuildId();
+      // Build integrity: the stamped sw.js buildId must equal the manifest's.
+      // Chromium's update check byte-compares only the MAIN sw.js, so a
+      // stale/missing stamp means shell updates silently never happen.
+      assertEquals(
+        stampedSwBuildId(),
+        buildId,
+        "sw.js stamped BUILD_ID does not match dist/cache-manifest.js — shell updates are broken; run `deno task build`",
+      );
       const cacheKeys = (await conn.evaluate(
         "(async () => { " +
           "  await navigator.serviceWorker.ready; " +

@@ -1,18 +1,40 @@
 /**
  * Taskman service worker — zero-dependency, cache-first app shell.
  *
- * Update model: the build emits `./dist/cache-manifest.js` containing
- * `self.CACHE_MANIFEST = { buildId, files }` where `buildId` is the SHA-256
- * of all shell file hashes. The cache name embeds the buildId, so any
- * content change ships a new cache; the old one is deleted on activate.
- * This is the staleness fix for stable (non-hashed) filenames.
+ * Update model: `gen-revision.ts` (part of `deno task build`) stamps the
+ * current BUILD_ID into this file AND emits `./dist/cache-manifest.js` with
+ * `self.CACHE_MANIFEST = { buildId, files }`. The cache name embeds the
+ * buildId, so any content change ships a new cache; the old one is deleted
+ * on activate.
+ *
+ * Why the stamped constant matters: Chromium's SW update check byte-compares
+ * the MAIN script only — files pulled in via `importScripts` changing does
+ * NOT trigger an update. Without stamping the buildId here, a changed
+ * cache-manifest.js would never be re-read and the shell would be stale
+ * forever. This is the staleness fix for stable (non-hashed) filenames.
  */
 
 /* global CACHE_MANIFEST — provided by dist/cache-manifest.js at install time */
 
+// AUTO-STAMPED by gen-revision.ts — do not edit by hand.
+const BUILD_ID =
+  "9037fc88ae4b43e3ebd595c2aa9433eea07c63ff4048efa2f0cef123a5904dd0";
+
 importScripts("./dist/cache-manifest.js");
 
 const CACHE_NAME = `taskman-shell-${CACHE_MANIFEST.buildId}`;
+// Hard assertion: if the stamped buildId disagrees with the imported
+// manifest, the main script was not restamped — refuse to serve a mismatched
+// shell rather than precaching the wrong build.
+if (BUILD_ID !== CACHE_MANIFEST.buildId) {
+  throw new Error(
+    `sw.js BUILD_ID (${
+      BUILD_ID.slice(0, 12)
+    }…) does not match cache-manifest.js (${
+      CACHE_MANIFEST.buildId.slice(0, 12)
+    }…) — regenerate both via \`deno task build\``,
+  );
+}
 const PRECACHE_URLS = ["./", ...CACHE_MANIFEST.files.map((f) => `./${f}`)];
 
 self.addEventListener("install", (event) => {

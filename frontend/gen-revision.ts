@@ -77,6 +77,29 @@ await Deno.writeTextFile(
   out,
 );
 
+// Stamp the buildId into the SW main script. Chromium byte-compares only the
+// MAIN sw script on its update check; a changed importScripts'd manifest
+// alone never triggers an update — so without this stamp the shell would be
+// pinned to the first build the browser ever saw.
+const swPath = toFsPath(new URL("sw.js", pub));
+const swSrc = await Deno.readTextFile(swPath);
+// Whitespace-tolerant: deno fmt may wrap the line after `=` (string literal
+// on the following line), so match comment + declaration across both shapes.
+const STAMP_RE =
+  /^(\/\/ AUTO-STAMPED by gen-revision\.ts — do not edit by hand\.\r?\nconst BUILD_ID =\r?\n?\s*)"?[0-9a-f]{64}"?(;\r?\n)$/m;
+if (!STAMP_RE.test(swSrc)) {
+  throw new Error(
+    `sw.js is missing the BUILD_ID stamp placeholder — re-add the AUTO-STAMPED const BUILD_ID line`,
+  );
+}
+const stamped = swSrc.replace(
+  STAMP_RE,
+  `$1"${buildId}"$2`,
+);
+await Deno.writeTextFile(swPath, stamped);
+
 console.log(
-  `cache-manifest.js: buildId=${buildId.slice(0, 12)}… (${files.length} files)`,
+  `cache-manifest.js: buildId=${
+    buildId.slice(0, 12)
+  }… (${files.length} files) — sw.js stamped`,
 );

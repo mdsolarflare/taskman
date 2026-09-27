@@ -126,6 +126,34 @@ Also fixed during the work (not pre-existing): a `Runtime.evaluate` on
 rasterizing the PWA icons — the generator must `Page.navigate` to the
 served origin first.
 
+### Bug 5 (post-demo, Windows): `importScripts`'d manifest changes never triggered a SW update
+
+**Location:** `public/sw.js` + `frontend/gen-revision.ts`
+**Symptom:** installed Windows PWA kept the pre-transparency icon
+(`#fffde7` corners in Brave's generated `Taskman.ico`) across multiple
+rebuilds — the shell was pinned to the first build the browser ever saw.
+
+Chromium's SW update check byte-compares only the **main** script. Our
+`sw.js` was static; only `dist/cache-manifest.js` (pulled in via
+`importScripts`) changed per build — which the update check never sees. The
+revision map existed precisely to defeat permanent caching, but without a
+changing main script it was dead code: updates never fired, old precaches
+never evicted.
+
+```diff
++// AUTO-STAMPED by gen-revision.ts — do not edit by hand.
++const BUILD_ID = "<sha256 buildId>";   // rewritten by every `deno task build`
++
+ importScripts("./dist/cache-manifest.js");
++if (BUILD_ID !== CACHE_MANIFEST.buildId) throw new Error("stale sw.js stamp");
+```
+
+`gen-revision.ts` now stamps the buildId into `sw.js` (whitespace-tolerant
+regex — `deno fmt` wraps the long line), the SW asserts stamp↔manifest
+agreement at install, and the e2e suite asserts the stamp equals the
+manifest's buildId. Verified live: touch a shell file → rebuild → the
+browser installs the new worker → old cache evicted, new build serving.
+
 ---
 
 ## Tests Added
