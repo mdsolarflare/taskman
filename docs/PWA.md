@@ -82,6 +82,16 @@ background; the maskable and apple-touch variants paint a solid
 `#fff9c4` (the banana-crisis `--bg-secondary`, also the manifest
 `theme_color`/`background_color`) — Android circle-crops maskable icons and
 iOS composites apple-touch icons over black, so those two must be opaque.
+
+**Why the PNGs are committed rather than CI-generated** — a deliberate
+trade-off, not an oversight: the only zero-dependency rasterizer available
+is a real browser canvas (`gen_icons.ts` drives headless Edge), and the
+deploy workflow has no browser. Generating them in CI would mean adding a
+Chromium install (~hundreds of MB, slower builds, new platform matrix) or a
+rasterization library (a new third-party dep) — significant complexity to
+avoid committing four small files that change only when the logo does.
+~55 KB of stable binaries was judged the smaller cost.
+
 If the logo changes, regenerate them:
 
 ```bash

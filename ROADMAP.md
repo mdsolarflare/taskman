@@ -47,6 +47,16 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
 
 **Items:**
 
+- **Review all `console.*` diagnostics calls (23 across `useAutoSave.ts` +
+  `main.tsx`)** — The tech-debt pass removed stray console statements, but
+  `useAutoSave.ts` accumulated ~22 diagnostic logs (the `[autoSave]`
+  diagnostics group + scheduleSave traces) and the PWA work added one
+  deliberate `console.warn` for SW registration failure in `main.tsx`.
+  Review as a set: keep the genuinely useful failure paths, drop the
+  chatty tracing, and consider a shared debug-log helper so diagnostics
+  are behind one flag instead of interleaved with app logic.
+  _(low priority, added 2026-09-26)_
+
 - **Split `App.tsx` (~1108 lines)** — Handles 6+ concerns: state management
   (10 separate `useState` calls), file I/O (`loadYaml`, open/new/save/load-sample),
   workspace persistence (debounced localStorage + mount restore), node CRUD
@@ -66,22 +76,32 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
   repeat across ~5 components. Known trade-off of zero-CSS design; shared
   primitives would emerge naturally during App.tsx split. _(low priority)_
 
+- **Revisit `"exclude": ["e2e/"]` in `frontend/deno.json`** — The PWA work
+  excluded the e2e module from the frontend TS module graph so `deno check`
+  passes without Deno-types config surgery (the e2e folder runs
+  `--no-check` with its own `deno.json`). Works, but the exclusion is
+  broad: it also opts `e2e/` out of `deno fmt --check` and `deno lint`
+  coverage in CI (`deno fmt --check frontend/` passes even if e2e files
+  drift). Consider a scoped fix later — per-file `deno.json` in e2e is
+  already the boundary; the question is whether CI should fmt/lint the
+  harness too. _(low priority, added 2026-09-26)_
+
 ## Security Hardening — Unresolved ?Low? Risk Items (SecOps Audit Findings)
 
 - [ ] **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) — Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
 
 - [x] **Pin exact dependency versions in `deno.json`** — DONE (2026-09): all npm/JSR specifiers in `frontend/deno.json` are now exact pins (no `^`/`~`, no unversioned `npm:`/`jsr:` refs), matching the committed `deno.lock`. Also pinned: `ichor/Cargo.toml` direct deps (`=` exact, matching `Cargo.lock`), CI tool versions in both workflows (Deno `2.9.7`, wasm-pack `0.15.0`, GitHub Actions by commit SHA), and the Rust compiler via `rust-toolchain.toml` (`1.95.0`). A refresh is now a no-op unless a pin is deliberately changed.
 
-- [ ] **Add `robots.txt`** (`frontend/public/`) — Search engines may index the GitHub Pages deployment. Low risk for a public tool, but worth considering if you don't want it indexed. _(low priority)_
+- [x] **Add `robots.txt`** (`frontend/public/`) — DONE (2026-09-26): added with `User-agent: *` / `Allow: /` — the site is intentionally indexable; the file exists to make that explicit rather than to block crawlers.
 
 - ~~**Add `ichor/pkg/` to `.gitignore`**~~ — **Resolved (2026-09-26):** `ichor/pkg/` is now in the root `.gitignore`. (The audit claim that it was "NOT gitignored" was itself stale — wasm-pack auto-generates a self-ignoring `ichor/pkg/.gitignore` on every build — but that file is transient, so the root-level rule is the durable fix.)
 
 - ~~**Document WASM build as deploy prerequisite**~~ — **Stale (verified 2026-09-18):** the claim "CI now builds WASM but doesn't deploy" is wrong — `.github/workflows/static.yml` builds WASM, vendors it, and deploys `frontend/public/` to Pages. Residual kernel: *manual* deploys to other static hosts still require `wasm-pack build` + `deno task vendor-wasm` first, or the app ships without its brain and fails silently. Worth one line in the README "Other Static Hosts" section. _(low priority)_
 
-## README Inaccuracies (found during PWA study, 2026-09-18)
+## README Inaccuracies (found during PWA study, 2026-09-18 — resolved 2026-09-26)
 
-- Project Structure section shows `Sample.yaml` and `DATA_MODEL.md` at repo root; both actually live at `frontend/public/sample.yaml` and `docs/DATA_MODEL.md`. The root copy of `Sample.yaml` doesn't exist.
-- `frontend/src/assets/hero.png`, `frontend/src/assets/react.svg`, and `frontend/public/icons.svg` (SVG sprite with bluesky/github symbols) are unreferenced by any source file (verified by grep across src/docs/html/css/md) — dead assets, safe to delete per the "verify with grep before deleting" rule.
+- ~~Project Structure section shows `Sample.yaml` and `DATA_MODEL.md` at repo root; both actually live at `frontend/public/sample.yaml` and `docs/DATA_MODEL.md`. The root copy of `Sample.yaml` doesn't exist.~~ — **Fixed (2026-09-26):** README Project Structure block now shows the real layout, and the `DATA_MODEL.md` link points to `./docs/DATA_MODEL.md`.
+- ~~`frontend/src/assets/hero.png`, `frontend/src/assets/react.svg`, and `frontend/public/icons.svg` (SVG sprite with bluesky/github symbols) are unreferenced by any source file (verified by grep across src/docs/html/css/md) — dead assets, safe to delete per the "verify with grep before deleting" rule.~~ — **Resolved (2026-09-26):** re-verified unreferenced by grep (the GitHub icon in `App.tsx` is inline SVG, not the sprite), all three deleted along with the now-empty `src/assets/` directory.
 
 ## Documentation Drift (from docs/ review, 2026-09-18)
 

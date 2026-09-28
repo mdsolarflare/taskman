@@ -130,21 +130,27 @@ On first load, the app automatically serves a sample graph from `/sample.yaml`
 (see [Sample Data](#-sample-data)). Subsequent visits restore your last
 workspace from `localStorage`.
 
-See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
+See [`DATA_MODEL.md`](./docs/DATA_MODEL.md) for the complete schema specification.
 
 ## 📁 Project Structure
 
 ```text
 .
-├── Sample.yaml              # Reference copy of the sample graph (project root)
-├── DATA_MODEL.md            # Full schema spec for Nodes and DAG mapping
+├── AGENTS.md                # Agent working rules (principles + verification gates)
+├── ROADMAP.md               # Roadmap + audit findings log
+├── docs/                    # DATA_MODEL.md, PWA.md, DECISION-*.md, records-pain/
 ├── ichor/                   # Rust WASM project
 │   ├── src/                 # YAML parsing, graph builder, layout algorithms
 │   └── Cargo.toml           # Rust dependencies & WASM configuration
 └── frontend/                # React + esbuild project
     ├── src/                 # UI components and WASM integration glue
+    ├── e2e/                 # CDP-driven browser e2e harness (own deno.json)
+    ├── gen-revision.ts       # Build step: hashes shell, stamps SW BUILD_ID
     ├── public/              # Static assets served by the file server
-    │   └── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
+    │   ├── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
+    │   ├── icons/           # Committed PWA icons (regen: deno task gen-icons)
+    │   ├── manifest.webmanifest
+    │   └── sw.js            # Hand-rolled service worker (see docs/DECISION-sw-revisioning.md)
     └── deno.json            # Frontend dependencies (Deno 2)
 ```
 
