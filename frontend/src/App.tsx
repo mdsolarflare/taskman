@@ -13,6 +13,7 @@ import ThemeModal from "./components/ThemeModal.tsx";
 import NavigationPanel from "./components/NavigationPanel.tsx";
 import { useTheme } from "./hooks/useTheme.ts";
 import { useAutoSave } from "./hooks/useAutoSave.ts";
+import { usePWA } from "./hooks/usePWA.ts";
 import "./themes.css";
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,7 @@ function App() {
   );
 
   const theme = useTheme();
+  const pwa = usePWA();
 
   // Load YAML into a graph via WASM.
   const loadYaml = useCallback(async (yaml: string, isSample?: boolean) => {
@@ -140,6 +142,22 @@ function App() {
   // Auto-save timer for debouncing frequent writes.
   const autoSaveTimer = useRef<number | null>(null);
   const autoSave = useAutoSave();
+
+  // Keep <meta name="theme-color"> synced to the active theme so the installed
+  // app's title bar / taskbar swatch follows theme switches at runtime.
+  useEffect(() => {
+    const bg = theme.currentColors["--bg-secondary"];
+    if (!bg) return;
+    let meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    );
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = bg;
+  }, [theme.currentColors]);
 
   // Debounced save to localStorage (always active as a safety net)
   useEffect(() => {
@@ -404,10 +422,10 @@ function App() {
       {/* ─── Top Bar (Sandwich Menu) ─── */}
       <header
         style={{
-          height: 48,
+          height: "calc(48px + env(safe-area-inset-top))",
           display: "flex",
           alignItems: "center",
-          padding: "0 12px",
+          padding: "env(safe-area-inset-top) 12px 0",
           background: c["--bg-secondary"],
           borderBottom: `1px solid ${c["--border-color"]}`,
           zIndex: 50,
@@ -660,6 +678,32 @@ function App() {
                   </span>
                   Load Sample
                 </button>
+                {pwa.canInstall && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      pwa.promptInstall();
+                    }}
+                    style={menuItemStyle}
+                    onMouseEnter={(
+                      e,
+                    ) => (e.currentTarget.style.background = c["--bg-primary"])}
+                    onMouseLeave={(
+                      e,
+                    ) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span
+                      style={{
+                        marginRight: 10,
+                        opacity: 0.6,
+                      }}
+                    >
+                      📥
+                    </span>
+                    Install Taskman…
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1182,6 +1226,48 @@ function App() {
         hasCustom={theme.hasCustom}
         readCurrentColors={() => theme.currentColors}
       />
+
+      {/* ─── PWA update toast ─── */}
+      {pwa.waitingToReload && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 300,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 14px 10px 18px",
+            background: c["--bg-secondary"],
+            border: `1px solid ${c["--border-color"]}`,
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            fontSize: 13,
+            color: c["--text-primary"],
+            fontFamily: "system-ui, -apple-system, sans-serif",
+          }}
+        >
+          <span>A new version is ready.</span>
+          <button
+            type="button"
+            onClick={pwa.applyUpdate}
+            style={{
+              padding: "6px 14px",
+              fontSize: 13,
+              fontWeight: 500,
+              background: c["--accent"],
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      )}
 
       {/* Spinner animation */}
       <style>

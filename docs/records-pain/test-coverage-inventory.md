@@ -197,7 +197,7 @@ The following React components have zero test coverage. Testing them would requi
 ### No Tests At All (Other)
 
 - **WASM bridge** — nothing tests the Rust ↔ TypeScript communication layer. The `#[wasm_bindgen]` functions (`build_graph_from_yaml`, `graph_to_yaml`, `add_node`, `delete_node`) are tested through Rust internals but not across the actual WASM boundary.
-- **Integration / end-to-end flows** — no tests for YAML→graph→layout→render pipeline or user interaction sequences.
+- **Integration / end-to-end flows** — no tests for YAML→graph→layout→render pipeline or user interaction sequences. *(Partially resolved 2026-09-25: `frontend/e2e/` now runs 3 CDP-driven headless-Edge tests covering boot, WASM graph render, localStorage persistence, SW precache, and offline reload. User interaction sequences remain untested.)*
 - **useAutoSave hook lifecycle** — only the pure `deriveBaseStatus()` helper is tested; actual React hook behavior (effects, debouncing, IndexedDB) is untested.
 
 ### Deferred Until Infrastructure Investment

@@ -45,6 +45,10 @@ Our key design imperatives:
   data model hierarchy (parent nodes, leaf nodes, nesting).
 - 🎨 **Fast UI:** A clean, responsive interface using inline styles for a
   lightweight, zero-dependency frontend.
+- 📱 **Installable PWA:** Works offline after the first visit — the whole
+  shell (including the WASM brain) is precached by a zero-dependency service
+  worker with build-time cache revisioning. See
+  [Installing Taskman as an App](./docs/PWA.md).
 
 ## 🛠️ Development Setup
 
@@ -126,21 +130,27 @@ On first load, the app automatically serves a sample graph from `/sample.yaml`
 (see [Sample Data](#-sample-data)). Subsequent visits restore your last
 workspace from `localStorage`.
 
-See [`DATA_MODEL.md`](./DATA_MODEL.md) for the complete schema specification.
+See [`DATA_MODEL.md`](./docs/DATA_MODEL.md) for the complete schema specification.
 
 ## 📁 Project Structure
 
 ```text
 .
-├── Sample.yaml              # Reference copy of the sample graph (project root)
-├── DATA_MODEL.md            # Full schema spec for Nodes and DAG mapping
+├── AGENTS.md                # Agent working rules (principles + verification gates)
+├── ROADMAP.md               # Roadmap + audit findings log
+├── docs/                    # DATA_MODEL.md, PWA.md, DECISION-*.md, records-pain/
 ├── ichor/                   # Rust WASM project
 │   ├── src/                 # YAML parsing, graph builder, layout algorithms
 │   └── Cargo.toml           # Rust dependencies & WASM configuration
 └── frontend/                # React + esbuild project
     ├── src/                 # UI components and WASM integration glue
+    ├── e2e/                 # CDP-driven browser e2e harness (own deno.json)
+    ├── gen-revision.ts       # Build step: hashes shell, stamps SW BUILD_ID
     ├── public/              # Static assets served by the file server
-    │   └── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
+    │   ├── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
+    │   ├── icons/           # Committed PWA icons (regen: deno task gen-icons)
+    │   ├── manifest.webmanifest
+    │   └── sw.js            # Hand-rolled service worker (see docs/DECISION-sw-revisioning.md)
     └── deno.json            # Frontend dependencies (Deno 2)
 ```
 
@@ -189,6 +199,18 @@ If auto-save shows as unsupported in a Chromium browser:
 3. Ensure you're on HTTPS or `localhost` — the API requires a secure context.
 4. Firefox and Safari are not yet tested; behavior is unknown.
 
+## 📱 PWA — Install Taskman
+
+Taskman is an installable Progressive Web App. After the first visit, the
+entire app shell — HTML, JS, CSS, the Rust/WASM binary, the sample data, and
+icons — is precached by a service worker, so it boots with no network at all.
+Once installed it opens in its own window (no browser chrome), and the
+system title bar / taskbar swatch follows the active theme via
+`<meta name="theme-color">`.
+
+**Installing, offline behavior, update semantics, and icon regeneration:
+see [Installing Taskman as an App](./docs/PWA.md).**
+
 ## 🚀 Deployment
 
 This is an Offline-First app that deploys as a static site — no backend server
@@ -235,7 +257,8 @@ cd frontend && deno task build
 ### Guidance for Future Work - Agent Friendly
 
 - Always verify with grep before deleting — confirm the symbol is truly unreferenced.
-- Re-run the linter/test suite after every edit batch, not just at the end. `cd frontend && deno fmt && deno task lint && deno test` verifies the frontend. `cd ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
+- Re-run the linter/test suite after every edit batch, not just at the end. `cd frontend && deno fmt && deno task lint && deno task test` verifies the frontend. `cd ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
+- The full gate before committing also runs the browser e2e suite: `cd frontend/e2e && deno task test` (headless Edge via CDP; boots the app, checks localStorage persistence, and proves the service worker precaches the shell and serves it offline).
 - Prefer fixing over silencing — i.e. remove dead code instead adding suppression comments.
 - Use idiomatic rust
 - Use idiomatic typescript

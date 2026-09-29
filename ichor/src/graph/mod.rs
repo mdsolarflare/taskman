@@ -189,9 +189,11 @@ impl Graph {
 
         // Roots cannot be deleted
         if self.root_ids.contains(&node_id) {
-            let node = self.nodes.iter().find(|n| n.id == node_id).expect(
-                "Node must exist (checked by contains above)",
-            );
+            let node = self
+                .nodes
+                .iter()
+                .find(|n| n.id == node_id)
+                .expect("Node must exist (checked by contains above)");
             return Err(format!(
                 "Cannot delete root node '{}'. Root nodes cannot be removed.",
                 node.name
@@ -244,9 +246,10 @@ impl Graph {
                     parent_node.subtask_ids = Some(subtasks);
                 }
                 self.adjacency.entry(*parent_id).or_default();
-                let parent_children = self.adjacency.get_mut(parent_id).expect(
-                    "Adjacency entry must exist (created by entry().or_default() above)",
-                );
+                let parent_children = self
+                    .adjacency
+                    .get_mut(parent_id)
+                    .expect("Adjacency entry must exist (created by entry().or_default() above)");
                 if !parent_children.contains(child_id) {
                     parent_children.push(*child_id);
                 }
@@ -309,6 +312,9 @@ impl Graph {
     /// If `parent_id` is `None`, the new node is added as a root.
     ///
     /// Returns the ID of the newly created node.
+    #[allow(clippy::too_many_arguments)] // flat args mirror the Node fields;
+    // the wasm-bindgen export below and ~20 test call sites use positional
+    // form — a builder/struct would ripple through the JS ABI for no gain.
     pub fn add_node(
         &mut self,
         parent_id: Option<i64>,
@@ -367,7 +373,9 @@ impl Graph {
             self.reverse_adjacency.entry(new_id).or_default();
             self.reverse_adjacency
                 .get_mut(&new_id)
-                .expect("Reverse adjacency entry must exist (created by entry().or_default() above)")
+                .expect(
+                    "Reverse adjacency entry must exist (created by entry().or_default() above)",
+                )
                 .push(pid);
             // New node is not a root - remove from root_ids if somehow present
             self.root_ids.retain(|&id| id != new_id);
@@ -467,6 +475,7 @@ pub fn delete_node(graph_json: &str, node_id: i64) -> Result<JsValue, JsValue> {
 /// `parent_id` of `-1` means no parent (new root node).
 /// Returns the updated graph as JSON, or an error string.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)] // flat positional form is the JS ABI
 pub fn add_node(
     graph_json: &str,
     parent_id: i64,
@@ -626,7 +635,7 @@ nodes:
             a_node
                 .subtask_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&3)),
+                .is_some_and(|ids| ids.contains(&3)),
             "A should now have C as subtask"
         );
 
@@ -640,7 +649,7 @@ nodes:
             c_node
                 .parent_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&1)),
+                .is_some_and(|ids| ids.contains(&1)),
             "C should now have A as parent"
         );
     }
@@ -732,7 +741,7 @@ nodes:
             a_node
                 .subtask_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&4)),
+                .is_some_and(|ids| ids.contains(&4)),
             "A should now have D as subtask"
         );
 
@@ -746,7 +755,7 @@ nodes:
             b_node
                 .subtask_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&4)),
+                .is_some_and(|ids| ids.contains(&4)),
             "B should now have D as subtask"
         );
 
@@ -815,7 +824,7 @@ nodes:
             a_node
                 .subtask_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&4)),
+                .is_some_and(|ids| ids.contains(&4)),
             "A should now have D as subtask"
         );
 
@@ -857,14 +866,14 @@ nodes:
             .find(|n| n.id == 1)
             .expect("A should exist");
         assert!(
-            a_node.subtask_ids.as_ref().map_or(true, Vec::is_empty),
+            a_node.subtask_ids.as_ref().is_none_or(Vec::is_empty),
             "A should have no subtasks left"
         );
 
         // Adjacency should be cleaned up
         assert!(
             !graph.adjacency.contains_key(&1)
-                || graph.adjacency.get(&1).map_or(false, |ids| ids.is_empty()),
+                || graph.adjacency.get(&1).is_some_and(|ids| ids.is_empty()),
             "A should have no children in adjacency"
         );
     }
@@ -907,7 +916,7 @@ nodes:
             b_node
                 .subtask_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&4)),
+                .is_some_and(|ids| ids.contains(&4)),
             "B should now have D as subtask"
         );
 
@@ -921,7 +930,7 @@ nodes:
             d_node
                 .parent_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&2)),
+                .is_some_and(|ids| ids.contains(&2)),
             "D should now have B as parent"
         );
     }
@@ -1050,7 +1059,7 @@ nodes:
             parent
                 .subtask_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&3)),
+                .is_some_and(|ids| ids.contains(&3)),
             "Parent should list new node in subtask_ids"
         );
 
@@ -1060,7 +1069,7 @@ nodes:
             child
                 .parent_ids
                 .as_ref()
-                .map_or(false, |ids| ids.contains(&1)),
+                .is_some_and(|ids| ids.contains(&1)),
             "New child should reference parent"
         );
         assert_eq!(
@@ -1514,7 +1523,7 @@ nodes:
         // After delete, adjacency for A is cleaned up. C remains independent.
         let c = graph.get_node(3).expect("C should exist");
         assert!(
-            c.parent_ids.as_ref().map_or(true, Vec::is_empty),
+            c.parent_ids.as_ref().is_none_or(Vec::is_empty),
             "C should have no parents — it was never in adjacency"
         );
     }
@@ -1967,12 +1976,18 @@ nodes:
         let adj_a_after = graph.adjacency.get(&1).expect("A adjacency exists");
         assert!(!adj_a_after.contains(&2), "B must be gone from adjacency");
         assert!(adj_a_after.contains(&3), "C should still be in adjacency");
-        assert!(!adj_a_after.contains(&4), "Phantom D must not appear in adjacency");
+        assert!(
+            !adj_a_after.contains(&4),
+            "Phantom D must not appear in adjacency"
+        );
 
         // A's raw-mutated subtask_ids field is cleaned up by delete_node's cleanup pass.
         let a_after = graph.get_node(1).expect("A exists");
         let subs = a_after.subtask_ids.as_ref().expect("A has subtasks");
-        assert!(!subs.contains(&2), "B must be gone from A's subtask_ids after delete cleanup");
+        assert!(
+            !subs.contains(&2),
+            "B must be gone from A's subtask_ids after delete cleanup"
+        );
         // Note: phantom D(4) is NOT cleaned up by delete_node because it only
         // removes the *deleted* node ID (2). The stale mutation of D remains —
         // this documents that raw mutations are not self-healing.
