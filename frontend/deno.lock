@@ -22,7 +22,7 @@
     "npm:eslint-plugin-react-hooks@7.1.1": "7.1.1_eslint@10.11.0",
     "npm:eslint@10.11.0": "10.11.0",
     "npm:eslint@10.5.0": "10.5.0",
-    "npm:globals@17.12.0": "17.12.0",
+    "npm:globals@17.13.0": "17.13.0",
     "npm:react-dom@19.3.0": "19.3.0_react@19.3.0",
     "npm:react@19.3.0": "19.3.0",
     "npm:typescript-eslint@8.71.0": "8.71.0_eslint@10.11.0_typescript@6.0.3"
@@ -893,8 +893,8 @@
         "is-glob"
       ]
     },
-    "globals@17.12.0": {
-      "integrity": "sha512-cezEd/DTyyht9cvSSURyygXPfy04GtWO/5e6ZPvH7fCtjKz9PYOmuawphw1Ctd1f6C+5JypXfGD7ahNMXvevBA=="
+    "globals@17.13.0": {
+      "integrity": "sha512-RwMTC61u7hrG3ZJMkZQOK4JLJrKS8QtoTii63EmWvFXHqycY9FObBJQCbsLxSO8kjKhWE5kV1GC+Vb1g3RI0Zg=="
     },
     "hashery@1.5.1": {
       "integrity": "sha512-iZyKG96/JwPz1N55vj2Ie2vXbhu440zfUfJvSwEqEbeLluk7NnapfGqa7LH0mOsnDxTF85Mx8/dyR6HfqcbmbQ==",
@@ -1166,7 +1166,7 @@
       "npm:@types/react@19.2.15",
       "npm:eslint-plugin-react-hooks@7.1.1",
       "npm:eslint@10.11.0",
-      "npm:globals@17.12.0",
+      "npm:globals@17.13.0",
       "npm:react-dom@19.3.0",
       "npm:react@19.3.0",
       "npm:typescript-eslint@8.71.0"
