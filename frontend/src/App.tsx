@@ -191,7 +191,7 @@ function App() {
     setState((s) => {
       if (!s.graph) return s;
       const nodes = s.graph.nodes.map((n: GraphNode) =>
-        n.id === nodeId ? { ...n, collapsed } : n
+        n.id === nodeId ? { ...n, collapsed } : n,
       );
       return { ...s, graph: { ...s.graph, nodes } };
     });
@@ -281,23 +281,26 @@ function App() {
   }, []);
 
   // Common save-and-update logic for both create and edit paths
-  const saveGraphAndUpdate = useCallback(async (newGraph: Graph) => {
-    try {
-      const yaml = await saveGraphToYaml(newGraph);
-      saveWorkspace(yaml);
-      // Schedule debounced file write to disk
-      autoSave.scheduleSave(yaml);
-      setState((s) => ({ ...s, graph: newGraph, yaml }));
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        error: err instanceof Error ? err.message : "Failed to save graph",
-      }));
-    }
-    setEditingNodeId(null);
-    setIsCreating(false);
-    setAddParentId(-1);
-  }, [autoSave]);
+  const saveGraphAndUpdate = useCallback(
+    async (newGraph: Graph) => {
+      try {
+        const yaml = await saveGraphToYaml(newGraph);
+        saveWorkspace(yaml);
+        // Schedule debounced file write to disk
+        autoSave.scheduleSave(yaml);
+        setState((s) => ({ ...s, graph: newGraph, yaml }));
+      } catch (err) {
+        setState((s) => ({
+          ...s,
+          error: err instanceof Error ? err.message : "Failed to save graph",
+        }));
+      }
+      setEditingNodeId(null);
+      setIsCreating(false);
+      setAddParentId(-1);
+    },
+    [autoSave],
+  );
 
   const handleNodeSave = useCallback(
     async (updated: GraphNode) => {
@@ -323,7 +326,7 @@ function App() {
         newGraph = {
           ...state.graph,
           nodes: state.graph.nodes.map((n: GraphNode) =>
-            n.id === updated.id ? updated : n
+            n.id === updated.id ? updated : n,
           ),
         };
       }
@@ -517,12 +520,12 @@ function App() {
                   type="button"
                   onClick={handleFileNew}
                   style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <span
                     style={{
@@ -538,12 +541,12 @@ function App() {
                   type="button"
                   onClick={handleFileOpen}
                   style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <span
                     style={{
@@ -559,12 +562,12 @@ function App() {
                   type="button"
                   onClick={handleFileSaveAs}
                   style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <span
                     style={{
@@ -602,12 +605,12 @@ function App() {
                     setShowThemeModal(true);
                   }}
                   style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <span
                     style={{
@@ -640,12 +643,12 @@ function App() {
                     setShowHelp(true);
                   }}
                   style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <span
                     style={{
@@ -661,12 +664,12 @@ function App() {
                   type="button"
                   onClick={handleLoadSample}
                   style={menuItemStyle}
-                  onMouseEnter={(
-                    e,
-                  ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  onMouseLeave={(
-                    e,
-                  ) => (e.currentTarget.style.background = "transparent")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <span
                     style={{
@@ -686,12 +689,12 @@ function App() {
                       pwa.promptInstall();
                     }}
                     style={menuItemStyle}
-                    onMouseEnter={(
-                      e,
-                    ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                    onMouseLeave={(
-                      e,
-                    ) => (e.currentTarget.style.background = "transparent")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = c["--bg-primary"])
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
                   >
                     <span
                       style={{
@@ -741,19 +744,21 @@ function App() {
             textOverflow: "ellipsis",
           }}
         >
-          {state.loading
-            ? ("Loading…")
-            : state.graph
-            ? (autoSave.fileName
-              ? `${autoSave.fileName} — ${state.graph.nodes.length} nodes`
-              : `${state.graph.nodes.length} nodes (unsaved)`)
-            : state.error
-            ? (
-              <span style={{ color: c["--semantic-overdue"] }}>
-                Error: {state.error}
-              </span>
+          {state.loading ? (
+            "Loading…"
+          ) : state.graph ? (
+            autoSave.fileName ? (
+              `${autoSave.fileName} — ${state.graph.nodes.length} nodes`
+            ) : (
+              `${state.graph.nodes.length} nodes (unsaved)`
             )
-            : ("Ready")}
+          ) : state.error ? (
+            <span style={{ color: c["--semantic-overdue"] }}>
+              Error: {state.error}
+            </span>
+          ) : (
+            "Ready"
+          )}
         </span>
 
         {/* GitHub link */}
@@ -777,7 +782,8 @@ function App() {
             fill="currentColor"
             aria-hidden="true"
           >
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+            <path
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
                 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
                 -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87
                 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59
@@ -785,7 +791,8 @@ function App() {
                 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44
                 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87
                 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01
-                2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+            />
           </svg>
         </a>
 
@@ -806,12 +813,13 @@ function App() {
               width: 8,
               height: 8,
               borderRadius: "50%",
-              background: autoSave.saveStatus === "disabled"
-                ? c["--border-color"]
-                : autoSave.saveStatus === "unsupported" ||
-                    autoSave.saveStatus === "error"
-                ? c["--semantic-overdue"]
-                : c["--text-primary"],
+              background:
+                autoSave.saveStatus === "disabled"
+                  ? c["--border-color"]
+                  : autoSave.saveStatus === "unsupported" ||
+                      autoSave.saveStatus === "error"
+                    ? c["--semantic-overdue"]
+                    : c["--text-primary"],
             }}
           />
 
@@ -827,16 +835,18 @@ function App() {
               display: "flex",
               alignItems: "center",
               padding: "0 2px",
-              background: autoSave.supported &&
-                  autoSave.autoSaveEnabled &&
-                  autoSave.fileName
-                ? c["--accent"]
-                : c["--border-color"],
+              background:
+                autoSave.supported &&
+                autoSave.autoSaveEnabled &&
+                autoSave.fileName
+                  ? c["--accent"]
+                  : c["--border-color"],
               border: "none",
               borderRadius: 9,
-              cursor: autoSave.supported && autoSave.fileName
-                ? "pointer"
-                : "not-allowed",
+              cursor:
+                autoSave.supported && autoSave.fileName
+                  ? "pointer"
+                  : "not-allowed",
               transition: "background 0.15s",
               opacity: autoSave.supported && autoSave.fileName ? 1 : 0.4,
             }}
@@ -924,124 +934,117 @@ function App() {
             minWidth: 0,
           }}
         >
-          {state.error
-            ? (
-              // Error state
-              <div
+          {state.error ? (
+            // Error state
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 16,
+                padding: 32,
+                textAlign: "center",
+                maxWidth: 500,
+              }}
+            >
+              <div style={{ fontSize: 48 }}>⚠️</div>
+              <h2
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 16,
-                  padding: 32,
-                  textAlign: "center",
-                  maxWidth: 500,
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: c["--text-primary"],
                 }}
               >
-                <div style={{ fontSize: 48 }}>⚠️</div>
-                <h2
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 600,
-                    color: c["--text-primary"],
-                  }}
-                >
-                  Something went wrong
-                </h2>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: c["--text-secondary"],
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {state.error}
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    flexDirection: "column",
-                    width: "100%",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={handleLoadSample}
-                    style={{
-                      padding: "10px 20px",
-                      fontSize: 14,
-                      fontWeight: 500,
-                      background: c["--accent"],
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      transition: "background 0.2s",
-                    }}
-                    onMouseEnter={(
-                      e,
-                    ) => (e.currentTarget.style.filter = "brightness(0.85)")}
-                    onMouseLeave={(
-                      e,
-                    ) => (e.currentTarget.style.filter = "none")}
-                  >
-                    Try Loading Sample
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleFileOpen}
-                    style={{
-                      padding: "10px 20px",
-                      fontSize: 14,
-                      fontWeight: 500,
-                      background: c["--bg-primary"],
-                      color: c["--text-primary"],
-                      border: `1px solid ${c["--border-color"]}`,
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      transition: "background 0.2s",
-                    }}
-                    onMouseEnter={(
-                      e,
-                    ) => (e.currentTarget.style.background =
-                      c["--border-color"])}
-                    onMouseLeave={(
-                      e,
-                    ) => (e.currentTarget.style.background = c["--bg-primary"])}
-                  >
-                    Open Your File
-                  </button>
-                </div>
-              </div>
-            )
-            : state.graph
-            ? (
-              <GraphRenderer
-                graph={state.graph}
-                onNodeToggle={handleNodeToggle}
-                onNodeEdit={handleNodeEdit}
-                onDeleteNode={handleNodeDeleteRequest}
-                onAddNode={handleNodeAdd}
-                selectedNodeId={selectedNodeId}
-                onNodeSelect={handleGraphNodeSelect}
-                centerTargetNodeId={centerTargetNodeId}
-              />
-            )
-            : (
-              // Briefly shown during initial load before sample/workspace restores
-              <div
+                Something went wrong
+              </h2>
+              <p
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  fontSize: 14,
                   color: c["--text-secondary"],
-                  fontSize: 13,
+                  lineHeight: 1.6,
                 }}
               >
-                Loading...
+                {state.error}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexDirection: "column",
+                  width: "100%",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleLoadSample}
+                  style={{
+                    padding: "10px 20px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--accent"],
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.filter = "brightness(0.85)")
+                  }
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+                >
+                  Try Loading Sample
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFileOpen}
+                  style={{
+                    padding: "10px 20px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    background: c["--bg-primary"],
+                    color: c["--text-primary"],
+                    border: `1px solid ${c["--border-color"]}`,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = c["--border-color"])
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = c["--bg-primary"])
+                  }
+                >
+                  Open Your File
+                </button>
               </div>
-            )}
+            </div>
+          ) : state.graph ? (
+            <GraphRenderer
+              graph={state.graph}
+              onNodeToggle={handleNodeToggle}
+              onNodeEdit={handleNodeEdit}
+              onDeleteNode={handleNodeDeleteRequest}
+              onAddNode={handleNodeAdd}
+              selectedNodeId={selectedNodeId}
+              onNodeSelect={handleGraphNodeSelect}
+              centerTargetNodeId={centerTargetNodeId}
+            />
+          ) : (
+            // Briefly shown during initial load before sample/workspace restores
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: c["--text-secondary"],
+                fontSize: 13,
+              }}
+            >
+              Loading...
+            </div>
+          )}
 
           {/* Loading overlay */}
           {state.loading && (
@@ -1177,18 +1180,20 @@ function App() {
       {/* ─── Edit/Create Node Modal ─── */}
       {editingNodeId !== null && state.graph && (
         <EditNodeModal
-          node={isCreating
-            ? {
-              id: 0,
-              name: "",
-              details: "",
-              deadline: "",
-              important: false,
-              subtask_ids: [],
-            }
-            : (state.graph.nodes.find(
-              (n: GraphNode) => n.id === editingNodeId,
-            ) ?? state.graph.nodes[0])}
+          node={
+            isCreating
+              ? {
+                  id: 0,
+                  name: "",
+                  details: "",
+                  deadline: "",
+                  important: false,
+                  subtask_ids: [],
+                }
+              : (state.graph.nodes.find(
+                  (n: GraphNode) => n.id === editingNodeId,
+                ) ?? state.graph.nodes[0])
+          }
           allNodes={state.graph.nodes}
           onSave={handleNodeSave}
           onCancel={handleNodeCancelEdit}
@@ -1199,18 +1204,18 @@ function App() {
       {/* ─── Delete Node Dialog ─── */}
       {deletingNodeId !== null && state.graph && (
         <DeleteNodeDialog
-          nodeName={state.graph.nodes.find((n: GraphNode) =>
-            n.id === deletingNodeId
-          )
-            ?.name ?? ""}
-          hasChildren={(state.graph.nodes.find((n: GraphNode) =>
-            n.id === deletingNodeId
-          )
-            ?.subtask_ids?.length ?? 0) > 0}
-          parentCount={state.graph.nodes.find((n: GraphNode) =>
-            n.id === deletingNodeId
-          )
-            ?.parent_ids?.length ?? 0}
+          nodeName={
+            state.graph.nodes.find((n: GraphNode) => n.id === deletingNodeId)
+              ?.name ?? ""
+          }
+          hasChildren={
+            (state.graph.nodes.find((n: GraphNode) => n.id === deletingNodeId)
+              ?.subtask_ids?.length ?? 0) > 0
+          }
+          parentCount={
+            state.graph.nodes.find((n: GraphNode) => n.id === deletingNodeId)
+              ?.parent_ids?.length ?? 0
+          }
           onConfirm={handleNodeDeleteConfirm}
           onCancel={handleNodeDeleteCancel}
         />

@@ -11,7 +11,7 @@
  *   3. After each CRUD action completes → scheduleSave → debounced write to file
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,12 +26,12 @@ export interface FsFileHandle {
   name: string;
   getFile(): Promise<File>;
   createWritable(): Promise<FsWritableStream>;
-  queryPermission(
-    descriptor?: { mode?: "read" | "write" | "readwrite" },
-  ): Promise<"granted" | "denied">;
-  requestPermission(
-    descriptor?: { mode?: "read" | "write" | "readwrite" },
-  ): Promise<"granted" | "denied">;
+  queryPermission(descriptor?: {
+    mode?: "read" | "write" | "readwrite";
+  }): Promise<"granted" | "denied">;
+  requestPermission(descriptor?: {
+    mode?: "read" | "write" | "readwrite";
+  }): Promise<"granted" | "denied">;
 }
 
 interface FsWindow {
@@ -52,11 +52,7 @@ interface FsWindow {
 }
 
 export type SaveStatus =
-  | "idle"
-  | "saving"
-  | "error"
-  | "disabled"
-  | "unsupported";
+  "idle" | "saving" | "error" | "disabled" | "unsupported";
 
 export interface UseAutoSaveReturn {
   /** Display name of the tracked file, or null */
@@ -81,6 +77,10 @@ export interface UseAutoSaveReturn {
   toggleAutoSave: (enabled?: boolean) => void;
   /** Write immediately (bypasses debounce) */
   saveNow: (yaml: string) => Promise<void>;
+  /** Cause analysis for the current environment (reason + remediation). */
+  diagnosis: AutoSaveDiagnosis;
+  /** Last write/permission failure message; null when healthy. */
+  lastError: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,19 +126,18 @@ async function saveHandleToDB(
   db.close();
 }
 
-async function loadHandleFromDB(): Promise<
-  { handle: FsFileHandle; name: string } | null
-> {
+async function loadHandleFromDB(): Promise<{
+  handle: FsFileHandle;
+  name: string;
+} | null> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readonly");
   const store = tx.objectStore(STORE_NAME);
   const request = store.get("autoSaveHandle");
-  const result = await new Promise<unknown>(
-    (resolve, reject) => {
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    },
-  );
+  const result = await new Promise<unknown>((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
   db.close();
   if (result && typeof result === "object") {
     return result as { handle: FsFileHandle; name: string };
@@ -180,11 +179,81 @@ function persistAutoSavePreference(enabled: boolean): void {
   }
 }
 
-function isFsAccessSupported(): boolean {
-  const win = window as unknown as FsWindow;
-  return typeof win.showSaveFilePicker === "function" ||
-    typeof win.showOpenFilePicker === "function";
+/** Chromium-family browser? (Chrome/Edge/Brave/Opera/Vivaldi all match.) */
+function isChromiumLikeUA(ua: string): boolean {
+  return /Chrom/.test(ua);
 }
+
+export type AutoSaveBlockReason =
+  "ok" | "insecure-context" | "flags-or-version" | "browser-unsupported";
+
+export interface AutoSaveDiagnosis {
+  /** True when the File System Access API is usable right here. */
+  supported: boolean;
+  reason: AutoSaveBlockReason;
+  /** Fix-it text for the failing reason ("" when ok). */
+  remediation: string;
+}
+
+/**
+ * Map environment facts to a blocked-cause + remediation. Pure — unit
+ * tested. Picker presence implies a usable context (browsers only expose
+ * the pickers in secure contexts), so it is checked first.
+ */
+export function deriveAutoSaveDiagnosis(
+  isSecureContext: boolean,
+  hasSavePicker: boolean,
+  hasOpenPicker: boolean,
+  isChromiumLike: boolean,
+): AutoSaveDiagnosis {
+  if (hasSavePicker || hasOpenPicker) {
+    return { supported: true, reason: "ok", remediation: "" };
+  }
+  if (!isSecureContext) {
+    return {
+      supported: false,
+      reason: "insecure-context",
+      remediation:
+        "Auto-save needs a secure context — open the app at http://localhost:<port> " +
+        "(localhost counts as secure; 127.0.0.1 and LAN-IP hosts do not) or serve over https.",
+    };
+  }
+  if (isChromiumLike) {
+    return {
+      supported: false,
+      reason: "flags-or-version",
+      remediation:
+        "This Chromium build does not expose the File System Access API — check " +
+        "chrome://flags/#file-system-access-api (Edge: edge://flags) or update the browser.",
+    };
+  }
+  return {
+    supported: false,
+    reason: "browser-unsupported",
+    remediation:
+      "This browser has no File System Access API (e.g. Firefox/Safari) — " +
+      "Save As falls back to a download; auto-save to a tracked file is unavailable.",
+  };
+}
+
+const AUTO_SAVE_DEBUG_KEY = "taskman_autosave_debug";
+
+/** Debug gate for chatty per-CRUD traces (?debug=autosave or localStorage). */
+function isAutoSaveDebugEnabled(): boolean {
+  try {
+    if (typeof localStorage === "undefined") return false; // unit tests
+    if (localStorage.getItem(AUTO_SAVE_DEBUG_KEY) === "1") return true;
+  } catch {
+    /* storage blocked — fall through */
+  }
+  try {
+    return new URLSearchParams(location.search).get("debug") === "autosave";
+  } catch {
+    return false;
+  }
+}
+
+const AUTO_SAVE_DEBUG = isAutoSaveDebugEnabled();
 
 /**
  * Derive the base status from state. Used as the default when no async
@@ -231,7 +300,23 @@ export function useAutoSave(): UseAutoSaveReturn {
   // "saving" and "error" override the derived base status; null means
   // "use the derived value".
   const [statusOverride, setStatusOverride] = useState<SaveStatus | null>(null);
-  const supported = isFsAccessSupported();
+  const [lastError, setLastError] = useState<string | null>(null);
+  const hasSavePicker =
+    typeof (window as unknown as FsWindow).showSaveFilePicker === "function";
+  const hasOpenPicker =
+    typeof (window as unknown as FsWindow).showOpenFilePicker === "function";
+  // Environment facts never change during a session — memoize once.
+  const diagnosis = useMemo(
+    () =>
+      deriveAutoSaveDiagnosis(
+        window.isSecureContext,
+        hasSavePicker,
+        hasOpenPicker,
+        isChromiumLikeUA(navigator.userAgent),
+      ),
+    [hasSavePicker, hasOpenPicker],
+  );
+  const supported = diagnosis.supported;
   const hasHandle = fileName !== null;
 
   const debounceTimer = useRef<number | null>(null);
@@ -239,43 +324,45 @@ export function useAutoSave(): UseAutoSaveReturn {
 
   // Derived save status — overrides ("saving" / "error") take precedence,
   // otherwise fall back to the computed base value.
-  const saveStatus: SaveStatus = statusOverride ??
-    deriveBaseStatus(supported, autoSaveEnabled, hasHandle);
+  const saveStatus: SaveStatus =
+    statusOverride ?? deriveBaseStatus(supported, autoSaveEnabled, hasHandle);
 
   // ---------------------------------------------------------------------------
   // Write pipeline
   // ---------------------------------------------------------------------------
 
-  const writeToFile = useCallback(
-    async (yaml: string) => {
-      const handle = handleRef.current;
-      if (!handle || !yaml) return;
+  const writeToFile = useCallback(async (yaml: string) => {
+    const handle = handleRef.current;
+    if (!handle || !yaml) return;
 
-      setStatusOverride("saving");
+    setStatusOverride("saving");
 
-      try {
-        const perm = await handle.queryPermission({ mode: "readwrite" });
-        if (perm !== "granted") {
-          const requested = await handle.requestPermission({
-            mode: "readwrite",
-          });
-          if (requested !== "granted") {
-            setStatusOverride("error");
-            return;
-          }
+    try {
+      const perm = await handle.queryPermission({ mode: "readwrite" });
+      if (perm !== "granted") {
+        const requested = await handle.requestPermission({
+          mode: "readwrite",
+        });
+        if (requested !== "granted") {
+          setLastError("Write permission was denied for the tracked file.");
+          setStatusOverride("error");
+          return;
         }
-
-        const writable = await handle.createWritable();
-        await writable.write(yaml);
-        await writable.close();
-        setStatusOverride(null); // revert to derived "idle"
-      } catch (err) {
-        console.error("[autoSave] write failed:", err);
-        setStatusOverride("error");
       }
-    },
-    [],
-  );
+
+      const writable = await handle.createWritable();
+      await writable.write(yaml);
+      await writable.close();
+      setLastError(null);
+      setStatusOverride(null); // revert to derived "idle"
+    } catch (err) {
+      console.error("[autoSave] write failed:", err);
+      setLastError(
+        err instanceof Error ? err.message : "Unknown write failure",
+      );
+      setStatusOverride("error");
+    }
+  }, []);
 
   // ---------------------------------------------------------------------------
   // scheduleSave — called by App after each CRUD action with the new YAML
@@ -283,16 +370,18 @@ export function useAutoSave(): UseAutoSaveReturn {
 
   const scheduleSave = useCallback(
     (yaml: string) => {
-      console.log(
-        "[autoSave] scheduleSave called, enabled:",
-        autoSaveEnabled,
-        "has handle:",
-        !!handleRef.current,
-        "supported:",
-        supported,
-      );
+      if (AUTO_SAVE_DEBUG) {
+        console.log(
+          "[autoSave] scheduleSave called, enabled:",
+          autoSaveEnabled,
+          "has handle:",
+          !!handleRef.current,
+          "supported:",
+          supported,
+        );
+      }
       if (!autoSaveEnabled || !handleRef.current || !supported) {
-        console.log("[autoSave] scheduleSave bailing out");
+        if (AUTO_SAVE_DEBUG) console.log("[autoSave] scheduleSave bailing out");
         return;
       }
 
@@ -306,7 +395,7 @@ export function useAutoSave(): UseAutoSaveReturn {
         debounceTimer.current = null;
         const content = pendingYamlRef.current;
         if (content) {
-          console.log("[autoSave] debounced write firing");
+          if (AUTO_SAVE_DEBUG) console.log("[autoSave] debounced write firing");
           await writeToFile(content);
         }
       }, DEBOUNCE_MS) as unknown as number;
@@ -326,9 +415,11 @@ export function useAutoSave(): UseAutoSaveReturn {
     console.log("host:", location.host);
     console.log(
       "isSecureContext:",
-      (window as unknown as {
-        isSecureContext?: boolean;
-      }).isSecureContext,
+      (
+        window as unknown as {
+          isSecureContext?: boolean;
+        }
+      ).isSecureContext,
     );
     console.log("showSaveFilePicker:", typeof win.showSaveFilePicker);
     console.log("showOpenFilePicker:", typeof win.showOpenFilePicker);
@@ -350,9 +441,9 @@ export function useAutoSave(): UseAutoSaveReturn {
 
     // Check for sandbox restrictions
     try {
-      const sandbox =
-        (window as unknown as { sandbox?: { readonly allowances?: string } })
-          .sandbox;
+      const sandbox = (
+        window as unknown as { sandbox?: { readonly allowances?: string } }
+      ).sandbox;
       console.log("window.sandbox (iframe):", sandbox);
     } catch {
       console.log("window.sandbox: not accessible");
@@ -363,18 +454,17 @@ export function useAutoSave(): UseAutoSaveReturn {
       navigator.userAgent.split(" ").slice(-4).join(" "),
     );
 
+    console.log("diagnosis:", diagnosis.reason, diagnosis.remediation);
+
     if (!supported) {
       console.warn(
-        "[autoSave] File System Access API is not available.",
-        "If you're using Chrome/Edge/Brave Dev or Canary, the API may be",
-        "disabled by default. Re-enable at:",
-        "  chrome://flags/#file-system-access-api",
-        "Also try: chrome://flags/#file-system-write-unrestricted",
+        `[autoSave] File System Access API unavailable (${diagnosis.reason}).`,
+        diagnosis.remediation,
       );
     }
 
     console.groupEnd();
-  }, [supported]);
+  }, [diagnosis]);
 
   // ---------------------------------------------------------------------------
   // Restore handle from IndexedDB on mount
@@ -388,26 +478,54 @@ export function useAutoSave(): UseAutoSaveReturn {
     let cancelled = false;
 
     (async () => {
+      let record: Awaited<ReturnType<typeof loadHandleFromDB>>;
       try {
-        const record = await loadHandleFromDB();
-        if (!record) return;
-
-        // Permission check — request if needed
-        const perm = await record.handle.queryPermission({
-          mode: "readwrite",
-        });
-        if (perm !== "granted") {
-          await record.handle.requestPermission({ mode: "readwrite" });
-        }
-
-        if (cancelled) return;
-
-        handleRef.current = record.handle;
-        setFileName(record.name);
-        setStatusOverride(null);
-      } catch {
-        // DB corrupted or permission denied — silently give up
+        record = await loadHandleFromDB();
+      } catch (err) {
+        console.warn(
+          `[autoSave] IndexedDB unreadable at ${location.origin} — cannot restore file association.`,
+          err instanceof Error ? err.message : err,
+        );
+        return;
       }
+      if (!record) {
+        console.info(
+          `[autoSave] No file handle in IndexedDB at origin ${location.origin}. ` +
+            `If auto-save was set up at a different origin (127.0.0.1 vs localhost, ` +
+            `or a different port), the association lives there — re-link via Open / Save As.`,
+        );
+        return;
+      }
+
+      // Permission check — request if needed
+      const perm = await record.handle
+        .queryPermission({ mode: "readwrite" })
+        .catch(() => null);
+      if (perm !== "granted") {
+        try {
+          const granted = await record.handle.requestPermission({
+            mode: "readwrite",
+          });
+          if (granted !== "granted") {
+            console.warn(
+              "[autoSave] Restored file handle exists but write permission was not granted.",
+            );
+            return;
+          }
+        } catch (err) {
+          console.warn(
+            "[autoSave] Permission request for restored handle threw:",
+            err instanceof Error ? err.message : err,
+          );
+          return;
+        }
+      }
+
+      if (cancelled) return;
+
+      handleRef.current = record.handle;
+      setFileName(record.name);
+      setStatusOverride(null);
     })();
 
     return () => {
@@ -432,55 +550,52 @@ export function useAutoSave(): UseAutoSaveReturn {
   // Falls back to legacy download if showSaveFilePicker is unavailable.
   // ---------------------------------------------------------------------------
 
-  const saveAs = useCallback(
-    async (yaml: string) => {
-      // Check if showSaveFilePicker is actually available (supported only
-      // guarantees at least one picker exists)
-      const win = window as unknown as FsWindow;
-      const hasSavePicker = typeof win.showSaveFilePicker === "function";
+  const saveAs = useCallback(async (yaml: string) => {
+    // Check if showSaveFilePicker is actually available (supported only
+    // guarantees at least one picker exists)
+    const win = window as unknown as FsWindow;
+    const hasSavePicker = typeof win.showSaveFilePicker === "function";
 
-      if (!hasSavePicker) {
-        // Fallback: legacy download for browsers that only support
-        // showOpenFilePicker but not showSaveFilePicker
-        console.warn(
-          "[autoSave] showSaveFilePicker unavailable — falling back to download",
-        );
-        downloadYamlFallback(yaml);
-        return;
-      }
+    if (!hasSavePicker) {
+      // Fallback: legacy download for browsers that only support
+      // showOpenFilePicker but not showSaveFilePicker
+      console.warn(
+        "[autoSave] showSaveFilePicker unavailable — falling back to download",
+      );
+      downloadYamlFallback(yaml);
+      return;
+    }
 
-      try {
-        const handle = await win.showSaveFilePicker({
-          suggestedName: "tasks.yaml",
-          types: [
-            {
-              description: "YAML File",
-              accept: { "text/yaml": [".yaml", ".yml"] },
-            },
-          ],
-        });
+    try {
+      const handle = await win.showSaveFilePicker({
+        suggestedName: "tasks.yaml",
+        types: [
+          {
+            description: "YAML File",
+            accept: { "text/yaml": [".yaml", ".yml"] },
+          },
+        ],
+      });
 
-        // Write initial content
-        const writable = await handle.createWritable();
-        await writable.write(yaml);
-        await writable.close();
+      // Write initial content
+      const writable = await handle.createWritable();
+      await writable.write(yaml);
+      await writable.close();
 
-        // Persist handle to IndexedDB for future sessions
-        await saveHandleToDB(handle, handle.name);
+      // Persist handle to IndexedDB for future sessions
+      await saveHandleToDB(handle, handle.name);
 
-        // Associate with this session
-        handleRef.current = handle;
-        setFileName(handle.name);
-        setStatusOverride(null);
-      } catch (err) {
-        // User cancelled — silently ignore
-        if (err instanceof Error && err.name === "AbortError") return;
-        console.error("[autoSave] Save As failed:", err);
-        throw err; // Propagate to caller so App can display error
-      }
-    },
-    [],
-  );
+      // Associate with this session
+      handleRef.current = handle;
+      setFileName(handle.name);
+      setStatusOverride(null);
+    } catch (err) {
+      // User cancelled — silently ignore
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("[autoSave] Save As failed:", err);
+      throw err; // Propagate to caller so App can display error
+    }
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Open File — uses showOpenFilePicker to get a handle, reads file content,
@@ -556,12 +671,15 @@ export function useAutoSave(): UseAutoSaveReturn {
   // Toggle auto-save
   // ---------------------------------------------------------------------------
 
-  const toggleAutoSave = useCallback((enabled?: boolean) => {
-    const next = enabled !== undefined ? enabled : !autoSaveEnabled;
-    setAutoSaveEnabled(next);
-    persistAutoSavePreference(next);
-    setStatusOverride(null); // revert to derived
-  }, [autoSaveEnabled]);
+  const toggleAutoSave = useCallback(
+    (enabled?: boolean) => {
+      const next = enabled !== undefined ? enabled : !autoSaveEnabled;
+      setAutoSaveEnabled(next);
+      persistAutoSavePreference(next);
+      setStatusOverride(null); // revert to derived
+    },
+    [autoSaveEnabled],
+  );
 
   // ---------------------------------------------------------------------------
   // Immediate save (bypasses debounce)
@@ -580,7 +698,12 @@ export function useAutoSave(): UseAutoSaveReturn {
 
   const tooltip = (() => {
     if (!supported) {
-      return "Auto-save requires the File System Access API and secure context. Your scenario is not supported.";
+      return `Auto-save unavailable: ${diagnosis.remediation}`;
+    }
+    if (saveStatus === "error") {
+      return lastError
+        ? `Auto-save error: ${lastError}`
+        : "Auto-save error — see the browser console ([autoSave] logs) for details.";
     }
     if (!hasHandle) {
       return "Auto-save is not available yet. Use Open / Save As to track a file first.";
@@ -595,6 +718,10 @@ export function useAutoSave(): UseAutoSaveReturn {
     autoSaveEnabled,
     saveStatus,
     supported,
+    /** Cause analysis for the current environment (reason + remediation). */
+    diagnosis,
+    /** Last write/permission failure message; null when healthy. */
+    lastError,
     tooltip,
     saveAs,
     openFile,

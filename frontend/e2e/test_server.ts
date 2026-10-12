@@ -1,6 +1,6 @@
 /**
  * Smoke script: start the static server and probe a few paths.
- * Run from frontend/e2e: deno run --no-check --allow-net=127.0.0.1 --allow-env --allow-read=../public test_server.ts
+ * Run from frontend: node e2e/test_server.ts
  */
 
 import { serveStaticDir } from "./serve.ts";
@@ -19,19 +19,17 @@ const server = serveStaticDir(PUBLIC);
 console.log("rootUrl:", server.rootUrl.pathname);
 console.log("Server URL:", server.url);
 
-for (
-  const p of [
-    "index.html",
-    "dist/main.js",
-    "dist/main.css",
-    "dist/ichor_bg.wasm",
-    "dist/cache-manifest.js",
-    "sample.yaml",
-    "sw.js",
-    "manifest.webmanifest",
-    "icons/icon-192.png",
-  ]
-) {
+for (const p of [
+  "index.html",
+  "dist/main.js",
+  "dist/main.css",
+  "dist/ichor_bg.wasm",
+  "dist/cache-manifest.js",
+  "sample.yaml",
+  "sw.js",
+  "manifest.webmanifest",
+  "icons/icon-192.png",
+]) {
   const res = await fetch(`${server.url}${p}`);
   console.log(
     `GET /${p} →`,

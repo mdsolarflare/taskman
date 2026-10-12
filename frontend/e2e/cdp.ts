@@ -68,14 +68,11 @@ export class CdpSession {
   async evaluate(expression: string): Promise<unknown> {
     const r = await this.send<{
       result: { type: string; value: unknown };
-    }>(
-      "Runtime.evaluate",
-      {
-        expression,
-        returnByValue: true, // We always want the value back as JSON
-        awaitPromise: true,
-      },
-    );
+    }>("Runtime.evaluate", {
+      expression,
+      returnByValue: true, // We always want the value back as JSON
+      awaitPromise: true,
+    });
     return r.result?.value;
   }
 
@@ -87,17 +84,14 @@ export class CdpSession {
     // wrapping it as `(...)()` evaluates e.g. `true()` → TypeError, and the
     // resulting exceptionDetails make every poll return undefined, so the
     // wait times out. Only function predicates get the call wrapper.
-    const expr = typeof predicate === "string"
-      ? predicate
-      : `(${predicate.toString()})()`;
+    const expr =
+      typeof predicate === "string" ? predicate : `(${predicate.toString()})()`;
     const start = Date.now();
     while (true) {
       const done = await this.evaluate(expr);
       if (done) return;
       if (Date.now() - start > timeoutMs) {
-        throw new Error(
-          `waitForFunction timed out (${timeoutMs}ms): ${expr}`,
-        );
+        throw new Error(`waitForFunction timed out (${timeoutMs}ms): ${expr}`);
       }
       await new Promise((r) => setTimeout(r, 100));
     }

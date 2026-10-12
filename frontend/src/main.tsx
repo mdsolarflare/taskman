@@ -11,12 +11,14 @@ await initWasm();
 // updateViaCache: "none" so the browser always revalidates sw.js itself —
 // otherwise an HTTP-cached sw.js could pin the app to an old build.
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js", {
-    scope: "./",
-    updateViaCache: "none",
-  }).catch((err) =>
-    console.warn("[pwa] service worker registration failed:", err)
-  );
+  navigator.serviceWorker
+    .register("./sw.js", {
+      scope: "./",
+      updateViaCache: "none",
+    })
+    .catch((err) =>
+      console.warn("[pwa] service worker registration failed:", err),
+    );
 }
 
 createRoot(document.getElementById("root")!).render(

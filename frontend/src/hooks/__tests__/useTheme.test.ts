@@ -7,21 +7,25 @@ import {
   STORAGE_KEY_THEME,
   THEMES,
 } from "../themeConstants.ts";
-import { assert, assertEquals } from "@std/assert";
+import {
+  deepStrictEqual as assertEquals,
+  ok as assert,
+} from "node:assert/strict";
+import { test } from "node:test";
 
-Deno.test("useTheme - STORAGE_KEY_THEME is correct", () => {
+test("useTheme - STORAGE_KEY_THEME is correct", () => {
   assertEquals(STORAGE_KEY_THEME, "taskman_theme");
 });
 
-Deno.test("useTheme - STORAGE_KEY_CUSTOM is correct", () => {
+test("useTheme - STORAGE_KEY_CUSTOM is correct", () => {
   assertEquals(STORAGE_KEY_CUSTOM, "taskman_custom_colors");
 });
 
-Deno.test("useTheme - THEMES has 5 entries", () => {
+test("useTheme - THEMES has 5 entries", () => {
   assertEquals(THEMES.length, 5);
 });
 
-Deno.test("useTheme - theme ids match expected values", () => {
+test("useTheme - theme ids match expected values", () => {
   const ids = THEMES.map((t) => t.id);
   assertEquals(ids, [
     "banana-crisis",
@@ -32,23 +36,23 @@ Deno.test("useTheme - theme ids match expected values", () => {
   ]);
 });
 
-Deno.test("useTheme - every theme has a label", () => {
+test("useTheme - every theme has a label", () => {
   for (const theme of THEMES) {
     assert(theme.label.length > 0);
   }
 });
 
-Deno.test("useTheme - COLOR_VARIABLES has 12 entries", () => {
+test("useTheme - COLOR_VARIABLES has 12 entries", () => {
   assertEquals(COLOR_VARIABLES.length, 12);
 });
 
-Deno.test("useTheme - COLOR_VARIABLES starts with --", () => {
+test("useTheme - COLOR_VARIABLES starts with --", () => {
   for (const v of COLOR_VARIABLES) {
     assert(v.startsWith("--"));
   }
 });
 
-Deno.test("useTheme - COLOR_LABELS covers all variables", () => {
+test("useTheme - COLOR_LABELS covers all variables", () => {
   assertEquals(Object.keys(COLOR_LABELS).length, COLOR_VARIABLES.length);
 
   for (const v of COLOR_VARIABLES) {
@@ -57,7 +61,7 @@ Deno.test("useTheme - COLOR_LABELS covers all variables", () => {
   }
 });
 
-Deno.test("useTheme - specific color labels", () => {
+test("useTheme - specific color labels", () => {
   assertEquals(COLOR_LABELS["--bg-primary"], "Background");
   assertEquals(COLOR_LABELS["--text-primary"], "Text");
   assertEquals(COLOR_LABELS["--accent"], "Accent");
@@ -65,27 +69,24 @@ Deno.test("useTheme - specific color labels", () => {
   assertEquals(COLOR_LABELS["--backdrop"], "Backdrop");
 });
 
-Deno.test("useTheme - getThemeLabel returns correct labels for all themes", () => {
+test("useTheme - getThemeLabel returns correct labels for all themes", () => {
   assertEquals(getThemeLabel("banana-crisis"), "Banana Crisis");
   assertEquals(getThemeLabel("manhattan-lagoon"), "Manhattan Lagoon");
   assertEquals(getThemeLabel("brooding-burg"), "Brooding Burg");
   assertEquals(getThemeLabel("carbon-noir"), "Carbon Noir");
-  assertEquals(
-    getThemeLabel("monochrome-dystopia"),
-    "Monochrome Dystopia",
-  );
+  assertEquals(getThemeLabel("monochrome-dystopia"), "Monochrome Dystopia");
 });
 
-Deno.test("useTheme - getThemeLabel returns 'Custom' for custom", () => {
+test("useTheme - getThemeLabel returns 'Custom' for custom", () => {
   assertEquals(getThemeLabel("custom"), "Custom");
 });
 
-Deno.test("useTheme - getThemeLabel fallback for unknown id", () => {
+test("useTheme - getThemeLabel fallback for unknown id", () => {
   // @ts-expect-error testing with invalid theme id
   assertEquals(getThemeLabel("unknown-theme"), "Banana Crisis");
 });
 
-Deno.test("useTheme - theme cycling order is deterministic", () => {
+test("useTheme - theme cycling order is deterministic", () => {
   const cycle = (currentId: string) => {
     const idx = THEMES.findIndex((t) => t.id === currentId);
     const nextIdx = (idx + 1) % THEMES.length;

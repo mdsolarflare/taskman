@@ -1,7 +1,7 @@
 /**
  * Taskman service worker — zero-dependency, cache-first app shell.
  *
- * Update model: `gen-revision.ts` (part of `deno task build`) stamps the
+ * Update model: `gen-revision.ts` (part of `pnpm run build`) stamps the
  * current BUILD_ID into this file AND emits `./dist/cache-manifest.js` with
  * `self.CACHE_MANIFEST = { buildId, files }`. The cache name embeds the
  * buildId, so any content change ships a new cache; the old one is deleted
@@ -18,7 +18,7 @@
 
 // AUTO-STAMPED by gen-revision.ts — do not edit by hand.
 const BUILD_ID =
-  "9037fc88ae4b43e3ebd595c2aa9433eea07c63ff4048efa2f0cef123a5904dd0";
+  "b2f3ea595acab3063836c78119c3d2841a20f03c272437941946abb3d1dc6574";
 
 importScripts("./dist/cache-manifest.js");
 
@@ -28,11 +28,13 @@ const CACHE_NAME = `taskman-shell-${CACHE_MANIFEST.buildId}`;
 // shell rather than precaching the wrong build.
 if (BUILD_ID !== CACHE_MANIFEST.buildId) {
   throw new Error(
-    `sw.js BUILD_ID (${
-      BUILD_ID.slice(0, 12)
-    }…) does not match cache-manifest.js (${
-      CACHE_MANIFEST.buildId.slice(0, 12)
-    }…) — regenerate both via \`deno task build\``,
+    `sw.js BUILD_ID (${BUILD_ID.slice(
+      0,
+      12,
+    )}…) does not match cache-manifest.js (${CACHE_MANIFEST.buildId.slice(
+      0,
+      12,
+    )}…) — regenerate both via \`pnpm run build\``,
   );
 }
 const PRECACHE_URLS = ["./", ...CACHE_MANIFEST.files.map((f) => `./${f}`)];
@@ -58,9 +60,7 @@ self.addEventListener("activate", (event) => {
       // Delete every cache that isn't this build's.
       const keys = await caches.keys();
       await Promise.all(
-        keys
-          .filter((k) => k !== CACHE_NAME)
-          .map((k) => caches.delete(k)),
+        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)),
       );
       await self.clients.claim();
     })(),

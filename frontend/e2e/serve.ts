@@ -1,6 +1,7 @@
 /**
- * Static file server for e2e tests. Runs in-process (no external process).
- * Features:
+ * Static file server for e2e tests (also reused by the dev `pnpm run serve`
+ * entry — one implementation, no second server). Runs in-process (no
+ * external process). Features:
  *
  *   - SPA fallback: unknown paths serve /index.html (navigation-friendly)
  *   - Correct MIME for .wasm / .js / .css / .yaml / .svg / .png / .webmanifest
@@ -9,6 +10,10 @@
  *   - Optional offline mode: after `goOffline()`, all requests fail (used by
  *     the offline-reload e2e test to prove the service worker serves the shell)
  */
+
+import { createServer, type Server } from "node:http";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 
 const MIME: Record<string, string> = {
   ".html": "text/html",
@@ -32,7 +37,10 @@ export interface StaticServer {
   goOffline(): void;
 }
 
-export function serveStaticDir(rootDir: string): StaticServer {
+export function serveStaticDir(
+  rootDir: string,
+  opts: { port?: number; onError?: (err: Error) => void } = {},
+): StaticServer {
   // Convert incoming path forms to a Windows-native absolute path. Accepts
   // POSIX-style (/c/Users/...), forward-slash Windows (C:/Users/...), or
   // backslash Windows paths.
@@ -53,23 +61,26 @@ export function serveStaticDir(rootDir: string): StaticServer {
 
   let closed = false;
   let offline = false;
-  const ac = new AbortController();
 
-  // Use a port in a high, unreserved range so we don't collide with
-  // services on common dev ports or ephemeral system ports.
-  const port = 10000 + Math.floor(Math.random() * 10000);
+  // Use a fixed port when requested (the dev serve entry needs a stable
+  // origin — browser storage is host:port-scoped), or a random port in a
+  // high, unreserved range so parallel e2e runs never collide.
+  const port = opts.port ?? 10000 + Math.floor(Math.random() * 10000);
 
-  const server = Deno.serve(
-    { hostname: "127.0.0.1", port, signal: ac.signal },
-    async (req) => {
-      if (closed) return new Response("Server closed", { status: 503 });
+  const server: Server = createServer(async (req, res) => {
+    try {
+      if (closed) {
+        res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Server closed");
+        return;
+      }
       if (offline) {
-        return new Response("Network error (offline simulation)", {
-          status: 503,
-        });
+        res.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Network error (offline simulation)");
+        return;
       }
 
-      const u = new URL(req.url);
+      const u = new URL(req.url ?? "/", "http://127.0.0.1/");
       const rawPath = u.pathname;
       // Decode percent-escapes and strip leading slashes, then join via
       // plain string concatenation — never `new URL(rel, root)`: on Windows
@@ -78,51 +89,75 @@ export function serveStaticDir(rootDir: string): StaticServer {
       // fallback serves index.html for real files.
       const relPath = decodeURIComponent(rawPath).replace(/^\/+/, "");
       if (relPath.includes("..")) {
-        return new Response("Forbidden", { status: 403 });
+        res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Forbidden");
+        return;
       }
-      const fsPath = relPath === ""
-        ? `${rootPath}/index.html`
-        : `${rootPath}/${relPath}`;
+      const fsPath =
+        relPath === "" ? `${rootPath}/index.html` : `${rootPath}/${relPath}`;
 
-      const stat = await Deno.stat(fsPath).catch(() => null);
-      let status = 200;
+      const st = await stat(fsPath).catch(() => null);
       const ext = fsPath.slice(fsPath.lastIndexOf(".")).toLowerCase();
-      let contentType = MIME[ext] ?? "application/octet-stream";
-      let body: string | ReadableStream<Uint8Array> | null;
+      const contentType = MIME[ext] ?? "application/octet-stream";
 
-      if (!stat?.isFile) {
+      if (!st?.isFile) {
         if (rawPath === "/favicon.ico") {
-          status = 404;
-          body = "Not Found";
+          res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+          res.end("Not Found");
         } else {
           // SPA fallback — serve index.html.
-          body = await Deno.readTextFile(`${rootPath}/index.html`).catch(
+          const body = await readFile(`${rootPath}/index.html`, "utf8").catch(
             () => "Not Found",
           );
-          contentType = MIME[".html"];
+          res.writeHead(200, {
+            "content-type": MIME[".html"],
+            "cache-control": "no-cache",
+          });
+          res.end(body);
         }
-      } else {
-        const file = await Deno.open(fsPath).catch(() => null);
-        if (!file) return new Response("Not Found", { status: 404 });
-        body = file.readable;
+        return;
       }
 
-      return new Response(body, {
-        status,
-        headers: {
+      // Stream the file. Gate on "open" so a file that vanishes between
+      // stat and open still yields a clean 404 (mirrors the old
+      // open-then-404 behavior); errors mid-stream destroy the response
+      // since headers are already sent.
+      const stream = createReadStream(fsPath);
+      stream.on("error", () => {
+        if (res.headersSent) res.destroy();
+        else {
+          res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+          res.end("Not Found");
+        }
+      });
+      stream.on("open", () => {
+        res.writeHead(200, {
           "content-type": contentType,
           "cache-control": "no-cache",
-        },
+        });
+        stream.pipe(res);
       });
-    },
-  );
+    } catch {
+      res.destroy();
+    }
+  });
 
-  const url = `http://127.0.0.1:${server.addr.port}/`;
+  // Surface listen errors (e.g. EADDRINUSE) to the caller when requested;
+  // without a handler Node treats them as uncaught exceptions.
+  if (opts.onError) server.on("error", opts.onError);
+
+  server.listen(port, "127.0.0.1");
+
+  const url = `http://127.0.0.1:${port}/`;
 
   const close = async () => {
     closed = true;
-    ac.abort();
-    await server.finished;
+    await new Promise<void>((resolve) => {
+      // Force-close open sockets — keep-alive browser connections would
+      // otherwise hold the listener open past test teardown.
+      server.closeAllConnections();
+      server.close(() => resolve());
+    });
   };
 
   return {
