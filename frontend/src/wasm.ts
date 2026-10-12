@@ -104,9 +104,8 @@ export async function addNode(
 ): Promise<{ graph: unknown; new_id: number }> {
   await ensureInit();
   const graphJson = JSON.stringify(graph);
-  const subtaskIdsJson = subtaskIds.length > 0
-    ? JSON.stringify(subtaskIds)
-    : "";
+  const subtaskIdsJson =
+    subtaskIds.length > 0 ? JSON.stringify(subtaskIds) : "";
   const result = add_node(
     graphJson,
     BigInt(parentId),

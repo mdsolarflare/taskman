@@ -112,11 +112,9 @@ function injectCustomStyle(colors: ColorMap): void {
   const rules = COLOR_VARIABLES.map(
     (v) => `  ${v}: ${colors[v as ColorVariable]};`,
   );
-  customStyleTag.textContent = `[data-theme="custom"] {\n${
-    rules.join(
-      "\n",
-    )
-  }\n}`;
+  customStyleTag.textContent = `[data-theme="custom"] {\n${rules.join(
+    "\n",
+  )}\n}`;
 }
 
 function removeCustomStyle(): void {
@@ -173,9 +171,7 @@ interface UseThemeReturn {
 }
 
 export function useTheme(): UseThemeReturn {
-  const [activeTheme, setActiveTheme] = useState<ThemeId | "custom">(
-    loadTheme,
-  );
+  const [activeTheme, setActiveTheme] = useState<ThemeId | "custom">(loadTheme);
   const [draftColors, setDraftColors] = useState<ColorMap>(readCurrentColors);
 
   const initialized = useRef(false);
@@ -196,9 +192,8 @@ export function useTheme(): UseThemeReturn {
   }, [activeTheme]);
 
   // Update currentColors whenever theme changes
-  const [currentColors, setCurrentColors] = useState<ColorMap>(
-    readCurrentColors,
-  );
+  const [currentColors, setCurrentColors] =
+    useState<ColorMap>(readCurrentColors);
 
   useEffect(() => {
     // Small delay to let CSS apply before reading computed values

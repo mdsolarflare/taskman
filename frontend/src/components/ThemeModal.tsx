@@ -98,15 +98,16 @@ function ThemeCard({
           height: 18,
           borderRadius: 4,
           border: "1px solid var(--border-color)",
-          background: theme.id === "banana-crisis"
-            ? "linear-gradient(135deg, #f57f17, #ff8f00)"
-            : theme.id === "manhattan-lagoon"
-            ? "linear-gradient(135deg, #1d4ed8, #2e7d32)"
-            : theme.id === "brooding-burg"
-            ? "linear-gradient(135deg, #ef6c7a, #e65100)"
-            : theme.id === "carbon-noir"
-            ? "linear-gradient(135deg, #3a3a3a, #b0b0b0)"
-            : "linear-gradient(135deg, #ffffff, #00b0ff)",
+          background:
+            theme.id === "banana-crisis"
+              ? "linear-gradient(135deg, #f57f17, #ff8f00)"
+              : theme.id === "manhattan-lagoon"
+                ? "linear-gradient(135deg, #1d4ed8, #2e7d32)"
+                : theme.id === "brooding-burg"
+                  ? "linear-gradient(135deg, #ef6c7a, #e65100)"
+                  : theme.id === "carbon-noir"
+                    ? "linear-gradient(135deg, #3a3a3a, #b0b0b0)"
+                    : "linear-gradient(135deg, #ffffff, #00b0ff)",
           flexShrink: 0,
         }}
       />
@@ -147,11 +148,13 @@ function ColorInput({
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <input
           type="color"
-          value={variable === "--backdrop"
-            ? "#000000"
-            : /^rgba?/.test(value)
-            ? "#000000"
-            : value}
+          value={
+            variable === "--backdrop"
+              ? "#000000"
+              : /^rgba?/.test(value)
+                ? "#000000"
+                : value
+          }
           onChange={(e) => onChange(variable, e.target.value)}
           disabled={variable === "--backdrop"}
           style={{
@@ -321,12 +324,12 @@ export default function ThemeModal({
               fontSize: 16,
               color: "var(--text-secondary)",
             }}
-            onMouseEnter={(
-              e,
-            ) => (e.currentTarget.style.background = "var(--bg-primary)")}
-            onMouseLeave={(
-              e,
-            ) => (e.currentTarget.style.background = "transparent")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--bg-primary)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
           >
             ✕
           </button>
@@ -364,15 +367,18 @@ export default function ThemeModal({
                   fontSize: 13,
                   fontFamily: "system-ui, -apple-system, sans-serif",
                   fontWeight: activeTheme === "custom" ? 600 : 400,
-                  color: activeTheme === "custom"
-                    ? "var(--accent)"
-                    : "var(--text-primary)",
-                  background: activeTheme === "custom"
-                    ? "var(--bg-tertiary, transparent)"
-                    : "transparent",
-                  border: activeTheme === "custom"
-                    ? "1.5px solid var(--accent)"
-                    : "1.5px solid transparent",
+                  color:
+                    activeTheme === "custom"
+                      ? "var(--accent)"
+                      : "var(--text-primary)",
+                  background:
+                    activeTheme === "custom"
+                      ? "var(--bg-tertiary, transparent)"
+                      : "transparent",
+                  border:
+                    activeTheme === "custom"
+                      ? "1.5px solid var(--accent)"
+                      : "1.5px solid transparent",
                   borderRadius: 8,
                   cursor: "pointer",
                   textAlign: "left",

@@ -169,9 +169,8 @@ export default function EditNodeModal({
       deadline: datetimeLocalToIso(form.deadline),
       important: form.important,
       done: form.done,
-      subtask_ids: form.subtask_ids.length > 0
-        ? [...form.subtask_ids]
-        : undefined,
+      subtask_ids:
+        form.subtask_ids.length > 0 ? [...form.subtask_ids] : undefined,
     };
     onSave(updated);
   };
@@ -293,12 +292,12 @@ export default function EditNodeModal({
               fontSize: 16,
               color: colors.textMuted,
             }}
-            onMouseEnter={(
-              e,
-            ) => (e.currentTarget.style.background = colors.hover)}
-            onMouseLeave={(
-              e,
-            ) => (e.currentTarget.style.background = "transparent")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = colors.hover)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
           >
             ✕
           </button>
@@ -326,7 +325,8 @@ export default function EditNodeModal({
             maxLength={1024}
             rows={3}
             onChange={(e) =>
-              setForm((f) => ({ ...f, details: e.target.value }))}
+              setForm((f) => ({ ...f, details: e.target.value }))
+            }
             style={{ ...inputStyle, resize: "vertical" }}
             onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
             onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
@@ -340,7 +340,8 @@ export default function EditNodeModal({
             type="datetime-local"
             value={form.deadline}
             onChange={(e) =>
-              setForm((f) => ({ ...f, deadline: e.target.value }))}
+              setForm((f) => ({ ...f, deadline: e.target.value }))
+            }
             style={{
               ...inputStyle,
               colorScheme: "light",
@@ -388,9 +389,7 @@ export default function EditNodeModal({
               }}
             />
           </button>
-          <span style={{ fontSize: 13, color: colors.text }}>
-            Important
-          </span>
+          <span style={{ fontSize: 13, color: colors.text }}>Important</span>
         </div>
 
         {/* Done toggle */}
@@ -431,9 +430,7 @@ export default function EditNodeModal({
               }}
             />
           </button>
-          <span style={{ fontSize: 13, color: colors.text }}>
-            Done
-          </span>
+          <span style={{ fontSize: 13, color: colors.text }}>Done</span>
         </div>
 
         {/* Subtasks */}
@@ -547,16 +544,14 @@ export default function EditNodeModal({
                       cursor: "pointer",
                       color: colors.text,
                     }}
-                    onMouseEnter={(
-                      e,
-                    ) => (e.currentTarget.style.background = colors.hover)}
-                    onMouseLeave={(
-                      e,
-                    ) => (e.currentTarget.style.background = "transparent")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = colors.hover)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
                   >
-                    <span style={{ fontWeight: 500 }}>
-                      #{n.id}
-                    </span>
+                    <span style={{ fontWeight: 500 }}>#{n.id}</span>
                     <span
                       style={{
                         marginLeft: 8,
@@ -570,8 +565,7 @@ export default function EditNodeModal({
               </div>
             )}
 
-            {canAdd.length === 0 &&
-              form.subtask_ids.length === 0 && (
+            {canAdd.length === 0 && form.subtask_ids.length === 0 && (
               <div
                 style={{
                   fontSize: 11,
@@ -626,9 +620,9 @@ export default function EditNodeModal({
                 borderRadius: 6,
                 cursor: "pointer",
               }}
-              onMouseEnter={(
-                e,
-              ) => (e.currentTarget.style.filter = "brightness(0.85)")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.filter = "brightness(0.85)")
+              }
               onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
             >
               Save

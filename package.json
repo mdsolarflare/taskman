@@ -1,0 +1,17 @@
+{
+  "name": "taskman",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "build": "pnpm --dir frontend build",
+    "serve": "pnpm --dir frontend serve",
+    "check": "pnpm --dir frontend check",
+    "fmt": "pnpm --dir frontend fmt",
+    "fmt:check": "pnpm --dir frontend fmt:check",
+    "lint": "pnpm --dir frontend lint",
+    "test": "pnpm --dir frontend test",
+    "test:e2e": "pnpm --dir frontend test:e2e",
+    "gen-icons": "pnpm --dir frontend gen-icons"
+  }
+}

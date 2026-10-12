@@ -30,12 +30,12 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWA(): UsePwaReturn {
-  const [installEvent, setInstallEvent] = useState<
-    BeforeInstallPromptEvent | null
-  >(null);
+  const [installEvent, setInstallEvent] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [waitingToReload, setWaitingToReload] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(() =>
-    globalThis.matchMedia?.("(display-mode: standalone)").matches ?? false
+  const [isStandalone, setIsStandalone] = useState(
+    () =>
+      globalThis.matchMedia?.("(display-mode: standalone)").matches ?? false,
   );
   // Set by applyUpdate() so the controllerchange listener only reloads for
   // user-approved updates, not for the SW's first activation (clients.claim()).

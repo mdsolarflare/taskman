@@ -146,8 +146,8 @@ export default function NavigationPanel({
   const c = colors;
 
   // Active filter count (for showing clear button)
-  const hasActiveFilters = searchText || filterImportant || filterDeadline ||
-    filterDone;
+  const hasActiveFilters =
+    searchText || filterImportant || filterDeadline || filterDone;
 
   return (
     <aside
@@ -333,11 +333,12 @@ export default function NavigationPanel({
                   : "3px solid transparent",
                 // Vertical connector line for nested items
                 borderLeftStyle: depth > 0 && !isSelected ? "solid" : undefined,
-                borderLeftColor: depth > 0 && !isSelected
-                  ? c["--border-color"]
-                  : isSelected
-                  ? c["--accent"]
-                  : "transparent",
+                borderLeftColor:
+                  depth > 0 && !isSelected
+                    ? c["--border-color"]
+                    : isSelected
+                      ? c["--accent"]
+                      : "transparent",
                 borderLeftWidth: depth > 0 ? 1 : isSelected ? 3 : 0,
                 boxSizing: "border-box",
               }}
@@ -362,9 +363,10 @@ export default function NavigationPanel({
                     borderRadius: "50%",
                     marginRight: 4,
                     flexShrink: 0,
-                    background: deadlineStatus === "overdue"
-                      ? c["--semantic-overdue"]
-                      : c["--semantic-overdue"],
+                    background:
+                      deadlineStatus === "overdue"
+                        ? c["--semantic-overdue"]
+                        : c["--semantic-overdue"],
                     opacity: deadlineStatus === "overdue" ? 1 : 0.5,
                   }}
                 />

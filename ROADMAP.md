@@ -1,7 +1,10 @@
 # Roadmap
 
 - [x] Handle Task Completion
-- [x] Deno 2 Migration (from pnpm/nodejs)
+- ~~[x] Deno 2 Migration (from pnpm/nodejs)~~ — **reversed 2026-10-11:**
+  migrated back to pnpm/Node (branch `migrate-to-pnpm`); Deno is fully
+  removed from the repo (manifests, tasks, tests, e2e, CI, docs). Kept for
+  history per house rule.
 - [x] Navigation Pane
   - [x] Implement Navigation Pane
   - [x] Show Child Nesting in Navigation Pane
@@ -47,15 +50,17 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
 
 **Items:**
 
-- **Review all `console.*` diagnostics calls (23 across `useAutoSave.ts` +
-  `main.tsx`)** — The tech-debt pass removed stray console statements, but
-  `useAutoSave.ts` accumulated ~22 diagnostic logs (the `[autoSave]`
-  diagnostics group + scheduleSave traces) and the PWA work added one
-  deliberate `console.warn` for SW registration failure in `main.tsx`.
-  Review as a set: keep the genuinely useful failure paths, drop the
-  chatty tracing, and consider a shared debug-log helper so diagnostics
-  are behind one flag instead of interleaved with app logic.
-  _(low priority, added 2026-09-26)_
+- ~~**Review all `console.*` diagnostics calls (23 across `useAutoSave.ts` +
+  `main.tsx`)**~~ — **Resolved (2026-10-11):** the chatty per-CRUD
+  `scheduleSave` traces in `useAutoSave.ts` are now gated behind one debug
+  flag (`?debug=autosave` URL param or
+  `localStorage.taskman_autosave_debug = "1"`); failure-path warns (write
+  failures, permission denials, IndexedDB unreadable, handle-restore miss
+  with the origin that was checked) stay always-on, and the mount-time
+  diagnostics group now logs the structured `diagnosis` (cause +
+  remediation) from the new unit-tested `deriveAutoSaveDiagnosis` pure
+  function. The one deliberate `console.warn` in `main.tsx` (SW
+  registration failure) remains always-on by design.
 
 - **Split `App.tsx` (~1108 lines)** — Handles 6+ concerns: state management
   (10 separate `useState` calls), file I/O (`loadYaml`, open/new/save/load-sample),
@@ -76,21 +81,22 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
   repeat across ~5 components. Known trade-off of zero-CSS design; shared
   primitives would emerge naturally during App.tsx split. _(low priority)_
 
-- **Revisit `"exclude": ["e2e/"]` in `frontend/deno.json`** — The PWA work
-  excluded the e2e module from the frontend TS module graph so `deno check`
-  passes without Deno-types config surgery (the e2e folder runs
-  `--no-check` with its own `deno.json`). Works, but the exclusion is
-  broad: it also opts `e2e/` out of `deno fmt --check` and `deno lint`
-  coverage in CI (`deno fmt --check frontend/` passes even if e2e files
-  drift). Consider a scoped fix later — per-file `deno.json` in e2e is
-  already the boundary; the question is whether CI should fmt/lint the
-  harness too. _(low priority, added 2026-09-26)_
+- ~~**Revisit `"exclude": ["e2e/"]` in `frontend/deno.json`**~~ — **Stale
+  (2026-10-11):** `frontend/deno.json` no longer exists — the Deno→pnpm
+  migration replaced it with `frontend/tsconfig.json`, which likewise
+  excludes `e2e/` (and `public/`, `node_modules/`) so `tsc --noEmit` and
+  ESLint's ignore boundary stay clean. The underlying question — should CI
+  fmt/lint the e2e harness too — remains open if ever revisited; Prettier
+  currently ignores nothing in `e2e/` except via `.prettierignore`
+  (`node_modules`, `public/dist`, `pnpm-lock.yaml`, `**/*.svg`, `ichor`),
+  so the harness IS fmt-covered now, a slight coverage improvement over
+  the Deno setup.
 
 ## Security Hardening — Unresolved ?Low? Risk Items (SecOps Audit Findings)
 
 - [ ] **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) — Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
 
-- [x] **Pin exact dependency versions in `deno.json`** — DONE (2026-09): all npm/JSR specifiers in `frontend/deno.json` are now exact pins (no `^`/`~`, no unversioned `npm:`/`jsr:` refs), matching the committed `deno.lock`. Also pinned: `ichor/Cargo.toml` direct deps (`=` exact, matching `Cargo.lock`), CI tool versions in both workflows (Deno `2.9.7`, wasm-pack `0.15.0`, GitHub Actions by commit SHA), and the Rust compiler via `rust-toolchain.toml` (`1.95.0`). A refresh is now a no-op unless a pin is deliberately changed.
+- [x] **Pin exact dependency versions in `deno.json`** — DONE (2026-09): all npm/JSR specifiers in `frontend/deno.json` are now exact pins (no `^`/`~`, no unversioned `npm:`/`jsr:` refs), matching the committed `deno.lock`. Also pinned: `ichor/Cargo.toml` direct deps (`=` exact, matching `Cargo.lock`), CI tool versions in both workflows (Deno `2.9.7`, wasm-pack `0.15.0`, GitHub Actions by commit SHA), and the Rust compiler via `rust-toolchain.toml` (`1.95.0`). A refresh is now a no-op unless a pin is deliberately changed. *(Updated 2026-10-11: the Deno→pnpm migration moved these pins to `frontend/package.json` + root `pnpm-lock.yaml` with `.npmrc save-exact=true`, and CI tool pins to pnpm `12.11.2` / Node `26.7.0` via `packageManager` + setup-node.)*
 
 - [x] **Add `robots.txt`** (`frontend/public/`) — DONE (2026-09-26): added with `User-agent: *` / `Allow: /` — the site is intentionally indexable; the file exists to make that explicit rather than to block crawlers.
 

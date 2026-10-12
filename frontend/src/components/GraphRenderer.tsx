@@ -503,9 +503,9 @@ export default function GraphRenderer({
               cursor: "pointer",
               transition: "filter 0.2s",
             }}
-            onMouseEnter={(
-              e,
-            ) => (e.currentTarget.style.filter = "brightness(0.85)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.filter = "brightness(0.85)")
+            }
             onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
           >
             ＋ Add
@@ -521,9 +521,8 @@ export default function GraphRenderer({
               padding: "4px 8px",
               fontSize: 13,
               fontFamily: "system-ui, sans-serif",
-              background: selectedNodeId !== null
-                ? colors.accent
-                : "transparent",
+              background:
+                selectedNodeId !== null ? colors.accent : "transparent",
               color: selectedNodeId !== null ? "#ffffff" : colors.toolbarText,
               border: "none",
               borderRadius: 4,
@@ -531,12 +530,16 @@ export default function GraphRenderer({
               transition: "filter 0.2s",
               opacity: selectedNodeId !== null ? 1 : 0.4,
             }}
-            onMouseEnter={selectedNodeId !== null
-              ? (e) => (e.currentTarget.style.filter = "brightness(0.85)")
-              : undefined}
-            onMouseLeave={selectedNodeId !== null
-              ? (e) => (e.currentTarget.style.filter = "none")
-              : undefined}
+            onMouseEnter={
+              selectedNodeId !== null
+                ? (e) => (e.currentTarget.style.filter = "brightness(0.85)")
+                : undefined
+            }
+            onMouseLeave={
+              selectedNodeId !== null
+                ? (e) => (e.currentTarget.style.filter = "none")
+                : undefined
+            }
           >
             ✎ Edit
           </button>
@@ -566,12 +569,12 @@ export default function GraphRenderer({
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onMouseEnter={(
-            e,
-          ) => (e.currentTarget.style.background = colors.toolbarHover)}
-          onMouseLeave={(
-            e,
-          ) => (e.currentTarget.style.background = "transparent")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = colors.toolbarHover)
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
         >
           +
         </button>
@@ -600,12 +603,12 @@ export default function GraphRenderer({
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onMouseEnter={(
-            e,
-          ) => (e.currentTarget.style.background = colors.toolbarHover)}
-          onMouseLeave={(
-            e,
-          ) => (e.currentTarget.style.background = "transparent")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = colors.toolbarHover)
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
         >
           −
         </button>
@@ -653,12 +656,12 @@ export default function GraphRenderer({
             borderRadius: 4,
             cursor: "pointer",
           }}
-          onMouseEnter={(
-            e,
-          ) => (e.currentTarget.style.background = colors.toolbarHover)}
-          onMouseLeave={(
-            e,
-          ) => (e.currentTarget.style.background = "transparent")}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = colors.toolbarHover)
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
         >
           Reset
         </button>
@@ -675,9 +678,8 @@ export default function GraphRenderer({
               padding: "4px 8px",
               fontSize: 13,
               fontFamily: "system-ui, sans-serif",
-              background: selectedNodeId !== null
-                ? colors.overdue
-                : "transparent",
+              background:
+                selectedNodeId !== null ? colors.overdue : "transparent",
               color: selectedNodeId !== null ? "#ffffff" : colors.toolbarText,
               border: "none",
               borderRadius: 4,
@@ -685,12 +687,16 @@ export default function GraphRenderer({
               transition: "filter 0.2s",
               opacity: selectedNodeId !== null ? 1 : 0.4,
             }}
-            onMouseEnter={selectedNodeId !== null
-              ? (e) => (e.currentTarget.style.filter = "brightness(0.85)")
-              : undefined}
-            onMouseLeave={selectedNodeId !== null
-              ? (e) => (e.currentTarget.style.filter = "none")
-              : undefined}
+            onMouseEnter={
+              selectedNodeId !== null
+                ? (e) => (e.currentTarget.style.filter = "brightness(0.85)")
+                : undefined
+            }
+            onMouseLeave={
+              selectedNodeId !== null
+                ? (e) => (e.currentTarget.style.filter = "none")
+                : undefined
+            }
           >
             🗑 Delete
           </button>

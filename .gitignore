@@ -21,6 +21,17 @@ target
 .idea/
 
 frontend/public/dist/
+# pnpm workspace — root node_modules (frontend/node_modules is covered by
+# frontend/.gitignore); pnpm-lock.yaml is intentionally NOT ignored (CI
+# installs with --frozen-lockfile).
+node_modules/
+# Secrets / environment files — never commit real credentials; keep a
+# .env.example template under version control instead.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 # wasm-pack build output (ichor_bg.wasm + glue JS) — wasm-pack also drops a
 # self-ignoring .gitignore in ichor/pkg/ on every build, but that file is
 # transient (vanishes with `rm -rf ichor/pkg`); pin it here too so a fresh

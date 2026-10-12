@@ -113,8 +113,8 @@ export class LayoutEngine {
           const prevRT = this.rt.get(prevRootId)!;
           // True bottom = prelim + shift + maxY (maxY is relative to node's origin)
           const prevBottom = prevRT.prelim + prevRT.shift + prevRT.maxY;
-          const gap = this.estimateNodeHeight(prevRoot) +
-            this.config.verticalSpacing;
+          const gap =
+            this.estimateNodeHeight(prevRoot) + this.config.verticalSpacing;
           const currRT = this.rt.get(rootId)!;
           // True top = prelim + shift + minY
           const currTop = currRT.prelim + currRT.shift + currRT.minY;
@@ -238,8 +238,8 @@ export class LayoutEngine {
     const firstCenter = firstTrueY + this.estimateNodeHeight(first) / 2;
     const lastCenter = lastTrueY + this.estimateNodeHeight(last) / 2;
     // Parent prelim is relative to parent's ancestor shift
-    this.rt.get(nodeId)!.prelim = (firstCenter + lastCenter) / 2 -
-      ancestorShift;
+    this.rt.get(nodeId)!.prelim =
+      (firstCenter + lastCenter) / 2 - ancestorShift;
 
     // 4. Cache subtree bounds relative to this node's prelim origin (O(children))
     // Each child's true extent in the ancestorShift frame is:
@@ -293,10 +293,10 @@ export class LayoutEngine {
     const earlierRT = this.rt.get(earlier.id)!;
     const laterRT = this.rt.get(later.id)!;
     // minY/maxY are relative to each node's own prelim origin, so include prelim
-    const earlierTrueBottom = ancestorShift + earlierRT.shift +
-      earlierRT.prelim + earlierRT.maxY;
-    const laterTrueTop = ancestorShift + laterRT.shift + laterRT.prelim +
-      laterRT.minY;
+    const earlierTrueBottom =
+      ancestorShift + earlierRT.shift + earlierRT.prelim + earlierRT.maxY;
+    const laterTrueTop =
+      ancestorShift + laterRT.shift + laterRT.prelim + laterRT.minY;
     const needed = earlierTrueBottom + this.config.verticalSpacing;
 
     if (laterTrueTop < needed) {
@@ -359,9 +359,7 @@ export class LayoutEngine {
 
     return node.subtask_ids
       .map((id: number) => this.nodeMap.get(id))
-      .filter(
-        (n: GraphNode | undefined): n is GraphNode => n !== undefined,
-      )
+      .filter((n: GraphNode | undefined): n is GraphNode => n !== undefined)
       .filter((child: GraphNode) => {
         // If child hasn't been visited yet, it's a forward edge
         if (!this.rt.has(child.id)) return true;

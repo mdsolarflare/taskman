@@ -1,5 +1,7 @@
 // One-shot: rasterize favicon.svg into PWA PNG icons via headless Edge canvas.
-// Run from frontend/e2e: deno task gen-icons
+// Run from frontend: pnpm run gen-icons
+import { spawn } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
 import { serveStaticDir } from "./serve.ts";
 
 /** Convert a URL pathname (MSYS- or file://-style) to a Windows-native path. */
@@ -17,23 +19,21 @@ const server = serveStaticDir(PUBLIC);
 
 // Launch Edge headless (flags only — never pass a URL)
 const stamp = Date.now();
-const localAppData = Deno.env.get("LOCALAPPDATA") ??
-  `C:\\Users\\${Deno.env.get("USERNAME")}\\AppData\\Local`;
+const localAppData =
+  process.env.LOCALAPPDATA ??
+  `C:\\Users\\${process.env.USERNAME}\\AppData\\Local`;
 const profileDir = `${localAppData}\\taskman-icon-gen-${stamp}`;
 const port = 9500 + Math.floor(Math.random() * 400);
-const proc = new Deno.Command(
+const proc = spawn(
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-  {
-    args: [
-      `--remote-debugging-port=${port}`,
-      `--user-data-dir=${profileDir}`,
-      "--headless=new",
-      "--no-first-run",
-    ],
-    stdout: "null",
-    stderr: "piped",
-  },
-).spawn();
+  [
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${profileDir}`,
+    "--headless=new",
+    "--no-first-run",
+  ],
+  { stdio: ["ignore", "ignore", "pipe"] },
+);
 
 let wsUrl = "";
 for (let i = 0; i < 75; i++) {
@@ -45,7 +45,9 @@ for (let i = 0; i < 75; i++) {
       wsUrl = info.webSocketDebuggerUrl;
       break;
     }
-  } catch { /* keep polling */ }
+  } catch {
+    /* keep polling */
+  }
 }
 if (!wsUrl) {
   proc.kill();
@@ -92,13 +94,13 @@ function send(method: string, params?: Record<string, unknown>) {
   });
 }
 
-const { targetId } = await send("Target.createTarget", {
+const { targetId } = (await send("Target.createTarget", {
   url: "about:blank",
-}) as { targetId: string };
-const { sessionId } = await send("Target.attachToTarget", {
+})) as { targetId: string };
+const { sessionId } = (await send("Target.attachToTarget", {
   targetId,
   flatten: true,
-}) as { sessionId: string };
+})) as { sessionId: string };
 activeSessionId = sessionId;
 await send("Runtime.enable");
 await send("Page.enable");
@@ -139,11 +141,11 @@ const expr = `(async () => {
   };
 })()`;
 
-const r = await send("Runtime.evaluate", {
+const r = (await send("Runtime.evaluate", {
   expression: expr,
   returnByValue: true,
   awaitPromise: true,
-}) as Record<string, unknown>;
+})) as Record<string, unknown>;
 console.log("RAW RESULT:", JSON.stringify(r, null, 2).slice(0, 2000));
 const icons = (r.result as { value: Record<string, string> }).value;
 console.log("eval result keys:", Object.keys(icons ?? {}));
@@ -151,11 +153,11 @@ if (!icons || Object.keys(icons).length === 0) {
   throw new Error("Canvas eval returned no icons");
 }
 const outDir = `${PUBLIC}/icons`;
-await Deno.mkdir(outDir, { recursive: true });
+await mkdir(outDir, { recursive: true });
 for (const [name, dataurl] of Object.entries(icons)) {
   const b64 = dataurl.split(",", 2)[1];
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  await Deno.writeFile(`${outDir}/${name}`, bytes);
+  await writeFile(`${outDir}/${name}`, bytes);
   console.log(`${name}: ${bytes.length} bytes`);
 }
 

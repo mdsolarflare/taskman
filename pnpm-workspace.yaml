@@ -1,0 +1,7 @@
+packages:
+  - frontend
+
+# pnpm 11+ build-script approval gate ("onlyBuiltDependencies" is legacy and
+# ignored since v11); esbuild's postinstall validates the platform binary.
+allowBuilds:
+  esbuild: true

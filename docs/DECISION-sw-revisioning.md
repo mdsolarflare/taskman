@@ -44,9 +44,13 @@ post-demo on Windows (records-pain, Bug 5).
   maintain this code by hand rather than picking up upstream Workbox fixes.
 - The stamp invariant (sw.js `BUILD_ID` == manifest `buildId`) must hold on
   every build; a regression here is *silent* (no error, just no updates).
-- The `deno fmt` interaction (the stamped line can be re-wrapped) is
-  handled by a whitespace-tolerant regex in `gen-revision.ts` — another
-  small thing to know about.
+- The `deno fmt` interaction noted below was superseded by the 2026-10-11
+  Deno→pnpm migration: the formatter is now Prettier, and the
+  whitespace-tolerant regex in `gen-revision.ts` equally handles the line
+  shapes Prettier produces — the invariant it guards is unchanged.
+- (Historical, pre-migration:) the stamped line could be re-wrapped by
+  `deno fmt`; the whitespace-tolerant regex in `gen-revision.ts` handled
+  both shapes — another small thing to know about.
 
 **Mitigations:**
 

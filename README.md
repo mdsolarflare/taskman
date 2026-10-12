@@ -7,7 +7,7 @@ browser, ensuring near-native performance and total data ownership.
 
 ## Core Dependencies
 
-- deno.com
+- nodejs.org (managed with pnpm — pnpm.io)
 - rust-lang.org
 
 ## 🏗️ Architectural Overview
@@ -18,7 +18,7 @@ The project is broken into modules
   theory calculations, and data processing. Compiled to WASM for browser
   execution. Our goal is near native speed.
 - **The Face (`/frontend`):** Built with **React** and **TypeScript**.
-  Bundled with **esbuild** via Deno tasks. Styled with inline JavaScript
+  Bundled with **esbuild** via pnpm scripts. Styled with inline JavaScript
   style objects for a lightweight, dependency-free approach.
 - **The Bridge:** `wasm-bindgen` and `wasm-pack` facilitate the communication
   between Rust logic and the TypeScript frontend.
@@ -27,7 +27,7 @@ Our key design imperatives:
 
 - As much idomatic rust as possible
 - As simple as possible
-- As few dependencies as possible, currently rust, typescript, deno, esbuild, and react. If opportunities arise to aim lower, I will.
+- As few dependencies as possible, currently rust, typescript, node/pnpm, esbuild, and react. If opportunities arise to aim lower, I will.
 - Minimal design, highly opinionated styling
 
 ## ✨ Key Features
@@ -56,7 +56,7 @@ Our key design imperatives:
 
 Install the following toolchains on your system:
 
-**Rust + WASM + deno** (Works on macOS and Linux)
+**Rust + WASM + Node (managed via pnpm)** (Works on macOS and Linux)
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -65,8 +65,9 @@ source "$HOME/.cargo/env"
 # Install wasm-pack
 cargo install wasm-pack
 
-# Install deno
-curl -fsSL https://deno.land/install.sh | sh
+# Install pnpm (brings its own managed Node; or install Node yourself
+# and run: corepack enable)
+curl -fsSL https://get.pnpm.io/install.sh | sh -
 ```
 
 ### 1.1 Sanity Check
@@ -77,17 +78,19 @@ Verify all tools are installed and on your PATH:
 rustc --version
 cargo --version
 wasm-pack --version
-deno --version
+node --version
+pnpm --version
 ```
 
 If any of these commands fail, double-check your installation before proceeding.
 
 This project pins exact toolchain versions for reproducible builds: Rust
 `1.95.0` (via `rust-toolchain.toml`, rustup switches to it automatically),
-Deno `2.9.7` and wasm-pack `0.15.0` (pinned in the CI workflows). All
-dependency versions are pinned exactly in `frontend/deno.json` and
-`ichor/Cargo.toml` — no caret/tilde ranges — so refreshing dependencies is a
-no-op unless a pin is deliberately changed.
+pnpm `12.11.2` + Node `26.7.0` (pinned via the `packageManager` field and
+CI) and wasm-pack `0.15.0` (pinned in the CI workflows). All dependency
+versions are pinned exactly in `frontend/package.json` /
+`pnpm-lock.yaml` and `ichor/Cargo.toml` — no caret/tilde ranges — so
+refreshing dependencies is a no-op unless a pin is deliberately changed.
 
 ### 2. Installation & Build Process
 
@@ -111,10 +114,10 @@ Now, install dependencies, lint, test, and build the frontend.
 ```bash
 # From root
 cd frontend
-deno install
-deno lint
-deno task test
-deno task build
+pnpm install
+pnpm lint
+pnpm test
+pnpm build
 ```
 
 ### 3. Running the App
@@ -123,7 +126,7 @@ Build and serve locally with a static file server:
 
 ```bash
 # From root
-cd frontend && deno task build && deno task serve
+cd frontend && pnpm build && pnpm serve
 ```
 
 On first load, the app automatically serves a sample graph from `/sample.yaml`
@@ -144,14 +147,14 @@ See [`DATA_MODEL.md`](./docs/DATA_MODEL.md) for the complete schema specificatio
 │   └── Cargo.toml           # Rust dependencies & WASM configuration
 └── frontend/                # React + esbuild project
     ├── src/                 # UI components and WASM integration glue
-    ├── e2e/                 # CDP-driven browser e2e harness (own deno.json)
+    ├── e2e/                 # CDP-driven browser e2e harness (own scripts, outside tsconfig)
     ├── gen-revision.ts       # Build step: hashes shell, stamps SW BUILD_ID
     ├── public/              # Static assets served by the file server
     │   ├── sample.yaml      # Sample graph auto-loaded on first visit (served at /sample.yaml)
-    │   ├── icons/           # Committed PWA icons (regen: deno task gen-icons)
+    │   ├── icons/           # Committed PWA icons (regen: pnpm gen-icons)
     │   ├── manifest.webmanifest
     │   └── sw.js            # Hand-rolled service worker (see docs/DECISION-sw-revisioning.md)
-    └── deno.json            # Frontend dependencies (Deno 2)
+    └── package.json         # Frontend dependencies (pnpm workspace package)
 ```
 
 ## 🔄 Development Workflow
@@ -162,7 +165,7 @@ When making changes to the application:
 2. **Recompile:** Run `wasm-pack build --release --target web` inside the `/ichor`
    directory.
 3. **Update UI:** Modify components in `frontend/src/`.
-4. **Rebuild:** Run `deno task build` in `frontend/` to bundle with esbuild,
+4. **Rebuild:** Run `pnpm build` in `frontend/` to bundle with esbuild,
    then refresh the browser.
 
 ## 💾 Auto-Save
@@ -187,12 +190,25 @@ In supported browsers, Taskman can write changes to disk automatically after eac
 
 ### Troubleshooting
 
-When the File System Access API is unavailable:
+When the File System Access API is unavailable, the status dot is grey and
+the toggle is disabled. Hover it — the tooltip names the exact cause and
+the fix. The three causes and their remedies:
 
-- The header shows a **grey status dot** and **disabled toggle** with a
-  tooltip explaining the limitation.
+| Cause | Meaning | Fix |
+|---|---|---|
+| Insecure context | Page opened over plain `http://` at a non-localhost host (e.g. `127.0.0.1`, a LAN IP) | Open the app at `http://localhost:<port>` (localhost counts as a secure context) or serve over HTTPS |
+| Chromium flags/version | Chromium-based browser without the API exposed | Check `chrome://flags/#file-system-access-api` (Edge: `edge://flags`) or update the browser |
+| Browser unsupported | Firefox / Safari (no File System Access API) | Save As falls back to a plain download; auto-save to a tracked file is unavailable |
 
-If auto-save shows as unsupported in a Chromium browser:
+Auto-save state is **origin-scoped** (browser storage is keyed by
+`host:port`): the file-handle association lives in IndexedDB and the
+workspace in localStorage, each under the exact origin you opened.
+`http://localhost:8000` and `http://127.0.0.1:8000` are **different
+origins** — a handle linked at one is invisible at the other. The console
+logs `[autoSave]` diagnostics on every boot, including the origin being
+used; if a handle is missing, the log says which origin was checked.
+
+Deep-dive checklist, if the tooltip alone isn't enough:
 
 1. Open the browser console and look for the `[autoSave] diagnostics` group.
 2. If `showSaveFilePicker: undefined`, check `chrome://flags/#file-system-access-api`.
@@ -250,17 +266,17 @@ Build locally and upload `frontend/public/` to any static host (Netlify,
 Vercel, Cloudflare Pages, S3 + CloudFront, etc.):
 
 ```bash
-cd frontend && deno task build
+cd frontend && pnpm build
 # Serve the contents of frontend/public/
 ```
 
 ### Guidance for Future Work - Agent Friendly
 
 - Always verify with grep before deleting — confirm the symbol is truly unreferenced.
-- Re-run the linter/test suite after every edit batch, not just at the end. `cd frontend && deno fmt && deno task lint && deno task test` verifies the frontend. `cd ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
-- The full gate before committing also runs the browser e2e suite: `cd frontend/e2e && deno task test` (headless Edge via CDP; boots the app, checks localStorage persistence, and proves the service worker precaches the shell and serves it offline).
+- Re-run the linter/test suite after every edit batch, not just at the end. `cd frontend && pnpm fmt && pnpm lint && pnpm test` verifies the frontend. `cd ichor && cargo fmt && cargo check` verifies the ichor module. We should always run these combo steps to verify work and find errors.
+- The full gate before committing also runs the browser e2e suite: `pnpm --dir frontend test:e2e` (headless Edge via CDP; boots the app, checks localStorage persistence, and proves the service worker precaches the shell and serves it offline).
 - Prefer fixing over silencing — i.e. remove dead code instead adding suppression comments.
 - Use idiomatic rust
 - Use idiomatic typescript
-- **Dual Linting (DO NOT REMOVE):** We use Deno's built-in linter AND ESLint for the frontend project. Both are mandatory and run together via `deno task lint`. Deno lint covers general JS/TS issues (unused vars, unreachable code). ESLint is required specifically for `eslint-plugin-react-hooks` — it catches Rules of Hooks violations and missing `useEffect` dependencies that Deno lint cannot detect. Removing ESLint leaves React-specific bugs undetected.
-- **Deno 2 NPM Compatibility (DO NOT REMOVE):** The frontend uses Deno 2's `nodeModulesDir: "auto"` NPM compatibility mode to work with esbuild and React. `frontend/node_modules/` is created automatically by Deno for npm package resolution and is NOT leftover cruft from pnpm — it's required infrastructure. The `deno.json` tasks use `npm:` specifiers (`npm:esbuild`, `npm:eslint`) to run npm binaries. Do not attempt to remove `node_modules/`, switch to pure JSR imports, or otherwise "clean up" NPM compatibility.
+- **ESLint-only Linting (DO NOT REMOVE):** The frontend is linted by ESLint (with `@typescript-eslint` and `eslint-plugin-react-hooks`). This was a deliberate simplification in the 2026-10-11 Deno→pnpm migration, which dropped the Deno built-in linter that previously ran alongside ESLint. Net delta: general JS/TS issues (unused vars, unreachable code) are now covered by `@typescript-eslint`'s recommended rules instead of deno-lint; ESLint remains mandatory specifically for `eslint-plugin-react-hooks` — it catches Rules of Hooks violations and missing `useEffect` dependencies. Removing ESLint leaves React-specific bugs undetected.
+- **pnpm-Managed node_modules (DO NOT REMOVE):** The frontend is a pnpm workspace package (`pnpm-workspace.yaml` at the repo root); dependencies are installed into `frontend/node_modules/` by pnpm from `pnpm-lock.yaml`. The directory is required infrastructure, NOT leftover cruft — do not attempt to remove `node_modules/` or "clean up" the pnpm setup. CI installs with `pnpm install --frozen-lockfile`.

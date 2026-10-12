@@ -56,27 +56,33 @@ jobs:
 
       # ─── TypeScript (frontend) ────────────────────────────────────
 
-      # Install Deno & cache remote modules automatically
-      - name: Setup Deno Environment
-        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+      # Install pnpm (version pinned via the packageManager field) + Node
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node Environment
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          deno-version: 2.9.7 # Pinned exact version (was "v2.x" = latest stable)
-          cache: true # Caches downloaded JSR/NPM packages based on your lockfile
+          node-version: 26.7.0 # Pinned exact version
+          cache: pnpm # Caches the pnpm store based on pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Vendor WASM glue files
-        run: deno task --config frontend/deno.json vendor-wasm
+        run: pnpm --dir frontend vendor-wasm
 
       - name: Verify formatting and styles
-        run: deno fmt --check frontend/
+        run: pnpm --dir frontend fmt:check
 
       - name: Lint TypeScript
-        run: deno task --config frontend/deno.json lint
+        run: pnpm --dir frontend lint
 
       - name: Run Typescript Tests
-        run: deno task --config frontend/deno.json test
+        run: pnpm --dir frontend test
 
       - name: Build Frontend - Includes type checking
-        run: deno task --config frontend/deno.json build
+        run: pnpm --dir frontend build
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload artifact

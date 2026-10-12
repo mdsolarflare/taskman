@@ -3,7 +3,11 @@ import {
   getLayoutBounds,
   LayoutEngine,
 } from "../layout.ts";
-import { assert, assertEquals } from "@std/assert";
+import {
+  deepStrictEqual as assertEquals,
+  ok as assert,
+} from "node:assert/strict";
+import { test } from "node:test";
 import type { Graph, GraphNode } from "../../types/graph.ts";
 
 /** Build a simple Graph with the given nodes and root_ids. */
@@ -36,7 +40,7 @@ function buildGraph(nodes: GraphNode[], rootIds: number[]): Graph {
 }
 
 /** Simple single root with no children. */
-Deno.test("LayoutEngine - single leaf node", () => {
+test("LayoutEngine - single leaf node", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph([{ id: 1, name: "Root" }], [1]);
   engine.setGraph(graph);
@@ -50,7 +54,7 @@ Deno.test("LayoutEngine - single leaf node", () => {
 });
 
 /** Single root with two leaf children. */
-Deno.test("LayoutEngine - root with two children", () => {
+test("LayoutEngine - root with two children", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -85,7 +89,7 @@ Deno.test("LayoutEngine - root with two children", () => {
 });
 
 /** Three roots processed as separate trees. */
-Deno.test("LayoutEngine - multiple roots", () => {
+test("LayoutEngine - multiple roots", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -115,7 +119,7 @@ Deno.test("LayoutEngine - multiple roots", () => {
 });
 
 /** Back-edge (subtask points to shallower depth) is excluded from layout walk. */
-Deno.test("LayoutEngine - back-edge handling", () => {
+test("LayoutEngine - back-edge handling", () => {
   const engine = createLayoutEngine();
   // Node 2 lists node 1 as subtask (back-edge), but layout should still work
   const graph = buildGraph(
@@ -136,7 +140,7 @@ Deno.test("LayoutEngine - back-edge handling", () => {
 });
 
 /** Collapsed nodes hide children from layout. */
-Deno.test("LayoutEngine - collapsed hides children", () => {
+test("LayoutEngine - collapsed hides children", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -155,7 +159,7 @@ Deno.test("LayoutEngine - collapsed hides children", () => {
 });
 
 /** Undefined collapsed (default) hides children. */
-Deno.test("LayoutEngine - undefined collapsed defaults to hidden", () => {
+test("LayoutEngine - undefined collapsed defaults to hidden", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -171,7 +175,7 @@ Deno.test("LayoutEngine - undefined collapsed defaults to hidden", () => {
 });
 
 /** getLayoutBounds returns correct bounding rectangle. */
-Deno.test("getLayoutBounds - basic", () => {
+test("getLayoutBounds - basic", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -191,7 +195,7 @@ Deno.test("getLayoutBounds - basic", () => {
 });
 
 /** getLayoutBounds handles empty layout. */
-Deno.test("getLayoutBounds - empty", () => {
+test("getLayoutBounds - empty", () => {
   const empty = { nodes: new Map(), edges: [] };
   const bounds = getLayoutBounds(empty);
 
@@ -202,7 +206,7 @@ Deno.test("getLayoutBounds - empty", () => {
 });
 
 /** Edges are collected from expanded nodes' subtask_ids. */
-Deno.test("LayoutEngine - edge collection", () => {
+test("LayoutEngine - edge collection", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -221,7 +225,7 @@ Deno.test("LayoutEngine - edge collection", () => {
 });
 
 /** Node heights account for details and deadline fields. */
-Deno.test("LayoutEngine - variable node height", () => {
+test("LayoutEngine - variable node height", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -246,7 +250,7 @@ Deno.test("LayoutEngine - variable node height", () => {
 });
 
 /** setConfig updates the layout configuration. */
-Deno.test("LayoutEngine - setConfig", () => {
+test("LayoutEngine - setConfig", () => {
   const engine = new LayoutEngine();
   engine.setConfig({ horizontalSpacing: 400 });
 
@@ -265,7 +269,7 @@ Deno.test("LayoutEngine - setConfig", () => {
 });
 
 /** clearCache resets internal state. */
-Deno.test("LayoutEngine - clearCache", () => {
+test("LayoutEngine - clearCache", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph([{ id: 1, name: "Root" }], [1]);
   engine.setGraph(graph);
@@ -277,7 +281,7 @@ Deno.test("LayoutEngine - clearCache", () => {
 });
 
 /** Deep nested tree layout. */
-Deno.test("LayoutEngine - deep nesting", () => {
+test("LayoutEngine - deep nesting", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph(
     [
@@ -304,7 +308,7 @@ Deno.test("LayoutEngine - deep nesting", () => {
 });
 
 /** Shifts propagate to grandchildren when a sibling is shifted. */
-Deno.test("LayoutEngine - shift propagation to grandchildren", () => {
+test("LayoutEngine - shift propagation to grandchildren", () => {
   const engine = createLayoutEngine();
   // Root -> A, B, C where B has children B1, B2
   // When B is shifted to avoid A, B1 and B2 must also shift.
@@ -345,7 +349,7 @@ Deno.test("LayoutEngine - shift propagation to grandchildren", () => {
 });
 
 /** Exhaustive overlap check: no two nodes at the same depth should overlap on Y. */
-Deno.test("LayoutEngine - no same-depth overlaps (many siblings)", () => {
+test("LayoutEngine - no same-depth overlaps (many siblings)", () => {
   const engine = createLayoutEngine();
   // Root -> P1(leaf), P2(has Q1..Q5), P3(has R1,R2)
   // This creates many depth=2 nodes from multiple parents
@@ -397,7 +401,7 @@ Deno.test("LayoutEngine - no same-depth overlaps (many siblings)", () => {
 });
 
 /** First child of many: when a parent has many children, the first should not overlap with previous siblings' subtrees. */
-Deno.test("LayoutEngine - first child of many no overlap", () => {
+test("LayoutEngine - first child of many no overlap", () => {
   const engine = createLayoutEngine();
   // Root -> A(leaf), B(has C1..C6)
   // C1 is the "first child of many" — must not overlap with A
@@ -447,7 +451,7 @@ Deno.test("LayoutEngine - first child of many no overlap", () => {
 });
 
 /** Empty graph produces empty layout without crashing. */
-Deno.test("LayoutEngine - empty graph layout", () => {
+test("LayoutEngine - empty graph layout", () => {
   const engine = createLayoutEngine();
   const graph = buildGraph([], []);
   engine.setGraph(graph);
@@ -458,7 +462,7 @@ Deno.test("LayoutEngine - empty graph layout", () => {
 });
 
 /** Mixed collapsed/expanded subtrees: only visible nodes are positioned. */
-Deno.test("LayoutEngine - mixed collapsed/expanded subtrees", () => {
+test("LayoutEngine - mixed collapsed/expanded subtrees", () => {
   const engine = createLayoutEngine();
   // Root expanded → A collapsed (hides A1,A2) + B expanded (shows B1,B2)
   const graph = buildGraph(
@@ -489,7 +493,7 @@ Deno.test("LayoutEngine - mixed collapsed/expanded subtrees", () => {
 });
 
 /** Re-computation after graph mutation clears stale state. */
-Deno.test("LayoutEngine - re-computation after graph mutation", () => {
+test("LayoutEngine - re-computation after graph mutation", () => {
   const engine = createLayoutEngine();
 
   // First layout: single root with two children
@@ -506,12 +510,7 @@ Deno.test("LayoutEngine - re-computation after graph mutation", () => {
   assertEquals(layout1.nodes.size, 3);
 
   // Second layout: completely different graph — single root only
-  const graph2 = buildGraph(
-    [
-      { id: 10, name: "New Root" },
-    ],
-    [10],
-  );
+  const graph2 = buildGraph([{ id: 10, name: "New Root" }], [10]);
   engine.setGraph(graph2);
   const layout2 = engine.computeLayout();
 
@@ -526,7 +525,7 @@ Deno.test("LayoutEngine - re-computation after graph mutation", () => {
 });
 
 /** DAG shared child: diamond pattern positions each node once. */
-Deno.test("LayoutEngine - DAG shared child (diamond)", () => {
+test("LayoutEngine - DAG shared child (diamond)", () => {
   const engine = createLayoutEngine();
   // Diamond: Root → A, B; both A and B → C
   const graph = buildGraph(
@@ -551,7 +550,7 @@ Deno.test("LayoutEngine - DAG shared child (diamond)", () => {
 });
 
 /** Parent bounding box must include the parent's own height, not just children. */
-Deno.test("LayoutEngine - parent bounds include self height", () => {
+test("LayoutEngine - parent bounds include self height", () => {
   const engine = createLayoutEngine();
   // Root -> A(leaf), B(has C1)
   // B is tall (has details+deadline) but its only child C1 is short.
