@@ -81,28 +81,19 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
   repeat across ~5 components. Known trade-off of zero-CSS design; shared
   primitives would emerge naturally during App.tsx split. _(low priority)_
 
-- ~~**Revisit `"exclude": ["e2e/"]` in `frontend/deno.json`**~~ — **Stale
-  (2026-10-11):** `frontend/deno.json` no longer exists — the Deno→pnpm
-  migration replaced it with `frontend/tsconfig.json`, which likewise
-  excludes `e2e/` (and `public/`, `node_modules/`) so `tsc --noEmit` and
   ESLint's ignore boundary stay clean. The underlying question — should CI
   fmt/lint the e2e harness too — remains open if ever revisited; Prettier
   currently ignores nothing in `e2e/` except via `.prettierignore`
-  (`node_modules`, `public/dist`, `pnpm-lock.yaml`, `**/*.svg`, `ichor`),
-  so the harness IS fmt-covered now, a slight coverage improvement over
-  the Deno setup.
 
 ## Security Hardening — Unresolved ?Low? Risk Items (SecOps Audit Findings)
 
 - [ ] **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) — Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
 
-- [x] **Pin exact dependency versions in `deno.json`** — DONE (2026-09): all npm/JSR specifiers in `frontend/deno.json` are now exact pins (no `^`/`~`, no unversioned `npm:`/`jsr:` refs), matching the committed `deno.lock`. Also pinned: `ichor/Cargo.toml` direct deps (`=` exact, matching `Cargo.lock`), CI tool versions in both workflows (Deno `2.9.7`, wasm-pack `0.15.0`, GitHub Actions by commit SHA), and the Rust compiler via `rust-toolchain.toml` (`1.95.0`). A refresh is now a no-op unless a pin is deliberately changed. *(Updated 2026-10-11: the Deno→pnpm migration moved these pins to `frontend/package.json` + root `pnpm-lock.yaml` with `.npmrc save-exact=true`, and CI tool pins to pnpm `12.11.2` / Node `26.7.0` via `packageManager` + setup-node.)*
-
 - [x] **Add `robots.txt`** (`frontend/public/`) — DONE (2026-09-26): added with `User-agent: *` / `Allow: /` — the site is intentionally indexable; the file exists to make that explicit rather than to block crawlers.
 
 - ~~**Add `ichor/pkg/` to `.gitignore`**~~ — **Resolved (2026-09-26):** `ichor/pkg/` is now in the root `.gitignore`. (The audit claim that it was "NOT gitignored" was itself stale — wasm-pack auto-generates a self-ignoring `ichor/pkg/.gitignore` on every build — but that file is transient, so the root-level rule is the durable fix.)
 
-- ~~**Document WASM build as deploy prerequisite**~~ — **Stale (verified 2026-09-18):** the claim "CI now builds WASM but doesn't deploy" is wrong — `.github/workflows/static.yml` builds WASM, vendors it, and deploys `frontend/public/` to Pages. Residual kernel: *manual* deploys to other static hosts still require `wasm-pack build` + `deno task vendor-wasm` first, or the app ships without its brain and fails silently. Worth one line in the README "Other Static Hosts" section. _(low priority)_
+- ~~**Document WASM build as deploy prerequisite**~~ — **Stale (verified 2026-09-18):** the claim "CI now builds WASM but doesn't deploy" is wrong — `.github/workflows/static.yml` builds WASM, vendors it, and deploys `frontend/public/` to Pages. Residual kernel: *manual* deploys to other static hosts still require `wasm-pack build` + `pnpm task vendor-wasm` first, or the app ships without its brain and fails silently. Worth one line in the README "Other Static Hosts" section. _(low priority)_
 
 ## README Inaccuracies (found during PWA study, 2026-09-18 — resolved 2026-09-26)
 

@@ -7,7 +7,7 @@ lessons from past sessions. Violations have historically shipped real bugs
 
 ## Design Principles
 
-1. **As few dependencies as possible.** Currently: rust, typescript, deno,
+1. **As few dependencies as possible.** Currently: rust, typescript, pnpm,
    esbuild, react. If an opportunity arises to aim lower, take it. Never add
    a third-party package when the platform provides the primitive
    (e.g. `crypto.subtle` instead of a hashing lib; raw CDP instead of
@@ -26,13 +26,13 @@ lessons from past sessions. Violations have historically shipped real bugs
 
 ## Verification Rules (mandatory before claiming done)
 
-- Frontend: `cd frontend && deno fmt && deno task lint && deno task test`
+- Frontend: `cd frontend && pnpm fmt && pnpm lint && pnpm test`
 - Rust: `cd ichor && cargo fmt && cargo clippy --all-targets -- -D warnings && cargo test`
-- Browser e2e (PWA/shell-affecting changes): `cd frontend/e2e && deno task test`
+- Browser e2e (PWA/shell-affecting changes): `cd frontend/e2e && pnpm test`
   — headless Edge via CDP; proves the service worker precaches the shell
   and serves it offline. Build integrity is asserted there too (stamped
   `sw.js` `BUILD_ID` must equal `dist/cache-manifest.js`'s `buildId`).
-- Full build: `cd frontend && deno task build` (vendors WASM, bundles, and
+- Full build: `cd frontend && pnpm build` (vendors WASM, bundles, and
   runs `gen-revision` — the step that stamps the SW cache revision).
 
 **Prefer fixing over silencing** — remove dead code instead of adding
@@ -40,7 +40,7 @@ suppression comments. A lint allow is a last resort and must carry an
 inline justification (see the two `too_many_arguments` allows on the
 wasm-bindgen `add_node` ABI).
 
-## Windows / Deno Path Rules (learned the hard way — see
+## Windows Path Rules (learned the hard way — see
 `docs/records-pain/pwa-e2e-harness.md`)
 
 - Resolve file paths by **plain string join from an NT-style root** — never
@@ -50,9 +50,6 @@ wasm-bindgen `add_node` ABI).
   differently.** Always pass absolute paths to `write_file`/`patch`/`read_file`.
   Never `cd` in `terminal` and then use relative tool paths — that is how
   phantom nested directories get created.
-- e2e module runs with `--no-check` and its own `deno.json`
-  (`frontend/deno.json` excludes `e2e/`); don't shoehorn Deno-only files
-  into the frontend TS module graph.
 - A failed `Runtime.evaluate` is silent — exceptions land in
   `exceptionDetails` while `result.value` reads `undefined`, so a broken
   predicate presents as a *timeout*, not an error.
@@ -62,13 +59,13 @@ wasm-bindgen `add_node` ABI).
 - **Chromium's SW update check byte-compares only the MAIN `sw.js` script.**
   A changed `importScripts`'d manifest alone triggers nothing. Therefore
   `gen-revision.ts` MUST stamp the `buildId` into `sw.js` itself
-  (`const BUILD_ID = "…"`, whitespace-tolerant regex — `deno fmt` wraps the
+  (`const BUILD_ID = "…"`, whitespace-tolerant regex — `pnpm fmt` wraps the
   line). Removing the stamp re-breaks shell updates silently.
 - All manifest and SW paths stay **relative** (`./`) — the app deploys under
   a GitHub Pages subpath (`/taskman/`).
 - `any`-purpose icons keep transparent backgrounds; maskable and
   apple-touch must be opaque (Android circle-crops; iOS composites over
-  black). Regenerate with `deno task gen-icons` (root task) after any
+  black). Regenerate with `pnpm gen-icons` (root task) after any
   `favicon.svg` change, and commit the PNGs — CI has no browser to
   rasterize them.
 - Icon/background colors come from the app's own theme palette
