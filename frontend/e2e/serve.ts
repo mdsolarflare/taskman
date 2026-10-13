@@ -1,6 +1,6 @@
 /**
  * Static file server for e2e tests (also reused by the dev `pnpm run serve`
- * entry — one implementation, no second server). Runs in-process (no
+ * entry - one implementation, no second server). Runs in-process (no
  * external process). Features:
  *
  *   - SPA fallback: unknown paths serve /index.html (navigation-friendly)
@@ -63,7 +63,7 @@ export function serveStaticDir(
   let offline = false;
 
   // Use a fixed port when requested (the dev serve entry needs a stable
-  // origin — browser storage is host:port-scoped), or a random port in a
+  // origin - browser storage is host:port-scoped), or a random port in a
   // high, unreserved range so parallel e2e runs never collide.
   const port = opts.port ?? 10000 + Math.floor(Math.random() * 10000);
 
@@ -83,7 +83,7 @@ export function serveStaticDir(
       const u = new URL(req.url ?? "/", "http://127.0.0.1/");
       const rawPath = u.pathname;
       // Decode percent-escapes and strip leading slashes, then join via
-      // plain string concatenation — never `new URL(rel, root)`: on Windows
+      // plain string concatenation - never `new URL(rel, root)`: on Windows
       // any rel starting with "/" resolves against the file:// origin and
       // discards the base directory, so every stat fails and the SPA
       // fallback serves index.html for real files.
@@ -105,7 +105,7 @@ export function serveStaticDir(
           res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
           res.end("Not Found");
         } else {
-          // SPA fallback — serve index.html.
+          // SPA fallback - serve index.html.
           const body = await readFile(`${rootPath}/index.html`, "utf8").catch(
             () => "Not Found",
           );
@@ -153,7 +153,7 @@ export function serveStaticDir(
   const close = async () => {
     closed = true;
     await new Promise<void>((resolve) => {
-      // Force-close open sockets — keep-alive browser connections would
+      // Force-close open sockets - keep-alive browser connections would
       // otherwise hold the listener open past test teardown.
       server.closeAllConnections();
       server.close(() => resolve());

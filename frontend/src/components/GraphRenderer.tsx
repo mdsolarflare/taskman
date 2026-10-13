@@ -240,8 +240,8 @@ export default function GraphRenderer({
   }, [layout]);
 
   // -----------------------------------------------------------------------
-  // Keyboard handler — Backspace / Delete triggers delete modal
-  //                — + triggers add node, = triggers edit node
+  // Keyboard handler - Backspace / Delete triggers delete modal
+  //                - + triggers add node, = triggers edit node
   // -----------------------------------------------------------------------
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 /**
- * PWA hook for Taskman — install prompt + service-worker update UX.
+ * PWA hook for Taskman - install prompt + service-worker update UX.
  *
  * Handles:
  * - SW registration status (registered in main.tsx; here we only observe)

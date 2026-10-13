@@ -1,14 +1,14 @@
 # Design Decision: Hand-Rolled SW Revisioning (No Workbox)
 
 **Date:** 2026-09-26
-**Status:** Accepted — owned infrastructure, guarded by e2e
+**Status:** Accepted - owned infrastructure, guarded by e2e
 **Relates to:** `frontend/public/sw.js`, `frontend/gen-revision.ts`,
 `frontend/e2e/e2e.test.ts`, `docs/records-pain/pwa-e2e-harness.md` (Bug 5)
 
 ## Context
 
 Taskman's build emits **stable filenames** (`dist/main.js`, not
-`main.<hash>.js`) — a deliberate choice to keep the esbuild build simple and
+`main.<hash>.js`) - a deliberate choice to keep the esbuild build simple and
 the Pages artifact plain. A cache-first service worker over stable
 filenames serves the old shell forever unless something changes per build.
 The standard industry answer is Workbox (+ `workbox-build`/
@@ -24,7 +24,7 @@ dependency besides.
 Own the mechanism instead: a ~100-line hand-rolled `sw.js` plus a
 `gen-revision.ts` build step that
 
-1. hashes every shell file with SHA-256 (`crypto.subtle` — no deps),
+1. hashes every shell file with SHA-256 (`crypto.subtle` - no deps),
 2. emits `dist/cache-manifest.js` (`self.CACHE_MANIFEST = { buildId, files }`),
 3. **stamps the `buildId` into the main `sw.js`** as `const BUILD_ID`,
 4. names the cache `taskman-shell-<buildId>` and deletes every other cache
@@ -33,12 +33,12 @@ Own the mechanism instead: a ~100-line hand-rolled `sw.js` plus a
 The stamp (step 3) is load-bearing: Chromium's SW update check
 byte-compares only the **main** script, so a changed `importScripts`'d
 manifest alone triggers nothing. Shipping without the stamp silently pins
-every install to the first build it ever fetched — exactly the bug found
+every install to the first build it ever fetched - exactly the bug found
 post-demo on Windows (records-pain, Bug 5).
 
 ## Consequences
 
-**Accepted costs — this is owned infrastructure now:**
+**Accepted costs - this is owned infrastructure now:**
 
 - Any change to precaching, update flow, or the build pipeline must
   maintain this code by hand rather than picking up upstream Workbox fixes.
@@ -47,15 +47,15 @@ post-demo on Windows (records-pain, Bug 5).
 - The `deno fmt` interaction noted below was superseded by the 2026-10-11
   Deno→pnpm migration: the formatter is now Prettier, and the
   whitespace-tolerant regex in `gen-revision.ts` equally handles the line
-  shapes Prettier produces — the invariant it guards is unchanged.
+  shapes Prettier produces - the invariant it guards is unchanged.
 - (Historical, pre-migration:) the stamped line could be re-wrapped by
   `deno fmt`; the whitespace-tolerant regex in `gen-revision.ts` handled
-  both shapes — another small thing to know about.
+  both shapes - another small thing to know about.
 
 **Mitigations:**
 
 - The e2e suite asserts the stamp matches the manifest on every run, and
-  the SW itself throws at install on mismatch — the silent failure mode is
+  the SW itself throws at install on mismatch - the silent failure mode is
   now a loud one.
 - The whole mechanism is ~100 lines of plain JS readable in one sitting,
   versus Workbox's ~300 KB minified runtime.
@@ -64,7 +64,7 @@ post-demo on Windows (records-pain, Bug 5).
 
 **Why not Workbox, concretely:** it would add the project's first runtime
 third-party dependency, an opinionated caching layer whose behavior we'd
-have to learn and debug, and a build plugin — to replace a mechanism that
+have to learn and debug, and a build plugin - to replace a mechanism that
 fits in one screen and whose single hard failure mode we've already hit,
 fixed, and pinned with a test. If the SW ever grows real complexity
 (background sync, offline mutation queues, ranged caching), revisit this

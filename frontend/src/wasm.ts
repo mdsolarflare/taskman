@@ -16,7 +16,7 @@ import init, {
 } from "../public/dist/ichor.js";
 
 // ---------------------------------------------------------------------------
-// Initialization — eager at startup, cached for subsequent calls
+// Initialization - eager at startup, cached for subsequent calls
 // ---------------------------------------------------------------------------
 
 let initialized = false;
@@ -40,7 +40,7 @@ export async function initWasm(): Promise<void> {
 }
 
 /**
- * Internal guard — should always be a no-op after `initWasm()` runs at startup.
+ * Internal guard - should always be a no-op after `initWasm()` runs at startup.
  */
 async function ensureInit(): Promise<void> {
   if (initialized) return;
@@ -48,7 +48,7 @@ async function ensureInit(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Public API — thin wrappers that ensure WASM is loaded, then call the typed
+// Public API - thin wrappers that ensure WASM is loaded, then call the typed
 // wasm-pack exports directly. Each function returns parsed JSON (not raw strings)
 // to match the existing App.tsx contract.
 // ---------------------------------------------------------------------------

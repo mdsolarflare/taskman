@@ -2,13 +2,13 @@
 
 **Date:** 2026-06-04  
 **Files:** `frontend/src/engine/layout.ts`, `frontend/src/engine/__tests__/layout.test.ts`  
-**Status:** ✅ Resolved — 17/17 tests pass, zero diagnostics
+**Status:** ✅ Resolved - 17/17 tests pass, zero diagnostics
 
 ---
 
 ## Problem Statement
 
-Y-axis overlaps between sibling nodes in the Reingold-Tilford layout engine. The X-axis (depth-based) spacing was correct, but Y positions conflicted — particularly affecting:
+Y-axis overlaps between sibling nodes in the Reingold-Tilford layout engine. The X-axis (depth-based) spacing was correct, but Y positions conflicted - particularly affecting:
 - Depth=2 children of parents with many siblings
 - "First child of many" patterns where a parent's first child overlapped previous siblings' subtrees
 
@@ -45,7 +45,7 @@ true_bottom = ancestorShift + shift + prelim + maxY
 
 ### Bug 1: Missing `prelim` in Sibling Spacing
 
-**Location:** `ensureSiblingSpacing()` — L291-294  
+**Location:** `ensureSiblingSpacing()` - L291-294  
 **Symptom:** Siblings with non-zero `prelim` got insufficient spacing → overlaps
 
 The true-position calculation omitted `prelim`, treating `minY`/`maxY` as absolute rather than relative to the node's origin:
@@ -61,10 +61,10 @@ The true-position calculation omitted `prelim`, treating `minY`/`maxY` as absolu
 
 ### Bug 2: Parent Bounds Exclude Self Height
 
-**Location:** `firstWalk` step 4 (subtree bounds caching) — L253-262  
+**Location:** `firstWalk` step 4 (subtree bounds caching) - L253-262  
 **Symptom:** Tall parents with short children had undersized bounding boxes → adjacent siblings overlapped the parent node itself
 
-The subtree bounds scan started from empty (`Infinity`/`-Infinity`) and only considered children's extents. A leaf correctly sets `minY=0, maxY=h`, but internal nodes were missing this invariant — their own height was excluded:
+The subtree bounds scan started from empty (`Infinity`/`-Infinity`) and only considered children's extents. A leaf correctly sets `minY=0, maxY=h`, but internal nodes were missing this invariant - their own height was excluded:
 ```diff
   const r = this.rt.get(nodeId)!;
 + const selfH = this.estimateNodeHeight(node);
@@ -79,7 +79,7 @@ The subtree bounds scan started from empty (`Infinity`/`-Infinity`) and only con
 
 ### Bug 3: Missing `prelim` in Multi-Root Spacing
 
-**Location:** `computeLayout()` multi-root loop — L115, L120  
+**Location:** `computeLayout()` multi-root loop - L115, L120  
 **Symptom:** Multiple roots could overlap when their subtrees had non-zero prelim offsets
 ```diff
 - const prevBottom = prevRT.maxY + prevRT.shift;
@@ -96,8 +96,8 @@ The subtree bounds scan started from empty (`Infinity`/`-Infinity`) and only con
 | Test | What it catches |
 |---|---|
 | `no same-depth overlaps (many siblings)` | Exhaustive check across all depth levels with multiple parents, each having many children at the same depth |
-| `first child of many no overlap` | First child of a large sibling group doesn't overlap previous siblings' subtrees — targets the specific "first child offset weird" pattern |
-| `parent bounds include self height` | Tall parent with short child still reports correct bounding box to prevent sibling overlap — regression test for Bug 2 |
+| `first child of many no overlap` | First child of a large sibling group doesn't overlap previous siblings' subtrees - targets the specific "first child offset weird" pattern |
+| `parent bounds include self height` | Tall parent with short child still reports correct bounding box to prevent sibling overlap - regression test for Bug 2 |
 
 ---
 
@@ -105,5 +105,5 @@ The subtree bounds scan started from empty (`Infinity`/`-Infinity`) and only con
 
 1. **The invariant is non-negotiable:** Every use of `minY`/`maxY` must include `prelim` in the true-position calculation. The bounds are relative offsets, not absolute positions.
 2. **Subtree bounds = self ∪ children:** Always initialize bounds with the node's own extent `[0, h]`, then expand to include children. This matches how leaf nodes work and prevents undersized bounding boxes for tall parents.
-3. **Bounding-box spacing is sufficient here:** In our L→R layout (X=depth), nodes at different depths are on separate columns and can't visually overlap. Full contour scanning (as in classic RT) is unnecessary — corrected bounding boxes guarantee no same-depth collisions.
-4. **O(n) complexity preserved:** No structural changes to the algorithm — only corrected arithmetic in existing calculations.
+3. **Bounding-box spacing is sufficient here:** In our L→R layout (X=depth), nodes at different depths are on separate columns and can't visually overlap. Full contour scanning (as in classic RT) is unnecessary - corrected bounding boxes guarantee no same-depth collisions.
+4. **O(n) complexity preserved:** No structural changes to the algorithm - only corrected arithmetic in existing calculations.

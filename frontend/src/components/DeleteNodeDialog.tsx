@@ -5,14 +5,14 @@
  * Uses a checkbox gate: the delete button stays disabled until the user
  * explicitly acknowledges the re-mapping behavior by checking a box.
  *
- * Design principle: simple and elegant — no extra dependencies, just a
+ * Design principle: simple and elegant - no extra dependencies, just a
  * clean overlay with a clear explanation and an intentional confirmation.
  */
 
 import { useEffect, useState } from "react";
 
 // ---------------------------------------------------------------------------
-// Theme colors — read from CSS variables at runtime
+// Theme colors - read from CSS variables at runtime
 // ---------------------------------------------------------------------------
 
 interface ModalColors {
@@ -73,7 +73,7 @@ export default function DeleteNodeDialog({
 }: DeleteNodeDialogProps) {
   const [confirmed, setConfirmed] = useState(false);
 
-  // Theme-aware colors — re-read on theme switch via MutationObserver
+  // Theme-aware colors - re-read on theme switch via MutationObserver
   const [colors, setColors] = useState(readModalColors);
 
   useEffect(() => {
