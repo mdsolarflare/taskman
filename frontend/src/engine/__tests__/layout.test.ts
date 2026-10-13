@@ -404,7 +404,7 @@ test("LayoutEngine - no same-depth overlaps (many siblings)", () => {
 test("LayoutEngine - first child of many no overlap", () => {
   const engine = createLayoutEngine();
   // Root -> A(leaf), B(has C1..C6)
-  // C1 is the "first child of many" — must not overlap with A
+  // C1 is the "first child of many" - must not overlap with A
   const graph = buildGraph(
     [
       { id: 1, name: "Root", subtask_ids: [2, 3], collapsed: false },
@@ -509,7 +509,7 @@ test("LayoutEngine - re-computation after graph mutation", () => {
   const layout1 = engine.computeLayout();
   assertEquals(layout1.nodes.size, 3);
 
-  // Second layout: completely different graph — single root only
+  // Second layout: completely different graph - single root only
   const graph2 = buildGraph([{ id: 10, name: "New Root" }], [10]);
   engine.setGraph(graph2);
   const layout2 = engine.computeLayout();
@@ -540,7 +540,7 @@ test("LayoutEngine - DAG shared child (diamond)", () => {
   engine.setGraph(graph);
   const layout = engine.computeLayout();
 
-  // All 4 nodes positioned — C appears once despite two parents
+  // All 4 nodes positioned - C appears once despite two parents
   assertEquals(layout.nodes.size, 4);
   assert(layout.nodes.has(4), "Shared child C should be in layout");
 

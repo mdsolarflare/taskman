@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GraphNode } from "../types/graph.ts";
 
 // ---------------------------------------------------------------------------
-// Theme colors — read from CSS variables at runtime
+// Theme colors - read from CSS variables at runtime
 // ---------------------------------------------------------------------------
 
 interface ModalColors {
@@ -129,7 +129,7 @@ export default function EditNodeModal({
 
   const [addDropdownOpen, setAddDropdownOpen] = useState(false);
 
-  // Theme-aware colors — re-read on theme switch via MutationObserver
+  // Theme-aware colors - re-read on theme switch via MutationObserver
   const [colors, setColors] = useState(readModalColors);
 
   useEffect(() => {

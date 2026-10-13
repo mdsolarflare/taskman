@@ -42,7 +42,7 @@ function saveWorkspace(yaml: string): void {
   try {
     localStorage.setItem(STORAGE_KEY, yaml);
   } catch {
-    // quota exceeded — silently ignore
+    // quota exceeded - silently ignore
   }
 }
 
@@ -90,7 +90,7 @@ function App() {
       if (result && typeof result === "object" && "nodes" in result) {
         const graph = result as Graph;
         setState({ graph, yaml, loading: false, error: null });
-        // Persist workspace (unless it's the sample — user hasn't modified it yet)
+        // Persist workspace (unless it's the sample - user hasn't modified it yet)
         if (!isSample) {
           saveWorkspace(yaml);
         }
@@ -200,7 +200,7 @@ function App() {
   const handleFileOpen = async () => {
     setMenuOpen(false);
 
-    // Try FS Access API first — tracks handle for auto-save
+    // Try FS Access API first - tracks handle for auto-save
     const text = await autoSave.openFile();
     if (text) {
       await loadYaml(text);
@@ -276,7 +276,7 @@ function App() {
   const handleNodeAdd = useCallback((parentId: number = -1) => {
     setIsCreating(true);
     setAddParentId(parentId);
-    // Use a placeholder node — the actual ID is assigned by WASM on save
+    // Use a placeholder node - the actual ID is assigned by WASM on save
     setEditingNodeId(0);
   }, []);
 
@@ -309,7 +309,7 @@ function App() {
       let newGraph: Graph;
 
       if (isCreating) {
-        // Create mode — call addNode via WASM
+        // Create mode - call addNode via WASM
         const result = (await addNode(
           state.graph,
           addParentId,
@@ -322,7 +322,7 @@ function App() {
         )) as { graph: Graph; new_id: number };
         newGraph = result.graph;
       } else {
-        // Edit mode — mutate existing node in place
+        // Edit mode - mutate existing node in place
         newGraph = {
           ...state.graph,
           nodes: state.graph.nodes.map((n: GraphNode) =>
@@ -748,7 +748,7 @@ function App() {
             "Loading…"
           ) : state.graph ? (
             autoSave.fileName ? (
-              `${autoSave.fileName} — ${state.graph.nodes.length} nodes`
+              `${autoSave.fileName} - ${state.graph.nodes.length} nodes`
             ) : (
               `${state.graph.nodes.length} nodes (unsaved)`
             )

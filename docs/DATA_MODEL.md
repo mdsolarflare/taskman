@@ -19,7 +19,7 @@ All task data is stored in a single file (e.g., `tasks.yaml`) to ensure atomicit
 
 ```yaml
 nodes:
-  # All nodes use the same schema — leaf nodes simply omit optional fields
+  # All nodes use the same schema - leaf nodes simply omit optional fields
   - id: 1
     name: "Main Task"
     details: "Description of the main task"
@@ -38,7 +38,7 @@ nodes:
 
 ### Node
 
-Every node in the graph uses the same schema. Fields beyond `id` and `name` are optional — a "leaf" node simply omits `details`, `important`, and `subtask_ids`.
+Every node in the graph uses the same schema. Fields beyond `id` and `name` are optional - a "leaf" node simply omits `details`, `important`, and `subtask_ids`.
 
 - `id` (int): Unique identifier.
 - `name` (string, max 128 chars): Display name.

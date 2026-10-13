@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-25 | Updated: 2026-09-26 (Bug 5: SW update cycle)
 **Files:** `frontend/e2e/serve.ts`, `frontend/e2e/cdp.ts`, `frontend/e2e/e2e.test.ts`, `frontend/e2e/gen_icons.ts`, `frontend/public/sw.js`, `frontend/public/manifest.webmanifest`, `frontend/gen-revision.ts`, `frontend/src/hooks/usePWA.ts`, `frontend/src/main.tsx`, `frontend/src/App.tsx`, `frontend/public/index.html`
-**Status:** ✅ Resolved — 3 e2e tests pass in headless Edge; fmt/lint/test/clippy all exit 0
+**Status:** ✅ Resolved - 3 e2e tests pass in headless Edge; fmt/lint/test/clippy all exit 0
 
 ---
 
@@ -22,11 +22,11 @@ verified by real browser tests.
   `attachToTarget`, and `Runtime.evaluate` polling.
 - The prior session's handoff claimed the root cause was
   `Deno.stat(URL)` failing on Windows. Verified against Deno 2.9.7:
-  `Deno.stat(fileURL)` **works**. The claim was stale — the real bugs were
+  `Deno.stat(fileURL)` **works**. The claim was stale - the real bugs were
   elsewhere (below).
 - The deploy target is a GitHub Pages subpath (`/taskman/`), so every
   manifest/SW path is relative (`./`), and bundle filenames are stable
-  (no content hashes) — which makes SW-driven staleness the central design
+  (no content hashes) - which makes SW-driven staleness the central design
   risk.
 
 ---
@@ -37,7 +37,7 @@ verified by real browser tests.
 
 **Location:** `e2e/serve.ts` (pre-fix: L59-62)
 **Symptom:** every static file returned index.html's 853 bytes with
-`text/html` — the browser saw HTML where it expected `main.js`.
+`text/html` - the browser saw HTML where it expected `main.js`.
 
 A URL whose path starts with `/` resolves against the *origin*, not the
 base. On `file:///C:/.../public/`, `new URL("/dist/main.js", root)` became
@@ -66,7 +66,7 @@ rule ("never `new URL(rel, fileURL)` on Windows").
 with a perfectly healthy app (verified by a standalone probe page boot).
 
 `new URL("../public/", import.meta.url).pathname` on Windows yields
-`/C:/Users/...` — with a **colon** after the drive letter. The existing
+`/C:/Users/...` - with a **colon** after the drive letter. The existing
 regex `^\/([c-z])\/(.*)` matches MSYS form `/c/Users/...` but not
 `/C:/Users/...`, so PUBLIC stayed a mangled pathname, the server read
 nothing, and the page got "Not Found" HTML.
@@ -89,7 +89,7 @@ nothing, and the page got "Not Found" HTML.
 **Symptom:** every wait timed out at exactly its limit; the app was fine.
 
 `waitForFunction("document.querySelector('#root')?.children.length > 0")`
-wrapped the string as `(predicate.toString())()` — i.e. `(true)()` — a
+wrapped the string as `(predicate.toString())()` - i.e. `(true)()` - a
 TypeError inside the page. `Runtime.evaluate` returns the exception in
 `exceptionDetails` while `result.value` stays undefined, so the poll read
 `undefined` forever instead of failing loudly.
@@ -125,7 +125,7 @@ which fires `controllerchange` on a first install too.
 
 Also fixed during the work (not pre-existing): a `Runtime.evaluate` on
 `about:blank` taints the canvas (SecurityError on `toDataURL`) when
-rasterizing the PWA icons — the generator must `Page.navigate` to the
+rasterizing the PWA icons - the generator must `Page.navigate` to the
 served origin first.
 
 ### Bug 5 (post-demo, Windows): `importScripts`'d manifest changes never triggered a SW update
@@ -133,17 +133,17 @@ served origin first.
 **Location:** `public/sw.js` + `frontend/gen-revision.ts`
 **Symptom:** installed Windows PWA kept the pre-transparency icon
 (`#fffde7` corners in Brave's generated `Taskman.ico`) across multiple
-rebuilds — the shell was pinned to the first build the browser ever saw.
+rebuilds - the shell was pinned to the first build the browser ever saw.
 
 Chromium's SW update check byte-compares only the **main** script. Our
 `sw.js` was static; only `dist/cache-manifest.js` (pulled in via
-`importScripts`) changed per build — which the update check never sees. The
+`importScripts`) changed per build - which the update check never sees. The
 revision map existed precisely to defeat permanent caching, but without a
 changing main script it was dead code: updates never fired, old precaches
 never evicted.
 
 ```diff
-+// AUTO-STAMPED by gen-revision.ts — do not edit by hand.
++// AUTO-STAMPED by gen-revision.ts - do not edit by hand.
 +const BUILD_ID = "<sha256 buildId>";   // rewritten by every `deno task build`
 +
  importScripts("./dist/cache-manifest.js");
@@ -151,7 +151,7 @@ never evicted.
 ```
 
 `gen-revision.ts` now stamps the buildId into `sw.js` (whitespace-tolerant
-regex — `deno fmt` wraps the long line), the SW asserts stamp↔manifest
+regex - `deno fmt` wraps the long line), the SW asserts stamp↔manifest
 agreement at install, and the e2e suite asserts the stamp equals the
 manifest's buildId. Verified live: touch a shell file → rebuild → the
 browser installs the new worker → old cache evicted, new build serving.
@@ -162,15 +162,15 @@ browser installs the new worker → old cache evicted, new build serving.
 
 `frontend/e2e/e2e.test.ts` (CDP-driven, headless Edge, ~4s):
 
-1. **app boots, WASM ready, sample graph renders** — React mounts, the
+1. **app boots, WASM ready, sample graph renders** - React mounts, the
    WASM-built graph renders `svg > g` nodes, and the `.wasm` binary is
    fetchable.
-2. **sample graph persisted to localStorage matches the source file** —
+2. **sample graph persisted to localStorage matches the source file** -
    first-visit workspace write equals `public/sample.yaml` (polls past the
    app's 1s debounce).
-3. **service worker registers, precaches the shell, and serves offline** —
+3. **service worker registers, precaches the shell, and serves offline** -
    page is controlled; the stamped `sw.js` `BUILD_ID` must equal the
-   manifest's `buildId` (build integrity — guards the Bug 5 class); `caches`
+   manifest's `buildId` (build integrity - guards the Bug 5 class); `caches`
    contains `taskman-shell-<buildId>` read from the built
    `dist/cache-manifest.js`; ≥12 precached entries; then the server is cut
    (`goOffline()`) and a reload still mounts and renders from the SW cache.
@@ -187,7 +187,7 @@ module keeps its own `deno.json` task.
   `new URL(rel, root)` for request paths, and never trust `URL.pathname`
   without a colon-aware normalizer.** Three separate bugs in this suite were
   the same mistake in three costumes.
-- **`Runtime.evaluate` failures are silent** — exceptions land in
+- **`Runtime.evaluate` failures are silent** - exceptions land in
   `exceptionDetails` and `result.value` reads as undefined, so a broken
   predicate presents as a timeout, not an error. Probing with a standalone
   page-boot script (which passed) against the full harness (which failed)
@@ -197,9 +197,9 @@ module keeps its own `deno.json` task.
   `dist/cache-manifest.js`, cache named by `buildId`, stale caches deleted
   on activate) is necessary but NOT sufficient: Chromium byte-compares only
   the main `sw.js` on its update check, so the buildId must also be stamped
-  into `sw.js` itself or shell updates silently never fire (Bug 5 — the
+  into `sw.js` itself or shell updates silently never fire (Bug 5 - the
   revision map alone left installs pinned to their first build).
-- **`clients.claim()` fires `controllerchange` on first activation** — gate
+- **`clients.claim()` fires `controllerchange` on first activation** - gate
   any reload-on-controllerchange behind a user-approval flag.
 - **Handoff claims drift; verify against the live tool first.** `Deno.stat(URL)`
   worked on the installed Deno 2.9.7; the actual blockers (bugs 1-3) were

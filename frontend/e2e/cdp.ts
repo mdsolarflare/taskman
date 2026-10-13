@@ -1,7 +1,7 @@
 /**
  * Minimal CDP client.
  *
- * Uses the raw WebSocket API — no helper libraries. Handles:
+ * Uses the raw WebSocket API - no helper libraries. Handles:
  * - Connection lifecycle (open/close)
  * - Session-scoped messaging (Target.attachToTarget → sessionId → Runtime.evaluate)
  * - Preserving ordering by message id
@@ -35,7 +35,7 @@ export class CdpSession {
   private pending = new Map<number, (msg: CdpMessage) => void>();
   private sock: WebSocket;
 
-  /** Session-scoped id — set externally after Target.attachToTarget. */
+  /** Session-scoped id - set externally after Target.attachToTarget. */
   sessionId?: string;
 
   constructor(sock: WebSocket) {
@@ -54,7 +54,7 @@ export class CdpSession {
       if (typeof m.id === "number" && Number.isInteger(m.id)) {
         // Guard the dispatch: m.id is wire-controlled (the browser under
         // test crafts it), so only invoke an entry that is actually our
-        // own registered callback function — never an unexpected value.
+        // own registered callback function - never an unexpected value.
         const res = this.pending.get(m.id);
         if (typeof res === "function") {
           this.pending.delete(m.id);
@@ -80,7 +80,7 @@ export class CdpSession {
     predicate: string | (() => boolean),
     timeoutMs: number,
   ): Promise<void> {
-    // A string predicate is a bare expression ("x > 0"), NOT a function —
+    // A string predicate is a bare expression ("x > 0"), NOT a function -
     // wrapping it as `(...)()` evaluates e.g. `true()` → TypeError, and the
     // resulting exceptionDetails make every poll return undefined, so the
     // wait times out. Only function predicates get the call wrapper.

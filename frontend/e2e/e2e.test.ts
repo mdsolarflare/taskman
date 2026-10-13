@@ -1,12 +1,12 @@
 /**
- * E2E Test Suite — CDP-driven tests against the live app
+ * E2E Test Suite - CDP-driven tests against the live app
  *
  * Reliable because: fresh instance per test, waits on DOM state, no simulated
  * environments, no test frameworks beyond node:test.
  *
  * Environment overrides:
- *   E2E_PUBLIC     — root dir to serve (default: <this-file>/../public)
- *   E2E_CHROME_WS  — WebSocket URL of an existing browser to reuse
+ *   E2E_PUBLIC     - root dir to serve (default: <this-file>/../public)
+ *   E2E_CHROME_WS  - WebSocket URL of an existing browser to reuse
  */
 
 import { readFileSync } from "node:fs";
@@ -28,7 +28,7 @@ function toWindowsPath(p: string): string {
   // /c/Users/x/... → C:\Users\x\...   (MSYS/git-bash form)
   const m = p.match(/^\/([c-z])\/(.*)/i);
   if (m) return `${m[1].toUpperCase()}:${m[2].replace(/\//g, "\\")}`;
-  // /C:/Users/x/... → C:\Users\x\...  (file:// URL pathname form — the
+  // /C:/Users/x/... → C:\Users\x\...  (file:// URL pathname form - the
   // leading slash is an artifact of URL.pathname, not a real path segment)
   const w = p.match(/^\/([a-z]):\/(.*)/i);
   if (w) return `${w[1].toUpperCase()}:\\${w[2].replace(/\//g, "\\")}`;
@@ -39,7 +39,7 @@ const PUBLIC =
   process.env.E2E_PUBLIC ??
   toWindowsPath(new URL("../public/", import.meta.url).pathname);
 
-/** buildId from the build's cache-manifest.js — the SW cache name embeds it. */
+/** buildId from the build's cache-manifest.js - the SW cache name embeds it. */
 function cacheManifestBuildId(): string {
   const src = readFileSync(`${PUBLIC}\\dist\\cache-manifest.js`, "utf8");
   const m = src.match(/self\.CACHE_MANIFEST = (\{[\s\S]*?\});/);
@@ -49,7 +49,7 @@ function cacheManifestBuildId(): string {
 
 /**
  * The buildId stamped into the SW main script. Chromium only byte-compares
- * the MAIN sw.js on its update check — if this stamp is missing or stale,
+ * the MAIN sw.js on its update check - if this stamp is missing or stale,
  * a changed shell never triggers an update and installed apps serve the
  * old build forever (the bug this assertion guards against).
  */
@@ -58,7 +58,7 @@ function stampedSwBuildId(): string {
   const m = src.match(/const BUILD_ID =\s*"([0-9a-f]{64})"/);
   if (!m) {
     throw new Error(
-      "sw.js has no stamped BUILD_ID — run `pnpm run build` (gen-revision stamps it)",
+      "sw.js has no stamped BUILD_ID - run `pnpm run build` (gen-revision stamps it)",
     );
   }
   return m[1];
@@ -95,7 +95,7 @@ async function startTestSession(): Promise<TestSession> {
     close: async () => {
       await close();
       await server.close();
-      // If we spawned our own Edge we leave it running — the profile dir is
+      // If we spawned our own Edge we leave it running - the profile dir is
       // trade-off for 0-dependency test isolation (reuse is safe).
     },
     goOffline: () => server.goOffline(),
@@ -161,7 +161,7 @@ async function launchEdgeHeadless(): Promise<number> {
 
   // Edge is intentionally left running after the tests (profile-dir reuse
   // trade-off), but a Node child handle with a piped stderr holds the
-  // event loop open — the runner would hang after reporting results.
+  // event loop open - the runner would hang after reporting results.
   // unref() lets Node exit while data events still flow during the poll.
   proc.unref();
   proc.stderr!.unref();
@@ -207,7 +207,7 @@ test("app boots, WASM ready, sample graph renders", async () => {
     await waitForApp(conn, { wasmReady: true });
 
     // Auto-save environment guard: the e2e origin (http://127.0.0.1:<port>)
-    // must expose the File System Access API pickers — localhost-class
+    // must expose the File System Access API pickers - localhost-class
     // origins are secure contexts. If this ever fails, serving changed in a
     // way that broke the secure context and auto-save is silently dead.
     const fsaOk = (await conn.evaluate(
@@ -215,14 +215,14 @@ test("app boots, WASM ready, sample graph renders", async () => {
     )) as boolean;
     assert(
       fsaOk,
-      "File System Access API unavailable at the e2e origin — " +
+      "File System Access API unavailable at the e2e origin - " +
         "auto-save would be broken by an insecure serving context",
     );
 
     const nodeCount = (await conn.evaluate(
       "document.querySelectorAll('svg > g').length",
     )) as number;
-    assert(nodeCount > 0, "no <g> elements in the SVG — no graph rendered");
+    assert(nodeCount > 0, "no <g> elements in the SVG - no graph rendered");
 
     const wasmAvailable = (await conn.evaluate(
       "(async () => { const r = await fetch('./dist/ichor_bg.wasm', {method: 'HEAD'}); return r.ok; })()",
@@ -242,7 +242,7 @@ test("sample graph persisted to localStorage matches the source file", async () 
       "fetch('./sample.yaml').then(r => r.text())",
     )) as string;
 
-    // App persists the workspace to localStorage on a 1-second debounce —
+    // App persists the workspace to localStorage on a 1-second debounce -
     // wait until the key shows up (up to 3s), then compare.
     let fromStorage: string | null = null;
     const deadline = Date.now() + 3000;
@@ -271,7 +271,7 @@ test("service worker registers, precaches the shell, and serves offline", async 
 
     // Wait for the SW to be active AND controlling the page. `ready`
     // resolves on activation, but control only transfers after
-    // clients.claim() lands — poll for the controller instead of a
+    // clients.claim() lands - poll for the controller instead of a
     // single-shot check (races on first install).
     const controlled = (await conn.evaluate(
       "(async () => { " +
@@ -293,7 +293,7 @@ test("service worker registers, precaches the shell, and serves offline", async 
     assertEquals(
       stampedSwBuildId(),
       buildId,
-      "sw.js stamped BUILD_ID does not match dist/cache-manifest.js — shell updates are broken; run `pnpm run build`",
+      "sw.js stamped BUILD_ID does not match dist/cache-manifest.js - shell updates are broken; run `pnpm run build`",
     );
     const cacheKeys = (await conn.evaluate(
       "(async () => { " +
@@ -335,7 +335,7 @@ test("service worker registers, precaches the shell, and serves offline", async 
 });
 
 // ---------------------------------------------------------------------------
-// Custom theme — regression: saving the editor used to persist the default
+// Custom theme - regression: saving the editor used to persist the default
 // palette (not the typed colors), because the commit path read a stale
 // hook-side draft instead of the modal's draft it was handed.
 // ---------------------------------------------------------------------------
@@ -345,7 +345,7 @@ test("custom theme: editor colors are applied, persisted, and survive reload", a
   try {
     await waitForApp(conn, { wasmReady: true });
 
-    // Start from clean theme state — a port collision with an earlier run
+    // Start from clean theme state - a port collision with an earlier run
     // could otherwise leave stale theme keys behind.
     await conn.evaluate("localStorage.clear()");
     await conn.evaluate("location.reload()");
@@ -391,7 +391,7 @@ test("custom theme: editor colors are applied, persisted, and survive reload", a
     })()`)) as string;
     assert(setOk === "ok", `could not type into the Accent row: ${setOk}`);
 
-    // Save — the exact flow that used to persist the default palette
+    // Save - the exact flow that used to persist the default palette
     const saved = (await conn.evaluate(`(() => {
       const b = [...document.querySelectorAll('button')].find(
         (x) => x.textContent.trim() === 'Save',
@@ -402,7 +402,7 @@ test("custom theme: editor colors are applied, persisted, and survive reload", a
     })()`)) as boolean;
     assert(saved, "Save button not found");
 
-    // The modal closes on save — wait for the re-render so state settles.
+    // The modal closes on save - wait for the re-render so state settles.
     await conn.waitForFunction(
       `![...document.querySelectorAll('h2')].some((h) => h.textContent === 'Theme')`,
       5000,
@@ -430,7 +430,7 @@ test("custom theme: editor colors are applied, persisted, and survive reload", a
     );
     assert(
       afterSave.accent === "#ab05cd",
-      `--accent computed to ${afterSave.accent}, expected the typed #ab05cd — ` +
+      `--accent computed to ${afterSave.accent}, expected the typed #ab05cd - ` +
         `the custom theme saved the wrong palette`,
     );
     assert(
@@ -450,7 +450,7 @@ test("custom theme: editor colors are applied, persisted, and survive reload", a
       "injected style tag does not carry the typed accent",
     );
 
-    // Reload — the custom theme must come back exactly as saved
+    // Reload - the custom theme must come back exactly as saved
     await conn.evaluate("location.reload()");
     await waitForApp(conn, { wasmReady: true });
     await conn.waitForFunction(

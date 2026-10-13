@@ -1,5 +1,5 @@
 /**
- * Graph Layout Engine — Reingold-Tilford hierarchical tree layout.
+ * Graph Layout Engine - Reingold-Tilford hierarchical tree layout.
  *
  * Reingold, E. M.; Tilford, J. S. (1991), "Tidier Drawings of Trees",
  * Software: Practice and Experience, 21(2): 95-113.
@@ -19,7 +19,7 @@
  *   1. firstWalk (bottom-up): compute relative positions, accumulate sibling shifts
  *   2. applyShifts (top-down): propagate shifts and finalize absolute positions
  *
- * This guarantees zero collisions with tight, deterministic spacing —
+ * This guarantees zero collisions with tight, deterministic spacing -
  * no magic multipliers needed.
  */
 
@@ -184,7 +184,7 @@ export class LayoutEngine {
    *   3. Center parent on its children's true positions
    *   4. Cache subtree bounds relative to parent frame
    *
-   * `ancestorShift` is the accumulated shift from all ancestors — used to compute
+   * `ancestorShift` is the accumulated shift from all ancestors - used to compute
    * true (absolute) positions of children for spacing and centering.
    */
   private firstWalk(
@@ -312,7 +312,7 @@ export class LayoutEngine {
   /**
    * Propagate accumulated shifts top-down and finalize absolute positions (O(n)).
    *
-   * Shifts are additive constants — applying them preserves all relative
+   * Shifts are additive constants - applying them preserves all relative
    * positions computed during firstWalk, so no re-centering is needed.
    */
   private applyShifts(nodeId: number, ancestorAccumShift: number): void {

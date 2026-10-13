@@ -44,7 +44,7 @@ function loadTheme(): ThemeId | "custom" {
     if (raw) {
       const valid = THEMES.find((t) => t.id === raw);
       if (valid) return valid.id;
-      // A persisted "custom" is only valid while its color map survives —
+      // A persisted "custom" is only valid while its color map survives -
       // corrupt/missing data falls back to the default theme instead of
       // landing on data-theme="custom" with nothing injected behind it.
       if (raw === "custom" && loadCustomColors() !== null) return "custom";
@@ -215,7 +215,7 @@ export function useTheme(): UseThemeReturn {
   const switchTheme = useCallback((id: ThemeId | "custom") => {
     if (id === "custom") {
       const custom = loadCustomColors();
-      // Without saved colors there is nothing to activate — stay on the
+      // Without saved colors there is nothing to activate - stay on the
       // current theme rather than dropping to the :root fallback while
       // the UI claims "Custom".
       if (!custom) return;
@@ -234,7 +234,7 @@ export function useTheme(): UseThemeReturn {
    * Commit a color map as the custom theme and activate it. The editable
    * draft lives in ThemeModal; this hook only persists and applies what it
    * is handed. Committing a hook-side draft is how the "custom theme saves
-   * the default palette" bug arose — do not reintroduce one.
+   * the default palette" bug arose - do not reintroduce one.
    */
   const saveCustom = useCallback((colors: ColorMap) => {
     saveCustomColors(colors);
