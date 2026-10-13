@@ -184,9 +184,7 @@ Constants and pure-function logic. `getThemeLabel` was moved from the React hook
 
 ## Coverage Gaps (Updated)
 
-### No Tests At All (Components)
-
-The following React components have zero test coverage. Testing them would require JSDOM + react-testing-library in Deno - non-trivial setup per the ROADMAP:
+The following React components have zero test coverage. Testing them would require JSDOM + react-testing-library in Deno (WE CAN REVISIT THIS NOW THAT WE ARE ON PNPM) non-trivial setup per the ROADMAP:
 
 - `GraphRenderer`
 - `EditNodeModal`
