@@ -11,7 +11,7 @@ import {
 } from "./wasm.ts";
 import ThemeModal from "./components/ThemeModal.tsx";
 import NavigationPanel from "./components/NavigationPanel.tsx";
-import { useTheme } from "./hooks/useTheme.ts";
+import { readCurrentColors, useTheme } from "./hooks/useTheme.ts";
 import { useAutoSave } from "./hooks/useAutoSave.ts";
 import { usePWA } from "./hooks/usePWA.ts";
 import "./themes.css";
@@ -1225,11 +1225,11 @@ function App() {
       <ThemeModal
         isOpen={showThemeModal}
         onClose={() => setShowThemeModal(false)}
-        onSaveCustom={theme.saveDraft}
+        onSaveCustom={theme.saveCustom}
         onSwitchTheme={theme.switchTheme}
         activeTheme={theme.activeTheme}
         hasCustom={theme.hasCustom}
-        readCurrentColors={() => theme.currentColors}
+        readCurrentColors={readCurrentColors}
       />
 
       {/* ─── PWA update toast ─── */}

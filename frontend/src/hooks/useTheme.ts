@@ -5,7 +5,7 @@
  * - 5 named themes persisted via localStorage ("taskman_theme")
  * - Cycling through themes
  * - Reading current theme's CSS variable values (for the manual editor)
- * - Draft + save/cancel flow for manual color overrides
+ * - Committing the custom theme (the editable draft lives in ThemeModal)
  * - Dynamic <style> injection for custom (manual) theme
  */
 
@@ -44,7 +44,10 @@ function loadTheme(): ThemeId | "custom" {
     if (raw) {
       const valid = THEMES.find((t) => t.id === raw);
       if (valid) return valid.id;
-      if (raw === "custom") return "custom";
+      // A persisted "custom" is only valid while its color map survives —
+      // corrupt/missing data falls back to the default theme instead of
+      // landing on data-theme="custom" with nothing injected behind it.
+      if (raw === "custom" && loadCustomColors() !== null) return "custom";
     }
   } catch {
     /* noop */
@@ -87,7 +90,7 @@ function saveCustomColors(colors: ColorMap): void {
 /**
  * Read the current computed values of all 12 CSS variables from <html>.
  */
-function readCurrentColors(): ColorMap {
+export function readCurrentColors(): ColorMap {
   const root = document.documentElement;
   const computed = getComputedStyle(root);
   const map: ColorMap = {} as ColorMap;
@@ -154,25 +157,12 @@ interface UseThemeReturn {
   /** Current CSS variable values (live read from computed style) */
   currentColors: ColorMap;
 
-  /** Draft colors for the manual editor (mutable) */
-  draftColors: ColorMap;
-
-  /** Open the manual editor with current colors loaded as draft */
-  openEditor: () => void;
-
-  /** Commit draft colors as a custom theme and activate it */
-  saveDraft: () => void;
-
-  /** Discard draft changes and reload current colors */
-  cancelDraft: () => void;
-
-  /** Set a single draft color value (called from input onChange) */
-  setDraftColor: (variable: ColorVariable, value: string) => void;
+  /** Commit a color map as the custom theme and activate it */
+  saveCustom: (colors: ColorMap) => void;
 }
 
 export function useTheme(): UseThemeReturn {
   const [activeTheme, setActiveTheme] = useState<ThemeId | "custom">(loadTheme);
-  const [draftColors, setDraftColors] = useState<ColorMap>(readCurrentColors);
 
   const initialized = useRef(false);
 
@@ -223,42 +213,37 @@ export function useTheme(): UseThemeReturn {
   }, []);
 
   const switchTheme = useCallback((id: ThemeId | "custom") => {
-    saveTheme(id);
-    applyThemeToDom(id);
     if (id === "custom") {
       const custom = loadCustomColors();
-      if (custom) {
-        injectCustomStyle(custom);
-      }
+      // Without saved colors there is nothing to activate — stay on the
+      // current theme rather than dropping to the :root fallback while
+      // the UI claims "Custom".
+      if (!custom) return;
+      saveTheme("custom");
+      applyThemeToDom("custom");
+      injectCustomStyle(custom);
     } else {
+      saveTheme(id);
+      applyThemeToDom(id);
       removeCustomStyle();
     }
     setActiveTheme(id);
   }, []);
 
-  const openEditor = useCallback(() => {
-    setDraftColors(readCurrentColors());
-  }, []);
-
-  const saveDraft = useCallback(() => {
-    saveCustomColors(draftColors);
-    injectCustomStyle(draftColors);
+  /**
+   * Commit a color map as the custom theme and activate it. The editable
+   * draft lives in ThemeModal; this hook only persists and applies what it
+   * is handed. Committing a hook-side draft is how the "custom theme saves
+   * the default palette" bug arose — do not reintroduce one.
+   */
+  const saveCustom = useCallback((colors: ColorMap) => {
+    saveCustomColors(colors);
+    injectCustomStyle(colors);
     applyThemeToDom("custom");
     saveTheme("custom");
     setActiveTheme("custom");
-    setCurrentColors(draftColors);
-  }, [draftColors]);
-
-  const cancelDraft = useCallback(() => {
-    setDraftColors(readCurrentColors());
+    setCurrentColors(colors);
   }, []);
-
-  const setDraftColor = useCallback(
-    (variable: ColorVariable, value: string) => {
-      setDraftColors((prev) => ({ ...prev, [variable]: value }));
-    },
-    [],
-  );
 
   return {
     activeTheme,
@@ -268,10 +253,6 @@ export function useTheme(): UseThemeReturn {
     switchTheme,
     hasCustom,
     currentColors,
-    draftColors,
-    openEditor,
-    saveDraft,
-    cancelDraft,
-    setDraftColor,
+    saveCustom,
   };
 }
