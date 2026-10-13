@@ -35,7 +35,7 @@ export interface GraphNode {
   /** Flag marking the node as completed (optional) */
   done?: boolean;
 
-  /** IDs of child nodes (optional — absent on leaf nodes) */
+  /** IDs of child nodes (optional - absent on leaf nodes) */
   subtask_ids?: number[];
 
   /** IDs of parent nodes, computed at graph build time */
@@ -76,10 +76,10 @@ export interface Graph {
  * Layout algorithm configuration for the graph renderer.
  */
 export interface LayoutConfig {
-  /** Horizontal spacing between parent and child columns (pixels) — static so bezier curves have predictable room */
+  /** Horizontal spacing between parent and child columns (pixels) - static so bezier curves have predictable room */
   horizontalSpacing: number;
 
-  /** Base vertical gap between siblings (pixels) — actual gap scales with subtree height at each level */
+  /** Base vertical gap between siblings (pixels) - actual gap scales with subtree height at each level */
   verticalSpacing: number;
 
   /** Maximum width of the graph before forcing vertical layout */

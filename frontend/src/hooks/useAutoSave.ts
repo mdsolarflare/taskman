@@ -166,7 +166,7 @@ function loadAutoSavePreference(): boolean {
     const raw = localStorage.getItem(AUTO_SAVE_STORAGE_KEY);
     if (raw !== null) return raw === "1";
   } catch {
-    /* quota exceeded — default on */
+    /* quota exceeded - default on */
   }
   return true;
 }
@@ -196,7 +196,7 @@ export interface AutoSaveDiagnosis {
 }
 
 /**
- * Map environment facts to a blocked-cause + remediation. Pure — unit
+ * Map environment facts to a blocked-cause + remediation. Pure - unit
  * tested. Picker presence implies a usable context (browsers only expose
  * the pickers in secure contexts), so it is checked first.
  */
@@ -214,7 +214,7 @@ export function deriveAutoSaveDiagnosis(
       supported: false,
       reason: "insecure-context",
       remediation:
-        "Auto-save needs a secure context — open the app at http://localhost:<port> " +
+        "Auto-save needs a secure context - open the app at http://localhost:<port> " +
         "(localhost counts as secure; 127.0.0.1 and LAN-IP hosts do not) or serve over https.",
     };
   }
@@ -223,7 +223,7 @@ export function deriveAutoSaveDiagnosis(
       supported: false,
       reason: "flags-or-version",
       remediation:
-        "This Chromium build does not expose the File System Access API — check " +
+        "This Chromium build does not expose the File System Access API - check " +
         "chrome://flags/#file-system-access-api (Edge: edge://flags) or update the browser.",
     };
   }
@@ -231,7 +231,7 @@ export function deriveAutoSaveDiagnosis(
     supported: false,
     reason: "browser-unsupported",
     remediation:
-      "This browser has no File System Access API (e.g. Firefox/Safari) — " +
+      "This browser has no File System Access API (e.g. Firefox/Safari) - " +
       "Save As falls back to a download; auto-save to a tracked file is unavailable.",
   };
 }
@@ -244,7 +244,7 @@ function isAutoSaveDebugEnabled(): boolean {
     if (typeof localStorage === "undefined") return false; // unit tests
     if (localStorage.getItem(AUTO_SAVE_DEBUG_KEY) === "1") return true;
   } catch {
-    /* storage blocked — fall through */
+    /* storage blocked - fall through */
   }
   try {
     return new URLSearchParams(location.search).get("debug") === "autosave";
@@ -305,7 +305,7 @@ export function useAutoSave(): UseAutoSaveReturn {
     typeof (window as unknown as FsWindow).showSaveFilePicker === "function";
   const hasOpenPicker =
     typeof (window as unknown as FsWindow).showOpenFilePicker === "function";
-  // Environment facts never change during a session — memoize once.
+  // Environment facts never change during a session - memoize once.
   const diagnosis = useMemo(
     () =>
       deriveAutoSaveDiagnosis(
@@ -322,7 +322,7 @@ export function useAutoSave(): UseAutoSaveReturn {
   const debounceTimer = useRef<number | null>(null);
   const pendingYamlRef = useRef<string | null>(null);
 
-  // Derived save status — overrides ("saving" / "error") take precedence,
+  // Derived save status - overrides ("saving" / "error") take precedence,
   // otherwise fall back to the computed base value.
   const saveStatus: SaveStatus =
     statusOverride ?? deriveBaseStatus(supported, autoSaveEnabled, hasHandle);
@@ -365,7 +365,7 @@ export function useAutoSave(): UseAutoSaveReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // scheduleSave — called by App after each CRUD action with the new YAML
+  // scheduleSave - called by App after each CRUD action with the new YAML
   // ---------------------------------------------------------------------------
 
   const scheduleSave = useCallback(
@@ -426,7 +426,7 @@ export function useAutoSave(): UseAutoSaveReturn {
     console.log(
       "supported:",
       supported,
-      supported ? "yes" : "no — falling back to legacy I/O",
+      supported ? "yes" : "no - falling back to legacy I/O",
     );
 
     // Check if the functions exist under a different casing or are shadowed
@@ -483,7 +483,7 @@ export function useAutoSave(): UseAutoSaveReturn {
         record = await loadHandleFromDB();
       } catch (err) {
         console.warn(
-          `[autoSave] IndexedDB unreadable at ${location.origin} — cannot restore file association.`,
+          `[autoSave] IndexedDB unreadable at ${location.origin} - cannot restore file association.`,
           err instanceof Error ? err.message : err,
         );
         return;
@@ -492,12 +492,12 @@ export function useAutoSave(): UseAutoSaveReturn {
         console.info(
           `[autoSave] No file handle in IndexedDB at origin ${location.origin}. ` +
             `If auto-save was set up at a different origin (127.0.0.1 vs localhost, ` +
-            `or a different port), the association lives there — re-link via Open / Save As.`,
+            `or a different port), the association lives there - re-link via Open / Save As.`,
         );
         return;
       }
 
-      // Permission check — request if needed
+      // Permission check - request if needed
       const perm = await record.handle
         .queryPermission({ mode: "readwrite" })
         .catch(() => null);
@@ -546,7 +546,7 @@ export function useAutoSave(): UseAutoSaveReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Save As — triggers file picker, persists handle, writes initial content
+  // Save As - triggers file picker, persists handle, writes initial content
   // Falls back to legacy download if showSaveFilePicker is unavailable.
   // ---------------------------------------------------------------------------
 
@@ -560,7 +560,7 @@ export function useAutoSave(): UseAutoSaveReturn {
       // Fallback: legacy download for browsers that only support
       // showOpenFilePicker but not showSaveFilePicker
       console.warn(
-        "[autoSave] showSaveFilePicker unavailable — falling back to download",
+        "[autoSave] showSaveFilePicker unavailable - falling back to download",
       );
       downloadYamlFallback(yaml);
       return;
@@ -590,7 +590,7 @@ export function useAutoSave(): UseAutoSaveReturn {
       setFileName(handle.name);
       setStatusOverride(null);
     } catch (err) {
-      // User cancelled — silently ignore
+      // User cancelled - silently ignore
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("[autoSave] Save As failed:", err);
       throw err; // Propagate to caller so App can display error
@@ -598,7 +598,7 @@ export function useAutoSave(): UseAutoSaveReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Open File — uses showOpenFilePicker to get a handle, reads file content,
+  // Open File - uses showOpenFilePicker to get a handle, reads file content,
   // and persists the handle for auto-save tracking. Returns the file text.
   // ---------------------------------------------------------------------------
 
@@ -608,7 +608,7 @@ export function useAutoSave(): UseAutoSaveReturn {
 
     if (!hasOpenPicker) {
       console.warn(
-        "[autoSave] showOpenFilePicker unavailable — returning null",
+        "[autoSave] showOpenFilePicker unavailable - returning null",
       );
       return null;
     }
@@ -642,7 +642,7 @@ export function useAutoSave(): UseAutoSaveReturn {
 
       return text;
     } catch (err) {
-      // User cancelled — silently ignore
+      // User cancelled - silently ignore
       if (err instanceof Error && err.name === "AbortError") return null;
       console.error("[autoSave] Open File failed:", err);
       throw err;
@@ -693,7 +693,7 @@ export function useAutoSave(): UseAutoSaveReturn {
   );
 
   // ---------------------------------------------------------------------------
-  // Tooltip — single string for both status dot and toggle
+  // Tooltip - single string for both status dot and toggle
   // ---------------------------------------------------------------------------
 
   const tooltip = (() => {
@@ -703,7 +703,7 @@ export function useAutoSave(): UseAutoSaveReturn {
     if (saveStatus === "error") {
       return lastError
         ? `Auto-save error: ${lastError}`
-        : "Auto-save error — see the browser console ([autoSave] logs) for details.";
+        : "Auto-save error - see the browser console ([autoSave] logs) for details.";
     }
     if (!hasHandle) {
       return "Auto-save is not available yet. Use Open / Save As to track a file first.";

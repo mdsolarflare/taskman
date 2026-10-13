@@ -7,7 +7,7 @@ Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, 
 | Module | File | Count | What it covers |
 |--------|------|-------|----------------|
 | **Rust Graph Logic** | `ichor/src/graph/mod.rs` | 47 tests | CRUD operations, YAML parsing edge cases, GraphBuilder conversion, adjacency invariants, delete+create sequencing, concurrent mutations |
-| **Layout Engine** | `frontend/src/engine/__tests__/layout.test.ts` | 21 tests | Tree layout algorithm — positioning, spacing, overlap avoidance, empty graph, mixed collapse states, DAG shared children, re-computation |
+| **Layout Engine** | `frontend/src/engine/__tests__/layout.test.ts` | 21 tests | Tree layout algorithm - positioning, spacing, overlap avoidance, empty graph, mixed collapse states, DAG shared children, re-computation |
 | **useAutoSave Hook** | `frontend/src/hooks/__tests__/useAutoSave.test.ts` | 8 tests | Pure helper `deriveBaseStatus()` only (all 8 boolean input combos) |
 | **useTheme Logic** | `frontend/src/hooks/__tests__/useTheme.test.ts` | 13 tests | Theme configuration constants, data integrity, `getThemeLabel` pure function, cycling order |
 
@@ -15,7 +15,7 @@ Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, 
 
 ---
 
-## Rust Graph Logic (`ichor/src/graph/mod.rs`) — 47 Tests
+## Rust Graph Logic (`ichor/src/graph/mod.rs`) - 47 Tests
 
 ### Delete (8 tests)
 
@@ -25,12 +25,12 @@ Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, 
 | 2 | `test_delete_root_node_rejected` | Deleting a root node returns an error with "Cannot delete root node" message. |
 | 3 | `test_delete_nonexistent_node` | Deleting a non-existent ID (999) returns an error containing "not found". |
 | 4 | `test_delete_remapping_children_to_all_parents` | DAG diamond pattern: deleting C (shared by A and B) remaps D to both A and B. Verifies no duplicate parent references. |
-| 5 | `test_delete_node_with_multiple_parents` | Complex DAG where a deleted node's children already have other parents — verifies deduplication of parent/subtask references. |
+| 5 | `test_delete_node_with_multiple_parents` | Complex DAG where a deleted node's children already have other parents - verifies deduplication of parent/subtask references. |
 | 6 | `test_delete_leaf_node` | Deleting a leaf removes it from the graph and cleans up the parent's subtask_ids and adjacency lists. |
 | 7 | `test_delete_middle_of_deep_chain` | Deleting C in chain A→B→C→D→E remaps D to B, preserving the chain structure. |
 | 8 | `test_delete_updates_adjacency_correctly` | Deleting a node with multiple children (A→B→{C,D}) remaps both children to A and fully removes B from adjacency/reverse_adjacency maps. |
 
-### Create / Add Node (9 tests) — +3 new, 6 enhanced
+### Create / Add Node (9 tests) - +3 new, 6 enhanced
 
 | # | Test Name | What it verifies |
 |---|-----------|-----------------|
@@ -40,9 +40,9 @@ Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, 
 | 12 | `test_create_node_fails_with_invalid_parent` | Adding under non-existent parent ID returns an error mentioning the bad ID; graph is unchanged. |
 | 13 | `test_create_node_auto_id_skips_existing_ids` | Auto-ID uses max+1 (not gap-filling). With IDs {1, 3}, new node gets 4. |
 | 14 | `test_create_node_with_subtask_ids` | Creating a node with explicit subtask_ids updates reverse_adjacency for the children. **Also verifies the new node's own adjacency entry.** |
-| 15 | `test_create_node_with_done_field` *(new)* | Creates nodes with `done=true`, `done=false`, and `done=None` — verifies all three states persist correctly on create. |
+| 15 | `test_create_node_with_done_field` *(new)* | Creates nodes with `done=true`, `done=false`, and `done=None` - verifies all three states persist correctly on create. |
 | 16 | `test_create_multiple_roots` *(new)* | Adds two root nodes via `add_node` and verifies both are in `root_ids` with no parents. |
-| 17 | `test_create_with_nonexistent_subtask_ids` *(new)* | Documents that `add_node` does NOT validate subtask targets — it blindly updates reverse_adjacency even for non-existent IDs (intentional for YAML out-of-order node creation). |
+| 17 | `test_create_with_nonexistent_subtask_ids` *(new)* | Documents that `add_node` does NOT validate subtask targets - it blindly updates reverse_adjacency even for non-existent IDs (intentional for YAML out-of-order node creation). |
 
 ### Read (6 tests)
 
@@ -55,13 +55,13 @@ Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, 
 | 22 | `test_read_get_parents` | `get_parents()` returns both parents for a shared child in a DAG. |
 | 23 | `test_read_get_parents_root` | `get_parents()` on a root returns empty list. |
 
-### Update (3 tests) — +1 new, 2 enhanced
+### Update (3 tests) - +1 new, 2 enhanced
 
 | # | Test Name | What it verifies |
 |---|-----------|-----------------|
 | 24 | `test_update_node_fields` | Direct mutation of **all scalar fields** (name, details, deadline, important, done, collapsed) via `get_node_mut()` persists correctly. *(was: name, details, important only)* |
 | 25 | `test_update_node_add_subtask_field` | Mutating subtask_ids field is writable. **Asserts adjacency is NOT auto-updated** (was: comment-only). |
-| 26 | `test_update_mutation_then_delete_uses_stale_adjacency` *(new)* | Raw-mutate a node's `subtask_ids`, then delete another child — confirms `delete_node` operates on adjacency maps, not mutated fields. Documents the dangerous interaction between raw mutation and graph operations. |
+| 26 | `test_update_mutation_then_delete_uses_stale_adjacency` *(new)* | Raw-mutate a node's `subtask_ids`, then delete another child - confirms `delete_node` operates on adjacency maps, not mutated fields. Documents the dangerous interaction between raw mutation and graph operations. |
 
 ### Serialization / Roundtrip (3 tests)
 
@@ -71,7 +71,7 @@ Generated: 2026-06-04 | Updated: 2026-06-05 (Layout edge cases, useTheme logic, 
 | 28 | `test_yaml_roundtrip_preserves_node_data` | YAML → Graph → YAML roundtrip preserves all fields (name, details, deadline, important, subtask_ids). |
 | 29 | `test_done_field_roundtrip` | The `done` field parses correctly (true/false/None) and survives a full YAML roundtrip. |
 
-### GraphBuilder Conversion (4 tests) — new section
+### GraphBuilder Conversion (4 tests) - new section
 
 Direct unit tests for `GraphBuilder::nodes_from_yaml()` conversion logic:
 
@@ -82,25 +82,25 @@ Direct unit tests for `GraphBuilder::nodes_from_yaml()` conversion logic:
 | 32 | `test_nodes_from_yaml_collapsed_always_defaults_to_false` | Regardless of input, GraphNode gets `collapsed: Some(false)` |
 | 33 | `test_nodes_from_yaml_all_fields_mapped` | Full Node with every field (id, name, details, deadline, important, done) maps to matching GraphNode fields; parent_ids is always None from YAML |
 
-### YAML Parsing Edge Cases — Error Handling (5 tests) — new section
+### YAML Parsing Edge Cases - Error Handling (5 tests) - new section
 
 | # | Test Name | What it verifies |
 |---|-----------|-----------------|
 | 34 | `test_yaml_parse_empty_string_fails` | `""` → parse error (not panic, not empty graph) |
-| 35 | `test_yaml_parse_missing_nodes_key_fails` | `{garbage: true}` → parse error — `nodes:` key is required |
+| 35 | `test_yaml_parse_missing_nodes_key_fails` | `{garbage: true}` → parse error - `nodes:` key is required |
 | 36 | `test_yaml_parse_malformed_fails` | Bad indentation / unclosed structures → parse error with descriptive message |
-| 37 | `test_yaml_parse_empty_nodes_list_succeeds` | `nodes: []` → valid empty graph (0 nodes, 0 roots) — valid "new project" state |
+| 37 | `test_yaml_parse_empty_nodes_list_succeeds` | `nodes: []` → valid empty graph (0 nodes, 0 roots) - valid "new project" state |
 | 38 | `test_yaml_parse_node_missing_name_fails` | Node without `name` field → parse error (required by struct) |
 
-### YAML Parsing Edge Cases — Data Integrity (3 tests)
+### YAML Parsing Edge Cases - Data Integrity (3 tests)
 
 | # | Test Name | What it verifies |
 |---|-----------|-----------------|
-| 39 | `test_yaml_parse_duplicate_node_ids` | Two nodes with same `id` — serde allows this; both in parsed list (dedup is graph layer's job, not parser's) |
-| 40 | `test_yaml_parse_subtask_refs_nonexistent_node` | Node references subtask ID that doesn't exist — parses fine (validation belongs to graph layer) |
-| 41 | `test_yaml_parse_large_subtask_list` | Node with 100 subtask_ids — no truncation or overflow |
+| 39 | `test_yaml_parse_duplicate_node_ids` | Two nodes with same `id` - serde allows this; both in parsed list (dedup is graph layer's job, not parser's) |
+| 40 | `test_yaml_parse_subtask_refs_nonexistent_node` | Node references subtask ID that doesn't exist - parses fine (validation belongs to graph layer) |
+| 41 | `test_yaml_parse_large_subtask_list` | Node with 100 subtask_ids - no truncation or overflow |
 
-### Delete + Create Sequencing (3 tests) — new section
+### Delete + Create Sequencing (3 tests) - new section
 
 Compound operations that verify graph integrity after delete followed by create:
 
@@ -109,11 +109,11 @@ Compound operations that verify graph integrity after delete followed by create:
 | 42 | `test_delete_child_then_add_replacement` *(new)* | Delete child B from parent A, then add replacement D under A. Verifies no ghost references to B in adjacency or subtask_ids; C and D both present. |
 | 43 | `test_delete_and_create_in_diamond` *(new)* | Diamond DAG (Root→{A,B}→D): delete A, verify D remapped to Root via reverse_adjacency, then add E under D. Confirms adjacency stays consistent through compound ops. |
 | 44 | `test_add_node_after_delete_preserves_root_ids` *(new)* | Delete only child of a root → root_ids unchanged → add new child → root_ids still `[1]`. Verifies bidirectional links (parent→child, child→parent) are correct after the sequence. |
-| 45 | `test_delete_with_concurrent_field_mutations` *(new)* | Raw-mutate A's subtask_ids to include a phantom D(4), then delete B(2). Confirms adjacency operates on maps not mutated fields — phantom D never appears in adjacency, deleted B is cleaned from both adjacency and the raw-mutated field. Documents that stale mutations are NOT self-healing (phantom D persists in the field but not in graph structure). |
+| 45 | `test_delete_with_concurrent_field_mutations` *(new)* | Raw-mutate A's subtask_ids to include a phantom D(4), then delete B(2). Confirms adjacency operates on maps not mutated fields - phantom D never appears in adjacency, deleted B is cleaned from both adjacency and the raw-mutated field. Documents that stale mutations are NOT self-healing (phantom D persists in the field but not in graph structure). |
 
 ---
 
-## Layout Engine (`frontend/src/engine/__tests__/layout.test.ts`) — 21 Tests
+## Layout Engine (`frontend/src/engine/__tests__/layout.test.ts`) - 21 Tests
 
 | # | Test Name | What it verifies |
 |---|-----------|-----------------|
@@ -121,7 +121,7 @@ Compound operations that verify graph integrity after delete followed by create:
 | 2 | `root with two children` | Root centered between two children on Y-axis; children share same X depth; child B is below child A. |
 | 3 | `multiple roots` | Three independent roots all at depth 0, stacked vertically with spacing. |
 | 4 | `back-edge handling` | Cyclic reference (A→B and B→A) doesn't crash layout; both nodes positioned correctly. |
-| 5 | `collapsed hides children` | Collapsed parent only renders itself in the layout — children are excluded from node count. |
+| 5 | `collapsed hides children` | Collapsed parent only renders itself in the layout - children are excluded from node count. |
 | 6 | `undefined collapsed defaults to hidden` | When `collapsed` is undefined (default), children are treated as hidden. |
 | 7 | `getLayoutBounds - basic` | Bounding box calculation returns positive width/height with valid min/max bounds. |
 | 8 | `getLayoutBounds - empty` | Empty layout returns all-zero bounds. |
@@ -141,9 +141,9 @@ Compound operations that verify graph integrity after delete followed by create:
 
 ---
 
-## useAutoSave Hook (`frontend/src/hooks/__tests__/useAutoSave.test.ts`) — 8 Tests
+## useAutoSave Hook (`frontend/src/hooks/__tests__/useAutoSave.test.ts`) - 8 Tests
 
-All test `deriveBaseStatus(supported, enabled, hasHandle)` — a pure state machine function:
+All test `deriveBaseStatus(supported, enabled, hasHandle)` - a pure state machine function:
 
 | # | Test Name | Inputs → Expected Output |
 |---|-----------|------------------------|
@@ -160,7 +160,7 @@ All test `deriveBaseStatus(supported, enabled, hasHandle)` — a pure state mach
 
 ---
 
-## useTheme Logic (`frontend/src/hooks/__tests__/useTheme.test.ts`) — 13 Tests
+## useTheme Logic (`frontend/src/hooks/__tests__/useTheme.test.ts`) - 13 Tests
 
 Constants and pure-function logic. `getThemeLabel` was moved from the React hook to `themeConstants.ts` so it can be tested without pulling in the React runtime.
 
@@ -184,8 +184,6 @@ Constants and pure-function logic. `getThemeLabel` was moved from the React hook
 
 ## Coverage Gaps (Updated)
 
-### No Tests At All (Components)
-
 The following React components have zero test coverage. Testing them would require JSDOM + react-testing-library in Deno (WE CAN REVISIT THIS NOW THAT WE ARE ON PNPM) non-trivial setup per the ROADMAP:
 
 - `GraphRenderer`
@@ -196,9 +194,9 @@ The following React components have zero test coverage. Testing them would requi
 
 ### No Tests At All (Other)
 
-- **WASM bridge** — nothing tests the Rust ↔ TypeScript communication layer. The `#[wasm_bindgen]` functions (`build_graph_from_yaml`, `graph_to_yaml`, `add_node`, `delete_node`) are tested through Rust internals but not across the actual WASM boundary.
-- **Integration / end-to-end flows** — no tests for YAML→graph→layout→render pipeline or user interaction sequences. *(Partially resolved 2026-09-25: `frontend/e2e/` now runs 3 CDP-driven headless-Edge tests covering boot, WASM graph render, localStorage persistence, SW precache, and offline reload. User interaction sequences remain untested.)*
-- **useAutoSave hook lifecycle** — only the pure `deriveBaseStatus()` helper is tested; actual React hook behavior (effects, debouncing, IndexedDB) is untested.
+- **WASM bridge** - nothing tests the Rust ↔ TypeScript communication layer. The `#[wasm_bindgen]` functions (`build_graph_from_yaml`, `graph_to_yaml`, `add_node`, `delete_node`) are tested through Rust internals but not across the actual WASM boundary.
+- **Integration / end-to-end flows** - no tests for YAML→graph→layout→render pipeline or user interaction sequences. *(Partially resolved 2026-09-25: `frontend/e2e/` now runs 3 CDP-driven headless-Edge tests covering boot, WASM graph render, localStorage persistence, SW precache, and offline reload. User interaction sequences remain untested.)*
+- **useAutoSave hook lifecycle** - only the pure `deriveBaseStatus()` helper is tested; actual React hook behavior (effects, debouncing, IndexedDB) is untested.
 
 ### Deferred Until Infrastructure Investment
 
@@ -206,23 +204,23 @@ The following areas are intentionally deferred. Each requires new tooling or tes
 
 | Area | What's needed | Effort |
 |------|---------------|-------|
-| **React components** (`GraphRenderer`, `EditNodeModal`, `DeleteNodeDialog`, `NavigationPanel`, `ThemeModal`) | JSDOM + react-testing-library configured for Deno. Non-trivial setup — ROADMAP says "deferred." | High |
+| **React components** (`GraphRenderer`, `EditNodeModal`, `DeleteNodeDialog`, `NavigationPanel`, `ThemeModal`) | JSDOM + react-testing-library configured for Deno. Non-trivial setup - ROADMAP says "deferred." | High |
 | **WASM bridge** (`#[wasm_bindgen]` boundary) | `wasm-bindgen-test` crate + separate test harness to verify Rust→JS interop, not just Rust internals. | Medium-High |
 | **useAutoSave hook lifecycle** | DOM mocks for IndexedDB, File System Access API, and debounce timing. Can't run in Deno without these. | Medium |
 | **Integration / E2E flows** | Playwright or similar to test YAML→graph→layout→render pipeline and user interaction sequences. | High |
 
 ### Partial Coverage
 
-- **useTheme hook lifecycle** — `getThemeLabel` and constants are now tested; the actual React hook (localStorage read/write, theme switching via DOM effects) is untested but requires JSDOM to exercise.
+- **useTheme hook lifecycle** - `getThemeLabel` and constants are now tested; the actual React hook (localStorage read/write, theme switching via DOM effects) is untested but requires JSDOM to exercise.
 
 ### Now Covered (was previously a gap)
 
-- ~~**YAML parsing edge cases**~~ — now 12 tests covering error handling (empty string, missing key, malformed, empty list, missing required field), data integrity (duplicate IDs, nonexistent subtask refs, large lists), and GraphBuilder conversion invariants.
-- ~~**Create: done/collapsed fields**~~ — now tested on create path.
-- ~~**Create: adjacency map updates**~~ — now asserted for both parent→child and new node's own adjacency entry.
-- ~~**Update: all scalar fields**~~ — expanded from 3 to 6 fields (added deadline, done, collapsed).
-- ~~**Update: adjacency not auto-updated**~~ — comment-only note is now an actual assertion.
-- ~~**Update + delete interaction**~~ — new test documents the stale adjacency behavior when raw mutation precedes deletion.
-- ~~**Layout engine edge cases**~~ — empty graph layout, mixed collapsed/expanded subtrees, re-computation after mutation, and DAG shared-child (diamond) are now covered (4 new tests).
-- ~~**useTheme pure logic**~~ — `getThemeLabel` moved to `themeConstants.ts` and fully tested: all theme labels, custom label, unknown fallback, cycling order (4 new tests).
-- ~~**Delete with concurrent field mutations**~~ — raw-mutate + delete interaction now covered. Documents that adjacency maps are the source of truth and stale field mutations don't corrupt graph operations.
+- ~~**YAML parsing edge cases**~~ - now 12 tests covering error handling (empty string, missing key, malformed, empty list, missing required field), data integrity (duplicate IDs, nonexistent subtask refs, large lists), and GraphBuilder conversion invariants.
+- ~~**Create: done/collapsed fields**~~ - now tested on create path.
+- ~~**Create: adjacency map updates**~~ - now asserted for both parent→child and new node's own adjacency entry.
+- ~~**Update: all scalar fields**~~ - expanded from 3 to 6 fields (added deadline, done, collapsed).
+- ~~**Update: adjacency not auto-updated**~~ - comment-only note is now an actual assertion.
+- ~~**Update + delete interaction**~~ - new test documents the stale adjacency behavior when raw mutation precedes deletion.
+- ~~**Layout engine edge cases**~~ - empty graph layout, mixed collapsed/expanded subtrees, re-computation after mutation, and DAG shared-child (diamond) are now covered (4 new tests).
+- ~~**useTheme pure logic**~~ - `getThemeLabel` moved to `themeConstants.ts` and fully tested: all theme labels, custom label, unknown fallback, cycling order (4 new tests).
+- ~~**Delete with concurrent field mutations**~~ - raw-mutate + delete interaction now covered. Documents that adjacency maps are the source of truth and stale field mutations don't corrupt graph operations.

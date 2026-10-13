@@ -24,7 +24,7 @@
 #   - Parallelism: siblings ([2],[3],[4]) can run simultaneously
 
 nodes:
-  # ── Root Task — the entire project ──────────────────────────────
+  # ── Root Task - the entire project ──────────────────────────────
   - id: 1
     name: "Rebuild Taskman Repo"
     details: "End-to-end rebuild of our local-first graph engine with Rust WASM core and React frontend"
@@ -32,7 +32,7 @@ nodes:
     important: true
     subtask_ids: [2, 3, 4, 10]
 
-  # ── Parallel track A — Repo scaffolding ─────────────────────────
+  # ── Parallel track A - Repo scaffolding ─────────────────────────
   - id: 2
     name: "Scaffold Monorepo"
     details: "Initialize git repo, create ichor/ and frontend/ directories, add LICENSE and README"
@@ -45,7 +45,7 @@ nodes:
     details: "Add GitHub Actions for wasm-pack build, clippy, and pnpm lint/typecheck on PR"
     deadline: "2026-04-18T23:59:59Z"
 
-  # ── Parallel track B — Rust core ────────────────────────────────
+  # ── Parallel track B - Rust core ────────────────────────────────
   - id: 3
     name: "Build Rust Ichor Core"
     details: "Implement YAML parsing, graph builder, and adjacency list computation in Rust"
@@ -63,7 +63,7 @@ nodes:
     details: "Construct adjacency lists, reverse-index, and root identification from parsed nodes"
     deadline: "2026-05-10T23:59:59Z"
 
-  # ── Parallel track C — Frontend ─────────────────────────────────
+  # ── Parallel track C - Frontend ─────────────────────────────────
   - id: 4
     name: "Set Up React Frontend"
     details: "Scaffold Vite + TypeScript app, install Tailwind CSS and Shadcn/UI dependencies"
@@ -103,7 +103,7 @@ nodes:
     details: "Render task fields (details, deadline, important) in graph nodes with editable support"
     deadline: "2026-05-25T23:59:59Z"
 
-  # ── Sequential — must wait for all tracks, also a Task with child [13] ──
+  # ── Sequential - must wait for all tracks, also a Task with child [13] ──
   - id: 12
     name: "Write Integration Tests"
     details: "E2E tests for YAML load → graph render → node toggle → layout recompute cycle"

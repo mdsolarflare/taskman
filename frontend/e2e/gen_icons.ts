@@ -17,7 +17,7 @@ const PUBLIC = toWindowsPath(new URL("../public/", import.meta.url).pathname);
 
 const server = serveStaticDir(PUBLIC);
 
-// Launch Edge headless (flags only — never pass a URL)
+// Launch Edge headless (flags only - never pass a URL)
 const stamp = Date.now();
 const localAppData =
   process.env.LOCALAPPDATA ??
@@ -71,7 +71,7 @@ sock.onmessage = (e) => {
   if (typeof m.id === "number" && Number.isInteger(m.id)) {
     // Guard the dispatch: m.id is wire-controlled (the browser under
     // test crafts it), so only invoke an entry that is actually our
-    // own registered callback function — never an unexpected value.
+    // own registered callback function - never an unexpected value.
     const res = pending.get(m.id);
     if (typeof res === "function") {
       pending.delete(m.id);
@@ -105,7 +105,7 @@ activeSessionId = sessionId;
 await send("Runtime.enable");
 await send("Page.enable");
 
-// Navigate to the served origin first — evaluating on about:blank (null
+// Navigate to the served origin first - evaluating on about:blank (null
 // origin) makes same-origin http images "cross-origin" and taints the
 // canvas, so toDataURL() throws SecurityError.
 await send("Page.navigate", { url: server.url });

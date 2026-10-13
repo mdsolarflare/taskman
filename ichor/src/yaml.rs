@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// A node in the task graph.
 ///
-/// All fields except `id` and `name` are optional — a "leaf" node simply
+/// All fields except `id` and `name` are optional - a "leaf" node simply
 /// omits `details`, `important`, and `subtask_ids`. There is no separate
 /// Subtask type; every node is a Task with varying levels of detail.
 #[derive(Debug, Clone, Serialize, Deserialize)]

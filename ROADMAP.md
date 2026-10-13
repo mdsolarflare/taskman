@@ -1,10 +1,10 @@
 # Roadmap
 
 - [x] Handle Task Completion
-- ~~[x] Deno 2 Migration (from pnpm/nodejs)~~ — **reversed 2026-10-11:**
+- ~~[x] Deno 2 Migration (from pnpm/nodejs)~~ - **reversed 2026-10-11:**
   migrated back to pnpm/Node (branch `migrate-to-pnpm`); Deno is fully
   removed from the repo (manifests, tasks, tests, e2e, CI, docs). Kept for
-  history per house rule.
+  history per house rule. We went from Deno to Deno 2 to I guess just pnpm.
 - [x] Navigation Pane
   - [x] Implement Navigation Pane
   - [x] Show Child Nesting in Navigation Pane
@@ -41,7 +41,7 @@
 
 give an example of how you can use a model to parse the schema and do repairs.
 
-## Technical Debt — Cleanup Pass (Principle Audit Findings)
+## Technical Debt - Cleanup Pass (Principle Audit Findings)
 
 The project lives well to its principles (lean dependencies, offline-first,
 static deployable). This pass cleaned organizational debt, not architectural
@@ -51,7 +51,7 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
 **Items:**
 
 - ~~**Review all `console.*` diagnostics calls (23 across `useAutoSave.ts` +
-  `main.tsx`)**~~ — **Resolved (2026-10-11):** the chatty per-CRUD
+  `main.tsx`)**~~ - **Resolved (2026-10-11):** the chatty per-CRUD
   `scheduleSave` traces in `useAutoSave.ts` are now gated behind one debug
   flag (`?debug=autosave` URL param or
   `localStorage.taskman_autosave_debug = "1"`); failure-path warns (write
@@ -62,46 +62,40 @@ bloat. No TODO/FIXME markers, no stray console statements, minimal Rust deps
   function. The one deliberate `console.warn` in `main.tsx` (SW
   registration failure) remains always-on by design.
 
-- **Split `App.tsx` (~1108 lines)** — Handles 6+ concerns: state management
+- **Split `App.tsx` (~1108 lines)** - Handles 6+ concerns: state management
   (10 separate `useState` calls), file I/O (`loadYaml`, open/new/save/load-sample),
   workspace persistence (debounced localStorage + mount restore), node CRUD
   (edit/add/delete handlers), menu UI (~260 lines of inline dropdown JSX), and
   header bar composition. Already extracted: `useTheme` and `useAutoSave` hooks.
   **Recommended extraction order:**
-  1. `useWorkspace` hook — consolidates file I/O, persistence, debounced save,
+  1. `useWorkspace` hook - consolidates file I/O, persistence, debounced save,
      mount restore (~200 lines of logic)
-  2. `useNodeOperations` hook — edit/add/delete handlers + `saveGraphAndUpdate`
+  2. `useNodeOperations` hook - edit/add/delete handlers + `saveGraphAndUpdate`
      (~100 lines)
-  3. `TopBar` component — entire header bar with menu dropdown (~430 lines of
+  3. `TopBar` component - entire header bar with menu dropdown (~430 lines of
      inline JSX/styles)
-  4. `AboutModal` component — standalone help modal (~75 lines)
+  4. `AboutModal` component - standalone help modal (~75 lines)
   Target: reduce App.tsx to ~400–500 lines. _(deferred)_
 
-- **Inline style duplication** — Hover toggle pattern and modal backdrop pattern
+- **Inline style duplication** - Hover toggle pattern and modal backdrop pattern
   repeat across ~5 components. Known trade-off of zero-CSS design; shared
-  primitives would emerge naturally during App.tsx split. _(low priority)_
+## Security Hardening - Unresolved ?Low? Risk Items (SecOps Audit Findings)
 
-  ESLint's ignore boundary stay clean. The underlying question — should CI
-  fmt/lint the e2e harness too — remains open if ever revisited; Prettier
-  currently ignores nothing in `e2e/` except via `.prettierignore`
-
-## Security Hardening — Unresolved ?Low? Risk Items (SecOps Audit Findings)
-
-- [ ] **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) — Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
+- [ ] **Replace `unwrap()` with `.expect()` in Rust graph code** (`ichor/src/graph/mod.rs` lines 192, 245, 358, 360, 374) - Bare `.unwrap()` calls will panic if internal graph state becomes inconsistent. In WASM this propagates to JS with stack traces that expose function names and memory layout. With `strip = true` now enabled this is mitigated, but `.expect("context")` is still better practice for debugging. _(low priority)_
 
 - [x] **Add `robots.txt`** (`frontend/public/`) — DONE (2026-09-26): added with `User-agent: *` / `Allow: /` — the site is intentionally indexable; the file exists to make that explicit rather than to block crawlers.
 
-- ~~**Add `ichor/pkg/` to `.gitignore`**~~ — **Resolved (2026-09-26):** `ichor/pkg/` is now in the root `.gitignore`. (The audit claim that it was "NOT gitignored" was itself stale — wasm-pack auto-generates a self-ignoring `ichor/pkg/.gitignore` on every build — but that file is transient, so the root-level rule is the durable fix.)
+- ~~**Add `ichor/pkg/` to `.gitignore`**~~ - **Resolved (2026-09-26):** `ichor/pkg/` is now in the root `.gitignore`. (The audit claim that it was "NOT gitignored" was itself stale - wasm-pack auto-generates a self-ignoring `ichor/pkg/.gitignore` on every build - but that file is transient, so the root-level rule is the durable fix.)
 
 - ~~**Document WASM build as deploy prerequisite**~~ — **Stale (verified 2026-09-18):** the claim "CI now builds WASM but doesn't deploy" is wrong — `.github/workflows/static.yml` builds WASM, vendors it, and deploys `frontend/public/` to Pages. Residual kernel: *manual* deploys to other static hosts still require `wasm-pack build` + `pnpm task vendor-wasm` first, or the app ships without its brain and fails silently. Worth one line in the README "Other Static Hosts" section. _(low priority)_
 
-## README Inaccuracies (found during PWA study, 2026-09-18 — resolved 2026-09-26)
+## README Inaccuracies (found during PWA study, 2026-09-18 - resolved 2026-09-26)
 
-- ~~Project Structure section shows `Sample.yaml` and `DATA_MODEL.md` at repo root; both actually live at `frontend/public/sample.yaml` and `docs/DATA_MODEL.md`. The root copy of `Sample.yaml` doesn't exist.~~ — **Fixed (2026-09-26):** README Project Structure block now shows the real layout, and the `DATA_MODEL.md` link points to `./docs/DATA_MODEL.md`.
-- ~~`frontend/src/assets/hero.png`, `frontend/src/assets/react.svg`, and `frontend/public/icons.svg` (SVG sprite with bluesky/github symbols) are unreferenced by any source file (verified by grep across src/docs/html/css/md) — dead assets, safe to delete per the "verify with grep before deleting" rule.~~ — **Resolved (2026-09-26):** re-verified unreferenced by grep (the GitHub icon in `App.tsx` is inline SVG, not the sprite), all three deleted along with the now-empty `src/assets/` directory.
+- ~~Project Structure section shows `Sample.yaml` and `DATA_MODEL.md` at repo root; both actually live at `frontend/public/sample.yaml` and `docs/DATA_MODEL.md`. The root copy of `Sample.yaml` doesn't exist.~~ - **Fixed (2026-09-26):** README Project Structure block now shows the real layout, and the `DATA_MODEL.md` link points to `./docs/DATA_MODEL.md`.
+- ~~`frontend/src/assets/hero.png`, `frontend/src/assets/react.svg`, and `frontend/public/icons.svg` (SVG sprite with bluesky/github symbols) are unreferenced by any source file (verified by grep across src/docs/html/css/md) - dead assets, safe to delete per the "verify with grep before deleting" rule.~~ - **Resolved (2026-09-26):** re-verified unreferenced by grep (the GitHub icon in `App.tsx` is inline SVG, not the sprite), all three deleted along with the now-empty `src/assets/` directory.
 
 ## Documentation Drift (from docs/ review, 2026-09-18)
 
-- `docs/REINGOLD-TILFORD.md` is background reading, **not** a spec for the current layout engine. Describes the academic version (contours, threaded pointers, two-pass with `shift`/`change` bookkeeping). The actual TS implementation uses a bounding-box heuristic — justified by the constraint that X=depth means nodes in different columns can't overlap. The June bugfix doc (`records-pain/layout-y-axis-spacing.md`) is the authoritative reference. One-line pointer clarification would prevent future agent confusion.
+- `docs/REINGOLD-TILFORD.md` is background reading, **not** a spec for the current layout engine. Describes the academic version (contours, threaded pointers, two-pass with `shift`/`change` bookkeeping). The actual TS implementation uses a bounding-box heuristic - justified by the constraint that X=depth means nodes in different columns can't overlap. The June bugfix doc (`records-pain/layout-y-axis-spacing.md`) is the authoritative reference. One-line pointer clarification would prevent future agent confusion.
 
-- The test-coverage inventory (`docs/records-pain/test-coverage-inventory.md`) accurately tracks 89 tests across 4 files. Its "Coverage Gaps" section is the authoritative source for what is NOT tested (React components, WASM boundary). **PWA implication (resolved 2026-09-25):** the SW/install surface now HAS automated coverage — `frontend/e2e/` runs 3 CDP-driven tests in headless Edge (boot, localStorage persistence, SW precache + offline reload). React component rendering remains the untested gap.
+- The test-coverage inventory (`docs/records-pain/test-coverage-inventory.md`) accurately tracks 89 tests across 4 files. Its "Coverage Gaps" section is the authoritative source for what is NOT tested (React components, WASM boundary). **PWA implication (resolved 2026-09-25):** the SW/install surface now HAS automated coverage - `frontend/e2e/` runs 3 CDP-driven tests in headless Edge (boot, localStorage persistence, SW precache + offline reload). React component rendering remains the untested gap.

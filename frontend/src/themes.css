@@ -75,7 +75,7 @@
    Design decisions:
    - Pure white background (#ffffff) with black text (#000000) = 21:1 contrast
    - Black borders for maximum definition on white surfaces
-   - Dark gray (#333333) as accent — stays within the monochrome palette
+   - Dark gray (#333333) as accent - stays within the monochrome palette
    - Overdue uses bold black via --text-primary rather than a color accent
    - Important uses light gray fill (#e0e0e0) with black stroke
    - Grid and edges use mid-grays to stay subtle against white

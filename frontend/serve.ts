@@ -1,5 +1,5 @@
 /**
- * Dev static server — reuses the e2e harness's server (one implementation,
+ * Dev static server - reuses the e2e harness's server (one implementation,
  * zero extra dependencies). Run from frontend/: `pnpm run serve`.
  *
  * The node:http server keeps the process alive; Ctrl+C to stop.
@@ -7,7 +7,7 @@
  * Port: default 8000. Override with `--port 3000` or TASKMAN_PORT=3000.
  * The port is NOT cosmetic: browser storage (the auto-save file handle in
  * IndexedDB, the workspace in localStorage) is scoped to the ORIGIN
- * (host:port), so switching ports starts a fresh storage sandbox — your
+ * (host:port), so switching ports starts a fresh storage sandbox - your
  * auto-save file association and workspace will not follow. Pick one port
  * and stay on it. 8000 matches the pre-pnpm `deno task serve` (std
  * file-server default), so state saved back then reappears at
@@ -19,7 +19,7 @@ import { serveStaticDir } from "./e2e/serve.ts";
 /**
  * Convert a URL pathname (file://-style) to a Windows-native path.
  * Written without literal backslashes (String.fromCharCode(92)) so no
- * editor/transcript layer can mangle the escapes — semantics identical to
+ * editor/transcript layer can mangle the escapes - semantics identical to
  * the same helper in e2e/test_server.ts.
  */
 const BS = String.fromCharCode(92); // backslash
@@ -32,7 +32,7 @@ function toWindowsPath(p: string): string {
   if (m) {
     return `${m[1].toUpperCase()}:${m[2].split("/").join(BS)}`;
   }
-  // /C:/Users/x/... → C:\Users\x\... (URL.pathname form — the leading
+  // /C:/Users/x/... → C:\Users\x\... (URL.pathname form - the leading
   // slash is an artifact of URL.pathname, not a real path segment)
   const w = p.match(URL_DRIVE_PATH);
   if (w) {
@@ -62,7 +62,7 @@ serveStaticDir(root, {
         `Taskman's browser storage (auto-save handle + workspace) is scoped to the ORIGIN,`,
       );
       console.error(
-        `so a stable port matters. Either stop the other process, or pick a different port —`,
+        `so a stable port matters. Either stop the other process, or pick a different port -`,
       );
       console.error(
         `but note: a NEW port means a NEW storage sandbox (your auto-save file`,
@@ -82,5 +82,5 @@ serveStaticDir(root, {
 console.log(`Serving ${root}`);
 console.log(`  → http://localhost:${port}/`);
 console.log(
-  `  (open localhost, not 127.0.0.1 — storage is origin-scoped and the two are different origins)`,
+  `  (open localhost, not 127.0.0.1 - storage is origin-scoped and the two are different origins)`,
 );
