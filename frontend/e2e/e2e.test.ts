@@ -333,3 +333,145 @@ test("service worker registers, precaches the shell, and serves offline", async 
     await close();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Custom theme — regression: saving the editor used to persist the default
+// palette (not the typed colors), because the commit path read a stale
+// hook-side draft instead of the modal's draft it was handed.
+// ---------------------------------------------------------------------------
+
+test("custom theme: editor colors are applied, persisted, and survive reload", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+
+    // Start from clean theme state — a port collision with an earlier run
+    // could otherwise leave stale theme keys behind.
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    // Menu → Theme modal
+    await conn.evaluate(
+      `document.querySelector('button[title="Menu"]').click()`,
+    );
+    await conn.evaluate(
+      `[...document.querySelectorAll('button')].find((b) => b.textContent.includes('🎨')).click()`,
+    );
+    await conn.waitForFunction(
+      `!![...document.querySelectorAll('h2')].find((h) => h.textContent === 'Theme')`,
+      5000,
+    );
+
+    // Custom → manual editor with 12 rows
+    await conn.evaluate(
+      `[...document.querySelectorAll('button')].find((b) => b.textContent.includes('Custom')).click()`,
+    );
+    await conn.waitForFunction(
+      `document.querySelectorAll('input[type="text"]').length >= 12`,
+      5000,
+    );
+
+    // Type a distinctive color into the Accent row. Label-anchored lookup +
+    // native value setter + input event (React controlled input).
+    const setOk = (await conn.evaluate(`(() => {
+      for (const label of document.querySelectorAll('label')) {
+        if (label.textContent.trim() !== 'Accent') continue;
+        const input = label.closest('div')?.querySelector('input[type="text"]');
+        if (!input) return 'no input';
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        ).set;
+        setter.call(input, '#ab05cd');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return 'ok';
+      }
+      return 'no Accent row';
+    })()`)) as string;
+    assert(setOk === "ok", `could not type into the Accent row: ${setOk}`);
+
+    // Save — the exact flow that used to persist the default palette
+    const saved = (await conn.evaluate(`(() => {
+      const b = [...document.querySelectorAll('button')].find(
+        (x) => x.textContent.trim() === 'Save',
+      );
+      if (!b) return false;
+      b.click();
+      return true;
+    })()`)) as boolean;
+    assert(saved, "Save button not found");
+
+    // The modal closes on save — wait for the re-render so state settles.
+    await conn.waitForFunction(
+      `![...document.querySelectorAll('h2')].some((h) => h.textContent === 'Theme')`,
+      5000,
+    );
+
+    const afterSave = (await conn.evaluate(`(() => ({
+      dataTheme: document.documentElement.getAttribute('data-theme'),
+      accent: getComputedStyle(document.documentElement)
+        .getPropertyValue('--accent')
+        .trim(),
+      lsTheme: localStorage.getItem('taskman_theme'),
+      lsCustom: localStorage.getItem('taskman_custom_colors'),
+      styleTag: document.getElementById('taskman-custom-theme')?.textContent ?? null,
+    }))()`)) as {
+      dataTheme: string | null;
+      accent: string;
+      lsTheme: string | null;
+      lsCustom: string | null;
+      styleTag: string | null;
+    };
+
+    assert(
+      afterSave.dataTheme === "custom",
+      `data-theme is ${afterSave.dataTheme}, expected "custom"`,
+    );
+    assert(
+      afterSave.accent === "#ab05cd",
+      `--accent computed to ${afterSave.accent}, expected the typed #ab05cd — ` +
+        `the custom theme saved the wrong palette`,
+    );
+    assert(
+      afterSave.lsTheme === "custom",
+      `localStorage taskman_theme is ${afterSave.lsTheme}, expected "custom"`,
+    );
+    const savedColors = JSON.parse(afterSave.lsCustom ?? "{}") as Record<
+      string,
+      string
+    >;
+    assert(
+      savedColors["--accent"] === "#ab05cd",
+      `persisted --accent is ${savedColors["--accent"]}, expected #ab05cd`,
+    );
+    assert(
+      (afterSave.styleTag ?? "").includes("--accent: #ab05cd"),
+      "injected style tag does not carry the typed accent",
+    );
+
+    // Reload — the custom theme must come back exactly as saved
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+    await conn.waitForFunction(
+      `!!document.getElementById('taskman-custom-theme')`,
+      5000,
+    );
+    const afterReload = (await conn.evaluate(`(() => ({
+      dataTheme: document.documentElement.getAttribute('data-theme'),
+      accent: getComputedStyle(document.documentElement)
+        .getPropertyValue('--accent')
+        .trim(),
+    }))()`)) as { dataTheme: string | null; accent: string };
+    assert(
+      afterReload.dataTheme === "custom",
+      `after reload data-theme is ${afterReload.dataTheme}`,
+    );
+    assert(
+      afterReload.accent === "#ab05cd",
+      `after reload --accent is ${afterReload.accent}, expected #ab05cd`,
+    );
+  } finally {
+    await close();
+  }
+});
