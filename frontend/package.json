@@ -19,7 +19,7 @@
     "build": "pnpm run clean && pnpm run vendor-wasm && pnpm run check && esbuild src/main.tsx --bundle --minify --jsx=automatic --format=esm --outdir=public/dist --out-extension:.js=.js && pnpm run gen-revision"
   },
   "dependencies": {
-    "react": "19.3.0",
+    "react": "19.3.1",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
