@@ -2,7 +2,7 @@
   "name": "taskman",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "build": "pnpm --dir frontend build",
     "serve": "pnpm --dir frontend serve",
