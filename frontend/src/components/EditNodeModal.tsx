@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GraphNode } from "../types/graph.ts";
+import DatePicker from "./DatePicker.tsx";
 
 // ---------------------------------------------------------------------------
 // Theme colors - read from CSS variables at runtime
@@ -220,6 +221,8 @@ export default function EditNodeModal({
     outline: "none",
     boxSizing: "border-box",
     transition: "border-color 0.15s",
+    background: colors.bg,
+    color: colors.text,
   };
 
   const labelStyle: React.CSSProperties = {
@@ -336,18 +339,10 @@ export default function EditNodeModal({
         {/* Deadline */}
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Deadline</label>
-          <input
-            type="datetime-local"
+          <DatePicker
             value={form.deadline}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, deadline: e.target.value }))
-            }
-            style={{
-              ...inputStyle,
-              colorScheme: "light",
-            }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
-            onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
+            onChange={(deadline) => setForm((f) => ({ ...f, deadline }))}
+            colors={colors}
           />
         </div>
 

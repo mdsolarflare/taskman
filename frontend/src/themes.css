@@ -9,6 +9,7 @@
 /* Default theme (Banana Crisis) */
 :root,
 [data-theme="banana-crisis"] {
+  color-scheme: light;
   --bg-primary: #fffde7;
   --bg-secondary: #fff9c4;
   --text-primary: #4e342e;
@@ -24,6 +25,7 @@
 }
 
 [data-theme="manhattan-lagoon"] {
+  color-scheme: light;
   --bg-primary: #eff6ff;
   --bg-secondary: #ffffff;
   --text-primary: #1e3a5f;
@@ -39,6 +41,7 @@
 }
 
 [data-theme="brooding-burg"] {
+  color-scheme: dark;
   --bg-primary: #2d1b1e;
   --bg-secondary: #3d2b2e;
   --text-primary: #f5e6e8;
@@ -54,6 +57,7 @@
 }
 
 [data-theme="carbon-noir"] {
+  color-scheme: dark;
   --bg-primary: #1a1a1a;
   --bg-secondary: #2a2a2a;
   --text-primary: #d4d4d4;
@@ -83,6 +87,7 @@
    ============================================================================ */
 
 [data-theme="monochrome-dystopia"] {
+  color-scheme: light;
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f5;
   --text-primary: #000000;

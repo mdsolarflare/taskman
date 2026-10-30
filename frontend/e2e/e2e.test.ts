@@ -475,3 +475,144 @@ test("custom theme: editor colors are applied, persisted, and survive reload", a
     await close();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Calendar picker - the create/edit modal's themed picker replaces the native
+// datetime-local input. Picking a day must land the deadline in the persisted
+// workspace through the same "YYYY-MM-DDTHH:mm" wire format the modal always
+// used (native popups are browser chrome the harness cannot drive - the
+// custom grid is plain DOM, which is exactly why it is testable here).
+// ---------------------------------------------------------------------------
+
+test("calendar picker: create-node flow sets a deadline that persists", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+
+    // Start clean - a port collision with an earlier run could leak state.
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    // Create node -> modal with the themed picker
+    await conn.evaluate(
+      `document.querySelector('button[title="Add node"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+
+    // Open the month grid
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[role="dialog"]')`,
+      5000,
+    );
+
+    // Pick the 15th of the visible (current) month via its aria-label.
+    const pick = (await conn.evaluate(`(() => {
+      const now = new Date();
+      const label = now.toLocaleString("en", { month: "long" }) + " 15, " + now.getFullYear();
+      const btn = [...document.querySelectorAll('[role="dialog"] button')]
+        .find((b) => b.getAttribute("aria-label") === label);
+      if (!btn) return "no day button: " + label;
+      btn.click();
+      return "ok";
+    })()`)) as string;
+    assert(pick === "ok", `could not pick a day: ${pick}`);
+
+    // Field shows the picked date; the time input activates at midnight.
+    await conn.waitForFunction(
+      `/^\\d{4}-\\d{2}-15 00:00$/.test(document.querySelector('[aria-label="Deadline date"] span').textContent)`,
+      5000,
+    );
+
+    // Set a distinctive time through React's controlled input.
+    const timeSet = (await conn.evaluate(`(() => {
+      const input = document.querySelector('input[type="time"]');
+      if (!input) return "no time input";
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      ).set;
+      setter.call(input, "14:30");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return "ok";
+    })()`)) as string;
+    assert(timeSet === "ok", `could not set the time: ${timeSet}`);
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline date"] span').textContent.endsWith("14:30")`,
+      5000,
+    );
+
+    // Save and let the modal close (addNode runs through WASM).
+    const saved = (await conn.evaluate(`(() => {
+      const b = [...document.querySelectorAll('button')].find(
+        (x) => x.textContent.trim() === 'Save',
+      );
+      if (!b) return false;
+      b.click();
+      return true;
+    })()`)) as boolean;
+    assert(saved, "Save button not found");
+    await conn.waitForFunction(
+      `!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+
+    // The deadline must reach the persisted workspace (ISO UTC).
+    let stored = "";
+    const deadline = Date.now() + 4000;
+    while (Date.now() < deadline) {
+      stored = (await conn.evaluate(
+        "localStorage.getItem('taskman_workspace') ?? ''",
+      )) as string;
+      if (stored.includes("T14:30:00")) break;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    assert(
+      stored.includes("T14:30:00"),
+      "picked deadline did not reach the persisted workspace YAML",
+    );
+  } finally {
+    await close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// color-scheme per theme: dark themes must declare color-scheme: dark (and
+// light themes light) so the UA-rendered widgets that remain - the time
+// input's chrome, scrollbars, selects - render at the theme's lightness.
+// ---------------------------------------------------------------------------
+
+test("themes declare color-scheme matching their lightness", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+
+    const schemeFor = async (theme: string): Promise<string> => {
+      await conn.evaluate(
+        `localStorage.setItem('taskman_theme', ${JSON.stringify(theme)})`,
+      );
+      await conn.evaluate("location.reload()");
+      await waitForApp(conn, { wasmReady: true });
+      return (await conn.evaluate(
+        "getComputedStyle(document.documentElement).colorScheme",
+      )) as string;
+    };
+
+    assert(
+      (await schemeFor("carbon-noir")) === "dark",
+      "carbon-noir should declare color-scheme: dark",
+    );
+    assert(
+      (await schemeFor("banana-crisis")) === "light",
+      "banana-crisis should declare color-scheme: light",
+    );
+  } finally {
+    await close();
+  }
+});
