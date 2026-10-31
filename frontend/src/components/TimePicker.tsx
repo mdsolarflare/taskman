@@ -96,6 +96,10 @@ function WheelColumn({
   const canUp = selected !== null && selected > 0;
   const canDown = selected !== null && selected < values.length - 1;
 
+  // Same caret glyph as the date picker's month navigation, rotated to point
+  // along the wheel's scroll direction. Only the glyph rotates (an inner
+  // span) - the button box stays axis-aligned so its hit area never
+  // overlaps the rows.
   const chevronStyle = (enabled: boolean): React.CSSProperties => ({
     margin: "0 auto",
     width: 34,
@@ -104,7 +108,7 @@ function WheelColumn({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 1,
     color: colors.textMuted,
     background: "transparent",
@@ -129,7 +133,7 @@ function WheelColumn({
         }}
         onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
       >
-        ▲
+        <span style={{ display: "block", transform: "rotate(90deg)" }}>‹</span>
       </button>
       <div
         ref={listRef}
@@ -214,7 +218,7 @@ function WheelColumn({
         }}
         onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
       >
-        ▼
+        <span style={{ display: "block", transform: "rotate(-90deg)" }}>‹</span>
       </button>
     </div>
   );

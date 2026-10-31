@@ -871,6 +871,25 @@ test("display timezone: render shifts, stored data stays UTC", async () => {
       `!!document.querySelector('[aria-label="Pick a display time zone"]')`,
       5000,
     );
+
+    // The zone list shows a ~5-entry window; search + scroll reach the rest.
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Time zone list"]')`,
+      5000,
+    );
+    const zoneWindow = (await conn.evaluate(`(() => {
+      const list = document.querySelector('[aria-label="Time zone list"]');
+      const row = list.querySelector("button");
+      return {
+        listH: list.clientHeight,
+        rowH: row ? row.getBoundingClientRect().height : 0,
+      };
+    })()`)) as { listH: number; rowH: number };
+    assert(
+      zoneWindow.rowH > 0 && zoneWindow.listH <= zoneWindow.rowH * 5 + 12,
+      `zone list window should show ~5 entries: ${JSON.stringify(zoneWindow)}`,
+    );
+
     const zoneSet = (await conn.evaluate(`(() => {
       const input = document.querySelector('[aria-label="Search time zones"]');
       if (!input) return "no search input";

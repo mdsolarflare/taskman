@@ -105,9 +105,11 @@ export default function TimeZonePicker({
   };
 
   const rowStyle = (active: boolean): React.CSSProperties => ({
-    display: "block",
+    display: "flex",
+    alignItems: "center",
     width: "100%",
-    padding: "6px 10px",
+    height: 30,
+    padding: "0 10px",
     fontSize: 12,
     textAlign: "left",
     background: active ? colors.accent : "transparent",
@@ -202,7 +204,7 @@ export default function TimeZonePicker({
               onChange(null);
               close();
             }}
-            style={rowStyle(!isCustom)}
+            style={{ ...rowStyle(!isCustom), marginBottom: 4 }}
             onMouseEnter={(e) => {
               if (isCustom) e.currentTarget.style.background = colors.hover;
             }}
@@ -213,32 +215,46 @@ export default function TimeZonePicker({
             {isCustom ? "" : "✓ "}
             Browser default ({cityLabel(browserTimeZone())})
           </button>
-          {matches.map((z) => {
-            const active = z === timeZone;
-            return (
-              <button
-                type="button"
-                key={z}
-                aria-label={z}
-                title={z}
-                onClick={() => {
-                  onChange(z);
-                  close();
-                }}
-                style={rowStyle(active)}
-                onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.background = colors.hover;
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) e.currentTarget.style.background = "transparent";
-                }}
-              >
-                {active ? "✓ " : ""}
-                {cityLabel(z)} · {zoneOffsetLabel(z)}
-              </button>
-            );
-          })}
-          {matches.length === 0 && (
+
+          {/* Five-entry window: search + scroll reach the rest of the list. */}
+          {matches.length > 0 ? (
+            <div
+              aria-label="Time zone list"
+              style={{
+                height: 5 * 30,
+                overflowY: "auto",
+                borderRadius: 6,
+              }}
+            >
+              {matches.map((z) => {
+                const active = z === timeZone;
+                return (
+                  <button
+                    type="button"
+                    key={z}
+                    aria-label={z}
+                    title={z}
+                    onClick={() => {
+                      onChange(z);
+                      close();
+                    }}
+                    style={rowStyle(active)}
+                    onMouseEnter={(e) => {
+                      if (!active)
+                        e.currentTarget.style.background = colors.hover;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active)
+                        e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    {active ? "✓ " : ""}
+                    {cityLabel(z)} · {zoneOffsetLabel(z)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
             <div
               style={{
                 fontSize: 11,
