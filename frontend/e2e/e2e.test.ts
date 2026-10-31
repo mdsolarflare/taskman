@@ -490,7 +490,10 @@ test("calendar picker: create-node flow sets a deadline that persists", async ()
     await waitForApp(conn, { wasmReady: true });
 
     // Start clean - a port collision with an earlier run could leak state.
+    // Pin the display zone to UTC so wall-clock display equals the stored
+    // wire value on any host.
     await conn.evaluate("localStorage.clear()");
+    await conn.evaluate(`localStorage.setItem('taskman_display_tz', 'UTC')`);
     await conn.evaluate("location.reload()");
     await waitForApp(conn, { wasmReady: true });
 
@@ -526,25 +529,39 @@ test("calendar picker: create-node flow sets a deadline that persists", async ()
 
     // Field shows the picked date; the time input activates at midnight.
     await conn.waitForFunction(
-      `/^\\d{4}-\\d{2}-15 00:00$/.test(document.querySelector('[aria-label="Deadline date"] span').textContent)`,
+      `/^\\d{4}-\\d{2}-15$/.test(document.querySelector('[aria-label="Deadline date"] span').textContent)`,
+      5000,
+    );
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "00:00"`,
       5000,
     );
 
-    // Set a distinctive time through React's controlled input.
-    const timeSet = (await conn.evaluate(`(() => {
-      const input = document.querySelector('input[type="time"]');
-      if (!input) return "no time input";
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        "value",
-      ).set;
-      setter.call(input, "14:30");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      return "ok";
-    })()`)) as string;
-    assert(timeSet === "ok", `could not set the time: ${timeSet}`);
+    // Set a distinctive time through the themed time picker: open its
+    // popover, pick hour 14 (stays open), then minute 30 (completes+ closes).
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline time"]').click()`,
+    );
     await conn.waitForFunction(
-      `document.querySelector('[aria-label="Deadline date"] span').textContent.endsWith("14:30")`,
+      `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      5000,
+    );
+    const hourSet = (await conn.evaluate(`(() => {
+      const btn = document.querySelector('[aria-label="Hour 14"]');
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(hourSet, "hour cell not found in the time picker");
+    const minuteSet = (await conn.evaluate(`(() => {
+      const btn = document.querySelector('[aria-label="Minute 30"]');
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(minuteSet, "minute cell not found in the time picker");
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "14:30"`,
       5000,
     );
 
@@ -612,6 +629,539 @@ test("themes declare color-scheme matching their lightness", async () => {
       (await schemeFor("banana-crisis")) === "light",
       "banana-crisis should declare color-scheme: light",
     );
+  } finally {
+    await close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Popover clipping - the deadline popovers used to render position:absolute
+// inside the modal card's overflow-y:auto box, so near the card bottom they
+// were cut off by up to 113px (time) / 45px (date) until the user scrolled.
+// The contract: every pixel of an open popover is visible without scrolling
+// the modal - either it lives inside the scroll container's visible box, or
+// it is position:fixed and fully inside the viewport.
+// ---------------------------------------------------------------------------
+
+/** Visibility check for one popover, parameterized by its aria-labels. */
+function popoverVisibleCheck(popoverLabel: string, fieldLabel: string): string {
+  return `(() => {
+    const pop = document.querySelector('[aria-label="${popoverLabel}"]');
+    if (!pop) return "no popover";
+    const field = document.querySelector('[aria-label="${fieldLabel}"]');
+    if (!field) return "no field";
+    let el = field.parentElement, card = null;
+    while (el) {
+      const oy = getComputedStyle(el).overflowY;
+      if (oy === "auto" || oy === "scroll") { card = el; break; }
+      el = el.parentElement;
+    }
+    const r = pop.getBoundingClientRect();
+    const pos = getComputedStyle(pop).position;
+    const inViewport = r.top >= 0 && r.bottom <= window.innerHeight &&
+      r.left >= 0 && r.right <= window.innerWidth;
+    let visible;
+    if (pos === "fixed") {
+      visible = inViewport;
+    } else if (card) {
+      const c = card.getBoundingClientRect();
+      visible = r.bottom <= c.bottom + 1 && r.top >= c.top - 1;
+    } else {
+      visible = inViewport;
+    }
+    return visible ? "ok"
+      : "clipped: pos=" + pos + " pop=" + Math.round(r.top) + "-" + Math.round(r.bottom) +
+        " card=" + (card ? Math.round(card.getBoundingClientRect().bottom) : "none");
+  })()`;
+}
+
+test("deadline popovers render fully visible without scrolling the modal", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    // Sane desktop viewport (the harness default is only 800x600, where the
+    // modal itself is small; the defect shows at real window sizes).
+    await conn.send("Emulation.setDeviceMetricsOverride", {
+      width: 1280,
+      height: 960,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+
+    await conn.evaluate(
+      `document.querySelector('button[title="Add node"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+
+    // Date popover
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const dateCheck = (await conn.evaluate(
+      popoverVisibleCheck("Pick a deadline date", "Deadline date"),
+    )) as string;
+    assert(dateCheck === "ok", `date popover not fully visible: ${dateCheck}`);
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+
+    // Pick day 15 to enable the time control
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const picked = (await conn.evaluate(`(() => {
+      const now = new Date();
+      const label = now.toLocaleString("en", { month: "long" }) + " 15, " + now.getFullYear();
+      const btn = [...document.querySelectorAll('[role="dialog"] button')]
+        .find((b) => b.getAttribute("aria-label") === label);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(picked, "day button not found");
+
+    // Time popover
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent !== "--:--"`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline time"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      5000,
+    );
+    const timeCheck = (await conn.evaluate(
+      popoverVisibleCheck("Pick a deadline time", "Deadline time"),
+    )) as string;
+    assert(timeCheck === "ok", `time popover not fully visible: ${timeCheck}`);
+  } finally {
+    await close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Display time zone - deadlines render as wall time in the selected zone
+// while the stored data stays UTC. UTC is pinned first so wall display
+// equals the wire value; switching to Asia/Kolkata (+5:30) must shift the
+// display WITHOUT touching the persisted workspace.
+// ---------------------------------------------------------------------------
+
+test("display timezone: render shifts, stored data stays UTC", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate(`localStorage.setItem('taskman_display_tz', 'UTC')`);
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    await conn.evaluate(
+      `document.querySelector('button[title="Add node"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+
+    // Pick day 15, 14:30 via the time picker
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const picked = (await conn.evaluate(`(() => {
+      const now = new Date();
+      const label = now.toLocaleString("en", { month: "long" }) + " 15, " + now.getFullYear();
+      const btn = [...document.querySelectorAll('[role="dialog"] button')]
+        .find((b) => b.getAttribute("aria-label") === label);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(picked, "day button not found");
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent !== "--:--"`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline time"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Hour 14"]').click()`,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Minute 30"]').click()`,
+    );
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "14:30"`,
+      5000,
+    );
+
+    // Save - with UTC display the stored wire value is 14:30Z.
+    await conn.evaluate(
+      `[...document.querySelectorAll('button')]
+        .find((x) => x.textContent.trim() === 'Save').click()`,
+    );
+    await conn.waitForFunction(
+      `!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+    let stored = "";
+    const deadline = Date.now() + 4000;
+    while (Date.now() < deadline) {
+      stored = (await conn.evaluate(
+        "localStorage.getItem('taskman_workspace') ?? ''",
+      )) as string;
+      if (stored.includes("T14:30:00")) break;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    assert(stored.includes("T14:30:00"), "deadline not stored as 14:30Z");
+
+    // Reopen the node (dblclick its title text) and switch the display zone
+    // to Asia/Calcutta (+5:30; Chromium exposes the CLDR-canonical id): the
+    // same stored instant must render as 20:00.
+    await conn.waitForFunction(
+      `[...document.querySelectorAll('svg text')].some((t) => t.textContent === 'Untitled')`,
+      5000,
+    );
+    await conn.evaluate(
+      `[...document.querySelectorAll('svg text')]
+        .find((t) => t.textContent === 'Untitled')
+        .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "14:30"`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Display time zone"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a display time zone"]')`,
+      5000,
+    );
+    const zoneSet = (await conn.evaluate(`(() => {
+      const input = document.querySelector('[aria-label="Search time zones"]');
+      if (!input) return "no search input";
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      ).set;
+      setter.call(input, "Calcutta");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return "ok";
+    })()`)) as string;
+    assert(zoneSet === "ok", `could not search zones: ${zoneSet}`);
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Asia/Calcutta"]')`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Asia/Calcutta"]').click()`,
+    );
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "20:00"`,
+      5000,
+    );
+
+    // The stored workspace must not have moved.
+    stored = (await conn.evaluate(
+      "localStorage.getItem('taskman_workspace') ?? ''",
+    )) as string;
+    assert(
+      stored.includes("T14:30:00"),
+      "switching the display zone mutated the stored deadline",
+    );
+  } finally {
+    await close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Typed time entry - segments strip letters/symbols and clamp to the valid
+// range (0-23 / 0-59), applying the sanitized value live.
+// ---------------------------------------------------------------------------
+
+test("typed time entry: letters ignored, values clamped", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate(`localStorage.setItem('taskman_display_tz', 'UTC')`);
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    await conn.evaluate(
+      `document.querySelector('button[title="Add node"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+
+    // Pick day 15 so the time control enables
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const picked = (await conn.evaluate(`(() => {
+      const now = new Date();
+      const label = now.toLocaleString("en", { month: "long" }) + " 15, " + now.getFullYear();
+      const btn = [...document.querySelectorAll('[role="dialog"] button')]
+        .find((b) => b.getAttribute("aria-label") === label);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(picked, "day button not found");
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent !== "--:--"`,
+      5000,
+    );
+
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline time"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      5000,
+    );
+
+    const typeSegment = (label: string, text: string): string => `(() => {
+      const input = document.querySelector('[aria-label="${label}"]');
+      if (!input) return "no input";
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      ).set;
+      setter.call(input, ${JSON.stringify(text)});
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return input.value;
+    })()`;
+
+    // Letters ignored: "ab9" sanitizes to "9" and applies as hour 09.
+    const hour1 = (await conn.evaluate(
+      typeSegment("Deadline time hour", "ab9"),
+    )) as string;
+    assert(hour1 === "9", `hour segment did not sanitize: ${hour1}`);
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "09:00"`,
+      5000,
+    );
+
+    // Out-of-range clamps: "25" becomes 23.
+    const hour2 = (await conn.evaluate(
+      typeSegment("Deadline time hour", "25"),
+    )) as string;
+    assert(hour2 === "23", `hour segment did not clamp: ${hour2}`);
+
+    // Minutes: "1x5" -> "15".
+    const minute1 = (await conn.evaluate(
+      typeSegment("Deadline time minute", "1x5"),
+    )) as string;
+    assert(minute1 === "15", `minute segment did not sanitize: ${minute1}`);
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "23:15"`,
+      5000,
+    );
+  } finally {
+    await close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Popover exclusivity + wheel stability - the deadline popovers used to
+// (a) close the moment their own wheel scrolled (the scroll-close listener
+// caught the wheel's scroll events) and (b) stack on top of each other,
+// since each picker held independent open state.
+// ---------------------------------------------------------------------------
+
+test("time popover stays open while its wheels scroll", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate(`localStorage.setItem('taskman_display_tz', 'UTC')`);
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    await conn.evaluate(
+      `document.querySelector('button[title="Add node"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const picked = (await conn.evaluate(`(() => {
+      const now = new Date();
+      const label = now.toLocaleString("en", { month: "long" }) + " 15, " + now.getFullYear();
+      const btn = [...document.querySelectorAll('[role="dialog"] button')]
+        .find((b) => b.getAttribute("aria-label") === label);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(picked, "day button not found");
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent !== "--:--"`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline time"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      5000,
+    );
+
+    // Scroll the minutes wheel (programmatic scrollTop fires real scroll
+    // events - exactly what a user's drag produces). The popover must stay
+    // open and the value under the wheel must apply.
+    const scrolled = (await conn.evaluate(`(() => {
+      const dialog = document.querySelector('[aria-label="Pick a deadline time"]');
+      if (!dialog) return "no dialog";
+      const scrollers = [...dialog.querySelectorAll("div")].filter(
+        (d) => d.scrollHeight > d.clientHeight + 10,
+      );
+      if (!scrollers.length) return "no scroller";
+      scrollers[scrollers.length - 1].scrollTop = 20 * 32; // minute 20
+      return "ok";
+    })()`)) as string;
+    assert(scrolled === "ok", `could not scroll the wheel: ${scrolled}`);
+
+    // The scrolled-to value applies (minute 20 under hour 00).
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "00:20"`,
+      5000,
+    );
+
+    // ...and the popover is still there after the scroll events settle.
+    for (let i = 0; i < 5; i++) {
+      const present = (await conn.evaluate(
+        `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      )) as boolean;
+      assert(present, "time popover closed while its wheel scrolled");
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  } finally {
+    await close();
+  }
+});
+
+test("deadline popovers are mutually exclusive", async () => {
+  const { conn, close } = await startTestSession();
+  try {
+    await waitForApp(conn, { wasmReady: true });
+    await conn.evaluate("localStorage.clear()");
+    await conn.evaluate(`localStorage.setItem('taskman_display_tz', 'UTC')`);
+    await conn.evaluate("location.reload()");
+    await waitForApp(conn, { wasmReady: true });
+
+    await conn.evaluate(
+      `document.querySelector('button[title="Add node"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Deadline date"]')`,
+      5000,
+    );
+
+    // Pick day 15 so the time control enables
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const picked = (await conn.evaluate(`(() => {
+      const now = new Date();
+      const label = now.toLocaleString("en", { month: "long" }) + " 15, " + now.getFullYear();
+      const btn = [...document.querySelectorAll('[role="dialog"] button')]
+        .find((b) => b.getAttribute("aria-label") === label);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`)) as boolean;
+    assert(picked, "day button not found");
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent !== "--:--"`,
+      5000,
+    );
+
+    // Open the TIME popover, then click the DATE field: the time popover
+    // must close instead of stacking under the date popover.
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline time"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline time"]')`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Deadline date"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a deadline date"]')`,
+      5000,
+    );
+    const timeGone = (await conn.evaluate(
+      `!document.querySelector('[aria-label="Pick a deadline time"]')`,
+    )) as boolean;
+    assert(timeGone, "time popover still open next to the date popover");
+
+    // Same for the zone chip: opening it closes the date popover.
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Display time zone"]').click()`,
+    );
+    await conn.waitForFunction(
+      `!!document.querySelector('[aria-label="Pick a display time zone"]')`,
+      5000,
+    );
+    const dateGone = (await conn.evaluate(
+      `!document.querySelector('[aria-label="Pick a deadline date"]')`,
+    )) as boolean;
+    assert(dateGone, "date popover still open next to the zone popover");
   } finally {
     await close();
   }

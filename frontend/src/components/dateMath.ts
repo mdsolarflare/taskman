@@ -110,3 +110,116 @@ export function monthGridCells(year: number, month0: number): MonthCell[] {
   }
   return cells;
 }
+
+// ---------------------------------------------------------------------------
+// Timezone-aware conversion
+//
+// The stored deadline is an ISO UTC instant; the picker speaks wall-clock
+// components in a display time zone. Offsets come from Intl (full ICU in
+// Chromium and Node), so no zone database ships with the app.
+// ---------------------------------------------------------------------------
+
+const wallFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getWallFormatter(timeZone: string): Intl.DateTimeFormat {
+  let f = wallFormatters.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    wallFormatters.set(timeZone, f);
+  }
+  return f;
+}
+
+function wallParts(instantMs: number, timeZone: string): DateTimeParts {
+  const parts = getWallFormatter(timeZone).formatToParts(
+    new Date(instantMs),
+  ) as Intl.DateTimeFormatPart[];
+  const get = (type: string): number =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return {
+    year: get("year"),
+    month0: get("month") - 1,
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+}
+
+/** Offset (ms) with wall = instant + offset, evaluated in `timeZone`. */
+function zoneOffsetMs(instantMs: number, timeZone: string): number {
+  const w = wallParts(instantMs, timeZone);
+  const wallAsUtc = Date.UTC(w.year, w.month0, w.day, w.hour, w.minute);
+  return wallAsUtc - Math.floor(instantMs / 60000) * 60000;
+}
+
+/**
+ * Wall-clock components of an ISO instant, rendered in `timeZone`.
+ * Returns null for an invalid instant or zone.
+ */
+export function instantToWall(
+  iso: string,
+  timeZone: string,
+): DateTimeParts | null {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  try {
+    return wallParts(d.getTime(), timeZone);
+  } catch {
+    return null; // invalid timeZone
+  }
+}
+
+/**
+ * The UTC instant for wall-clock components in `timeZone`.
+ *
+ * Two offset passes handle zones whose offset differs between the naive
+ * reading and the resolved instant (DST). Nonexistent spring-forward wall
+ * times snap forward past the gap; ambiguous fall-back times resolve to the
+ * first occurrence. Returns null for an invalid zone.
+ */
+export function wallToInstant(
+  p: DateTimeParts,
+  timeZone: string,
+): string | null {
+  try {
+    const wallAsUtc = Date.UTC(p.year, p.month0, p.day, p.hour, p.minute);
+    let ts = wallAsUtc - zoneOffsetMs(wallAsUtc, timeZone);
+    ts = wallAsUtc - zoneOffsetMs(ts, timeZone);
+    // Gap/fold check: the candidate must read back as the requested wall.
+    const back = wallParts(ts, timeZone);
+    if (
+      back.year !== p.year ||
+      back.month0 !== p.month0 ||
+      back.day !== p.day ||
+      back.hour !== p.hour ||
+      back.minute !== p.minute
+    ) {
+      // Nonexistent wall time (spring-forward gap): the two surrounding
+      // candidates straddle the gap - take the larger one (snap forward).
+      const a = wallAsUtc - zoneOffsetMs(ts, timeZone);
+      const b = wallAsUtc - zoneOffsetMs(a, timeZone);
+      ts = Math.max(a, b);
+    }
+    return new Date(ts).toISOString();
+  } catch {
+    return null; // invalid timeZone
+  }
+}
+
+/**
+ * Time-entry sanitizer: digits only (letters and symbols ignored), numeric
+ * value clamped to 0..max. Preserves typed leading zeros ("05" stays "05").
+ */
+export function sanitizeDigits(raw: string, max: number): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits === "") return "";
+  return Number(digits) > max ? String(max) : digits;
+}

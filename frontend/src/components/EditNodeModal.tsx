@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GraphNode } from "../types/graph.ts";
 import DatePicker from "./DatePicker.tsx";
+import TimeZonePicker from "./TimeZonePicker.tsx";
+import {
+  formatDateTimeLocal,
+  instantToWall,
+  parseDateTimeLocal,
+  wallToInstant,
+} from "./dateMath.ts";
 
 // ---------------------------------------------------------------------------
 // Theme colors - read from CSS variables at runtime
@@ -44,6 +51,10 @@ interface EditNodeModalProps {
   onSave: (updated: GraphNode) => void;
   onCancel: () => void;
   isCreate?: boolean;
+  /** Zone deadlines render in (stored data stays UTC). */
+  displayTimeZone: string;
+  displayTimeZoneIsCustom: boolean;
+  onDisplayTimeZoneChange: (timeZone: string | null) => void;
 }
 
 interface FormState {
@@ -59,33 +70,27 @@ interface FormState {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Convert ISO 8601 to datetime-local input value "YYYY-MM-DDTHH:mm" */
-function isoToDatetimeLocal(iso?: string): string {
+/**
+ * ISO UTC instant -> datetime-local wire value "YYYY-MM-DDTHH:mm", rendered
+ * as wall time in the display zone. Empty/invalid input stays empty.
+ */
+function isoToDisplayLocal(iso: string | undefined, timeZone: string): string {
   if (!iso) return "";
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime()) || !iso.includes("T")) return "";
-    const year = d.getUTCFullYear();
-    const month = (d.getUTCMonth() + 1).toString().padStart(2, "0");
-    const day = d.getUTCDate().toString().padStart(2, "0");
-    const hour = d.getUTCHours().toString().padStart(2, "0");
-    const minute = d.getUTCMinutes().toString().padStart(2, "0");
-    return `${year}-${month}-${day}T${hour}:${minute}`;
-  } catch {
-    return "";
-  }
+  const wall = instantToWall(iso, timeZone);
+  return wall ? formatDateTimeLocal(wall) : "";
 }
 
-/** Convert datetime-local value back to ISO 8601 UTC string */
-function datetimeLocalToIso(value: string): string | undefined {
-  if (!value) return undefined;
-  try {
-    const d = new Date(`${value}:00Z`);
-    if (isNaN(d.getTime())) return undefined;
-    return d.toISOString();
-  } catch {
-    return undefined;
-  }
+/**
+ * datetime-local wire value (wall time in the display zone) -> ISO UTC
+ * instant for storage. Empty/invalid input stays unset.
+ */
+function displayLocalToIso(
+  value: string,
+  timeZone: string,
+): string | undefined {
+  const parts = parseDateTimeLocal(value);
+  if (!parts) return undefined;
+  return wallToInstant(parts, timeZone) ?? undefined;
 }
 
 /** Collect all descendant IDs of a node (recursive) to prevent cycles */
@@ -118,15 +123,34 @@ export default function EditNodeModal({
   onSave,
   onCancel,
   isCreate = false,
+  displayTimeZone,
+  displayTimeZoneIsCustom,
+  onDisplayTimeZoneChange,
 }: EditNodeModalProps) {
   const [form, setForm] = useState<FormState>({
     name: node.name,
     details: node.details ?? "",
-    deadline: isoToDatetimeLocal(node.deadline),
+    deadline: isoToDisplayLocal(node.deadline, displayTimeZone),
     important: node.important ?? false,
     done: node.done ?? false,
     subtask_ids: node.subtask_ids ? [...node.subtask_ids] : [],
   });
+
+  // The form holds wall time in `formTimeZone`. When the display zone
+  // changes, re-derive the wall string from the same instant (stored data
+  // is untouched - only the presentation shifts). Adjusted during render
+  // per React's "adjusting state when props change" pattern.
+  const [formTimeZone, setFormTimeZone] = useState(displayTimeZone);
+  if (formTimeZone !== displayTimeZone) {
+    setFormTimeZone(displayTimeZone);
+    setForm((f) => {
+      const parts = parseDateTimeLocal(f.deadline);
+      if (!parts) return f; // no deadline set - nothing to shift
+      const iso = wallToInstant(parts, formTimeZone);
+      const next = iso ? instantToWall(iso, displayTimeZone) : null;
+      return next ? { ...f, deadline: formatDateTimeLocal(next) } : f;
+    });
+  }
 
   const [addDropdownOpen, setAddDropdownOpen] = useState(false);
 
@@ -167,7 +191,7 @@ export default function EditNodeModal({
       ...node,
       name: trimmedName || (isCreate ? "Untitled" : node.name),
       details: form.details.trim() || undefined,
-      deadline: datetimeLocalToIso(form.deadline),
+      deadline: displayLocalToIso(form.deadline, displayTimeZone),
       important: form.important,
       done: form.done,
       subtask_ids:
@@ -339,11 +363,20 @@ export default function EditNodeModal({
         {/* Deadline */}
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Deadline</label>
-          <DatePicker
-            value={form.deadline}
-            onChange={(deadline) => setForm((f) => ({ ...f, deadline }))}
-            colors={colors}
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <DatePicker
+              value={form.deadline}
+              onChange={(deadline) => setForm((f) => ({ ...f, deadline }))}
+              colors={colors}
+              timeZone={displayTimeZone}
+            />
+            <TimeZonePicker
+              timeZone={displayTimeZone}
+              isCustom={displayTimeZoneIsCustom}
+              onChange={onDisplayTimeZoneChange}
+              colors={colors}
+            />
+          </div>
         </div>
 
         {/* Important toggle */}

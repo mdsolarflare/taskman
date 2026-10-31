@@ -18,6 +18,9 @@ import {
   mergeTime,
   monthGridCells,
   parseDateTimeLocal,
+  instantToWall,
+  wallToInstant,
+  sanitizeDigits,
 } from "../dateMath.ts";
 
 // --- parseDateTimeLocal ------------------------------------------------------
@@ -158,4 +161,121 @@ test("monthGridCells keeps the leap day inside a leap February", () => {
     cells.find((c) => c.inMonth && c.day === 29),
     { year: 2024, month0: 1, day: 29, inMonth: true },
   );
+});
+
+// --- instantToWall / wallToInstant ---------------------------------------------
+
+test("instantToWall renders UTC instants as-is in the UTC zone", () => {
+  assertEquals(instantToWall("2026-07-15T14:30:00.000Z", "UTC"), {
+    year: 2026,
+    month0: 6,
+    day: 15,
+    hour: 14,
+    minute: 30,
+  });
+});
+
+test("instantToWall honors standard and daylight offsets", () => {
+  // March 5 2026 is before the US DST switch (Mar 8): New York is EST (-5).
+  assertEquals(instantToWall("2026-03-05T14:30:00.000Z", "America/New_York"), {
+    year: 2026,
+    month0: 2,
+    day: 5,
+    hour: 9,
+    minute: 30,
+  });
+  // July 15 2026 is EDT (-4).
+  assertEquals(instantToWall("2026-07-15T14:30:00.000Z", "America/New_York"), {
+    year: 2026,
+    month0: 6,
+    day: 15,
+    hour: 10,
+    minute: 30,
+  });
+});
+
+test("instantToWall handles half-hour and +14 zones, rolling the date", () => {
+  assertEquals(instantToWall("2026-07-15T14:30:00.000Z", "Asia/Kolkata"), {
+    year: 2026,
+    month0: 6,
+    day: 15,
+    hour: 20,
+    minute: 0,
+  });
+  // Pacific/Kiritimati is UTC+14: the wall date rolls into the next day.
+  assertEquals(
+    instantToWall("2026-07-15T14:30:00.000Z", "Pacific/Kiritimati"),
+    { year: 2026, month0: 6, day: 16, hour: 4, minute: 30 },
+  );
+});
+
+test("instantToWall rejects invalid instants and zones", () => {
+  assertEquals(instantToWall("garbage", "UTC"), null);
+  assertEquals(instantToWall("2026-07-15T14:30:00.000Z", "Mars/Olympus"), null);
+});
+
+test("wallToInstant inverts instantToWall across zones and DST seasons", () => {
+  const zones = [
+    "UTC",
+    "America/New_York",
+    "Asia/Kolkata",
+    "Pacific/Kiritimati",
+    "Australia/Lord_Howe", // +10:30 standard, +11 DST - minute-level offsets
+  ];
+  const instants = ["2026-01-15T00:30:00.000Z", "2026-07-15T14:30:00.000Z"];
+  for (const tz of zones) {
+    for (const iso of instants) {
+      const wall = instantToWall(iso, tz)!;
+      assertEquals(wallToInstant(wall, tz), iso, `${iso} @ ${tz}`);
+    }
+  }
+});
+
+test("wallToInstant snaps nonexistent spring-forward times forward", () => {
+  // 02:30 does not exist on 2026-03-08 in New York (clocks jump 02:00->03:00
+  // EST->EDT at 07:00Z). Snap-forward lands on 03:30 EDT = 07:30Z.
+  assertEquals(
+    wallToInstant(
+      { year: 2026, month0: 2, day: 8, hour: 2, minute: 30 },
+      "America/New_York",
+    ),
+    "2026-03-08T07:30:00.000Z",
+  );
+});
+
+test("wallToInstant resolves ambiguous fall-back times to the first offset", () => {
+  // 01:30 happens twice on 2026-11-01 in New York (EDT until 06:00Z, then
+  // EST). First occurrence: 01:30 EDT = 05:30Z.
+  assertEquals(
+    wallToInstant(
+      { year: 2026, month0: 10, day: 1, hour: 1, minute: 30 },
+      "America/New_York",
+    ),
+    "2026-11-01T05:30:00.000Z",
+  );
+});
+
+test("wallToInstant maps post-transition wall times directly", () => {
+  assertEquals(
+    wallToInstant(
+      { year: 2026, month0: 2, day: 8, hour: 3, minute: 30 },
+      "America/New_York",
+    ),
+    "2026-03-08T07:30:00.000Z",
+  );
+});
+
+// --- sanitizeDigits ------------------------------------------------------------
+
+test("sanitizeDigits strips letters and symbols", () => {
+  assertEquals(sanitizeDigits("ab", 23), "");
+  assertEquals(sanitizeDigits("1a2b", 23), "12");
+  assertEquals(sanitizeDigits("1:2", 23), "12");
+});
+
+test("sanitizeDigits clamps to the valid range", () => {
+  assertEquals(sanitizeDigits("27", 23), "23");
+  assertEquals(sanitizeDigits("60", 59), "59");
+  assertEquals(sanitizeDigits("9", 23), "9");
+  assertEquals(sanitizeDigits("05", 59), "05");
 });

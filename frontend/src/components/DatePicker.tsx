@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   formatDateTimeLocal,
+  instantToWall,
   mergeTime,
   monthGridCells,
   parseDateTimeLocal,
   type MonthCell,
 } from "./dateMath.ts";
+import TimePicker from "./TimePicker.tsx";
+import { useAnchoredPopover } from "../hooks/useAnchoredPopover.ts";
 
 // ---------------------------------------------------------------------------
 // Theme colors - passed down from the modal (already re-read on theme switch)
@@ -26,6 +29,8 @@ interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   colors: PickerColors;
+  /** Zone the wire value is a wall time in (drives "today"). */
+  timeZone: string;
 }
 
 const MONTH_NAMES = [
@@ -57,6 +62,22 @@ function shiftMonth(
   return { year: view.year + Math.floor(m / 12), month0: ((m % 12) + 12) % 12 };
 }
 
+/** Today's date in the display zone (falls back to local on a bad zone). */
+function todayInZone(timeZone: string): {
+  year: number;
+  month0: number;
+  day: number;
+} {
+  const wall = instantToWall(new Date().toISOString(), timeZone);
+  if (wall) return { year: wall.year, month0: wall.month0, day: wall.day };
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    month0: now.getMonth(),
+    day: now.getDate(),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -71,36 +92,36 @@ export default function DatePicker({
   value,
   onChange,
   colors,
+  timeZone,
 }: DatePickerProps) {
   const selected = parseDateTimeLocal(value);
-  const [open, setOpen] = useState(false);
+  const {
+    open,
+    toggle: popToggle,
+    close: popClose,
+    setAnchorEl,
+    setPopoverEl,
+    anchor,
+  } = useAnchoredPopover();
   const [view, setView] = useState(() => {
-    const now = new Date();
+    const today = todayInZone(timeZone);
     return {
-      year: selected?.year ?? now.getFullYear(),
-      month0: selected?.month0 ?? now.getMonth(),
+      year: selected?.year ?? today.year,
+      month0: selected?.month0 ?? today.month0,
     };
   });
 
   const toggle = () => {
     if (!open) {
       // Open on the month that holds the selection (or today).
-      const now = new Date();
+      const today = todayInZone(timeZone);
       setView({
-        year: selected?.year ?? now.getFullYear(),
-        month0: selected?.month0 ?? now.getMonth(),
+        year: selected?.year ?? today.year,
+        month0: selected?.month0 ?? today.month0,
       });
     }
-    setOpen(!open);
+    popToggle();
   };
-
-  // Close on outside click (same mechanism as the subtask dropdown).
-  useEffect(() => {
-    if (!open) return;
-    const handler = () => setOpen(false);
-    globalThis.addEventListener("click", handler);
-    return () => globalThis.removeEventListener("click", handler);
-  }, [open]);
 
   const pickDay = (cell: MonthCell) => {
     onChange(
@@ -112,28 +133,28 @@ export default function DatePicker({
         minute: selected?.minute ?? 0,
       }),
     );
-    setOpen(false);
+    popClose();
   };
 
   const goToday = () => {
-    const now = new Date();
-    setView({ year: now.getFullYear(), month0: now.getMonth() });
+    const today = todayInZone(timeZone);
+    setView({ year: today.year, month0: today.month0 });
     onChange(
       formatDateTimeLocal({
-        year: now.getFullYear(),
-        month0: now.getMonth(),
-        day: now.getDate(),
+        year: today.year,
+        month0: today.month0,
+        day: today.day,
         hour: selected?.hour ?? 0,
         minute: selected?.minute ?? 0,
       }),
     );
-    setOpen(false);
+    popClose();
   };
 
-  const now = new Date();
-  const todayY = now.getFullYear();
-  const todayM0 = now.getMonth();
-  const todayD = now.getDate();
+  const today = todayInZone(timeZone);
+  const todayY = today.year;
+  const todayM0 = today.month0;
+  const todayD = today.day;
   const cells = open ? monthGridCells(view.year, view.month0) : [];
 
   const fieldStyle: React.CSSProperties = {
@@ -168,13 +189,14 @@ export default function DatePicker({
   return (
     <div style={{ display: "flex", gap: 8 }}>
       <div
+        ref={setAnchorEl}
         style={{ position: "relative", flex: 1, minWidth: 0 }}
         onKeyDown={(e) => {
           // Close the popover without also closing the modal (the modal's
           // own Escape handler listens on window).
           if (e.key === "Escape" && open) {
             e.stopPropagation();
-            setOpen(false);
+            popClose();
           }
         }}
       >
@@ -214,7 +236,8 @@ export default function DatePicker({
               textOverflow: "ellipsis",
             }}
           >
-            {selected ? value.replace("T", " ") : "Set deadline…"}
+            {/* Date only - the time lives in the time control beside it. */}
+            {selected ? value.slice(0, 10) : "Set deadline…"}
           </span>
           {selected && (
             <button
@@ -223,7 +246,7 @@ export default function DatePicker({
               onClick={(e) => {
                 e.stopPropagation();
                 onChange("");
-                setOpen(false);
+                popClose();
               }}
               style={{
                 background: "none",
@@ -244,16 +267,20 @@ export default function DatePicker({
           )}
         </div>
 
-        {/* Month grid popover */}
-        {open && (
+        {/* Month grid popover - fixed-anchored to the field so the modal
+            card's scroll box can never clip it */}
+        {open && anchor && (
           <div
+            ref={setPopoverEl}
             role="dialog"
             aria-label="Pick a deadline date"
             onClick={(e) => e.stopPropagation()}
             style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
+              position: "fixed",
+              top: anchor.top,
+              left: anchor.left,
+              maxHeight: anchor.maxBottom - anchor.top,
+              overflowY: "auto",
               zIndex: 10,
               width: 7 * CELL_SIZE + 6 * CELL_GAP + 24,
               padding: 12,
@@ -430,21 +457,15 @@ export default function DatePicker({
       </div>
 
       {/* Time (enabled once a date is picked) */}
-      <input
-        type="time"
-        aria-label="Deadline time"
+      <TimePicker
         value={selected ? value.slice(11) : ""}
-        disabled={!selected}
-        onChange={(e) => onChange(mergeTime(value, e.target.value))}
-        style={{
-          ...fieldStyle,
-          width: 108,
-          flexShrink: 0,
-          opacity: selected ? 1 : 0.5,
-          cursor: selected ? "text" : "default",
+        onChange={(time) => {
+          const w = window as unknown as { __dpChange?: string[] };
+          w.__dpChange = [...(w.__dpChange ?? []), time];
+          onChange(mergeTime(value, time));
         }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
-        onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
+        colors={colors}
+        disabled={!selected}
       />
     </div>
   );
