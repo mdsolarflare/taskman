@@ -1084,6 +1084,22 @@ test("time popover stays open while its wheels scroll", async () => {
       assert(present, "time popover closed while its wheel scrolled");
       await new Promise((r) => setTimeout(r, 100));
     }
+
+    // Chevron steppers: "Increase hours" steps the hour (00 -> 01).
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Increase hours"]').click()`,
+    );
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "01:20"`,
+      5000,
+    );
+    await conn.evaluate(
+      `document.querySelector('[aria-label="Decrease hours"]').click()`,
+    );
+    await conn.waitForFunction(
+      `document.querySelector('[aria-label="Deadline time"]').textContent === "00:20"`,
+      5000,
+    );
   } finally {
     await close();
   }

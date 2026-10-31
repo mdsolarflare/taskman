@@ -41,6 +41,8 @@ interface WheelColumnProps {
   colors: TimePickerColors;
   /** Set from the parent when the popover value changes (external sync). */
   listRef: React.RefObject<HTMLDivElement | null>;
+  /** Unit name for the stepper aria-labels ("hours" / "minutes"). */
+  unit: string;
 }
 
 /**
@@ -56,6 +58,7 @@ function WheelColumn({
   ariaLabel,
   colors,
   listRef,
+  unit,
 }: WheelColumnProps) {
   // Native scroll listener: React's delegated onScroll misses non-bubbling
   // scroll events from this scroller (the wheel would never apply values).
@@ -63,8 +66,6 @@ function WheelColumn({
     const el = listRef.current;
     if (!el) return;
     const onScroll = () => {
-      const w = window as unknown as { __appScrollSeen?: number };
-      w.__appScrollSeen = (w.__appScrollSeen ?? 0) + 1;
       const idx = Math.round(el.scrollTop / ROW_H);
       const v = values[Math.min(Math.max(idx, 0), values.length - 1)];
       if (v !== selected) onSelect(v);
@@ -73,8 +74,48 @@ function WheelColumn({
     return () => el.removeEventListener("scroll", onScroll);
   }, [listRef, values, selected, onSelect]);
 
+  // One-time open nudge: a tiny oscillation that says "this scrolls".
+  // Skipped for users who prefer reduced motion. (WheelColumn remounts on
+  // every popover open, so this runs once per open.)
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    el.animate(
+      [
+        { transform: "translateY(0px)" },
+        { transform: "translateY(-7px)" },
+        { transform: "translateY(4px)" },
+        { transform: "translateY(0px)" },
+      ],
+      { duration: 550, easing: "ease-out" },
+    );
+  }, [listRef]);
+
+  const canUp = selected !== null && selected > 0;
+  const canDown = selected !== null && selected < values.length - 1;
+
+  const chevronStyle = (edge: "top" | "bottom"): React.CSSProperties => ({
+    position: "absolute",
+    [edge]: 0,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: 26,
+    height: 20,
+    padding: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 10,
+    lineHeight: 1,
+    color: colors.textMuted,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+  });
+
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
       <div
         ref={listRef}
         style={{
@@ -128,6 +169,52 @@ function WheelColumn({
           );
         })}
       </div>
+
+      {/* Selection band: the roller's selection window behind the centered
+          row (visual affordance, ignores pointers). */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: ROW_H,
+          height: ROW_H,
+          left: 0,
+          right: 0,
+          borderRadius: 6,
+          background: `color-mix(in srgb, ${colors.accent} 14%, transparent)`,
+          borderTop: `1px solid color-mix(in srgb, ${colors.accent} 55%, transparent)`,
+          borderBottom: `1px solid color-mix(in srgb, ${colors.accent} 55%, transparent)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Chevron steppers: affordance + click-to-step, shown only when
+          there is more content in that direction. Up the list = decrease,
+          down the list = increase. */}
+      {canUp && (
+        <button
+          type="button"
+          aria-label={`Decrease ${unit}`}
+          onClick={() => onSelect((selected ?? 0) - 1)}
+          style={chevronStyle("top")}
+          onMouseEnter={(e) => (e.currentTarget.style.color = colors.text)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
+        >
+          ▲
+        </button>
+      )}
+      {canDown && (
+        <button
+          type="button"
+          aria-label={`Increase ${unit}`}
+          onClick={() => onSelect((selected ?? 0) + 1)}
+          style={chevronStyle("bottom")}
+          onMouseEnter={(e) => (e.currentTarget.style.color = colors.text)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
+        >
+          ▼
+        </button>
+      )}
     </div>
   );
 }
@@ -386,6 +473,7 @@ export default function TimePicker({
                 ariaLabel={(v) => "Hour " + v}
                 colors={colors}
                 listRef={hourListRef}
+                unit="hours"
               />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -408,6 +496,7 @@ export default function TimePicker({
                 ariaLabel={(v) => "Minute " + v}
                 colors={colors}
                 listRef={minuteListRef}
+                unit="minutes"
               />
             </div>
           </div>
