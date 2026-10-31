@@ -1093,6 +1093,30 @@ test("time popover stays open while its wheels scroll", async () => {
       `document.querySelector('[aria-label="Deadline time"]').textContent === "01:20"`,
       5000,
     );
+
+    // Chevrons live in their own rows above/below the scroller - never on
+    // top of the scroll values. (Checked at hour 1, where both chevrons
+    // exist.)
+    const geom = (await conn.evaluate(`(() => {
+      const q = (label) => document.querySelector('[aria-label="' + label + '"]');
+      const r = (el) => el.getBoundingClientRect();
+      const dialog = document.querySelector('[aria-label="Pick a deadline time"]');
+      const scrollers = [...dialog.querySelectorAll("div")].filter(
+        (d) => d.scrollHeight > d.clientHeight + 10,
+      );
+      const hourScroller = r(scrollers[0]);
+      const up = r(q("Decrease hours"));
+      const down = r(q("Increase hours"));
+      return {
+        upAbove: up.bottom <= hourScroller.top + 2,
+        downBelow: down.top >= hourScroller.bottom - 2,
+      };
+    })()`)) as { upAbove: boolean; downBelow: boolean };
+    assert(
+      geom.upAbove && geom.downBelow,
+      `chevrons overlap the wheel values: ${JSON.stringify(geom)}`,
+    );
+
     await conn.evaluate(
       `document.querySelector('[aria-label="Decrease hours"]').click()`,
     );

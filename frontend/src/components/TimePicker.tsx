@@ -26,6 +26,7 @@ interface TimePickerProps {
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 const ROW_H = 32;
+const CHEV_H = 18;
 
 const pad = (n: number) => n.toString().padStart(2, "0");
 
@@ -95,13 +96,10 @@ function WheelColumn({
   const canUp = selected !== null && selected > 0;
   const canDown = selected !== null && selected < values.length - 1;
 
-  const chevronStyle = (edge: "top" | "bottom"): React.CSSProperties => ({
-    position: "absolute",
-    [edge]: 0,
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: 26,
-    height: 20,
+  const chevronStyle = (enabled: boolean): React.CSSProperties => ({
+    margin: "0 auto",
+    width: 34,
+    height: CHEV_H,
     padding: 0,
     display: "flex",
     alignItems: "center",
@@ -111,11 +109,28 @@ function WheelColumn({
     color: colors.textMuted,
     background: "transparent",
     border: "none",
-    cursor: "pointer",
+    cursor: enabled ? "pointer" : "default",
+    visibility: enabled ? "visible" : "hidden",
   });
 
   return (
     <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+      {/* Dedicated stepper rows: reserved space so the wheel never jumps
+          when a chevron appears/disappears at a list boundary, and the
+          chevrons never overlap the scroll values. */}
+      <button
+        type="button"
+        aria-label={`Decrease ${unit}`}
+        disabled={!canUp}
+        onClick={() => onSelect((selected ?? 0) - 1)}
+        style={chevronStyle(canUp)}
+        onMouseEnter={(e) => {
+          if (canUp) e.currentTarget.style.color = colors.text;
+        }}
+        onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
+      >
+        ▲
+      </button>
       <div
         ref={listRef}
         style={{
@@ -176,7 +191,7 @@ function WheelColumn({
         aria-hidden
         style={{
           position: "absolute",
-          top: ROW_H,
+          top: CHEV_H + ROW_H,
           height: ROW_H,
           left: 0,
           right: 0,
@@ -188,33 +203,19 @@ function WheelColumn({
         }}
       />
 
-      {/* Chevron steppers: affordance + click-to-step, shown only when
-          there is more content in that direction. Up the list = decrease,
-          down the list = increase. */}
-      {canUp && (
-        <button
-          type="button"
-          aria-label={`Decrease ${unit}`}
-          onClick={() => onSelect((selected ?? 0) - 1)}
-          style={chevronStyle("top")}
-          onMouseEnter={(e) => (e.currentTarget.style.color = colors.text)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
-        >
-          ▲
-        </button>
-      )}
-      {canDown && (
-        <button
-          type="button"
-          aria-label={`Increase ${unit}`}
-          onClick={() => onSelect((selected ?? 0) + 1)}
-          style={chevronStyle("bottom")}
-          onMouseEnter={(e) => (e.currentTarget.style.color = colors.text)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
-        >
-          ▼
-        </button>
-      )}
+      <button
+        type="button"
+        aria-label={`Increase ${unit}`}
+        disabled={!canDown}
+        onClick={() => onSelect((selected ?? 0) + 1)}
+        style={chevronStyle(canDown)}
+        onMouseEnter={(e) => {
+          if (canDown) e.currentTarget.style.color = colors.text;
+        }}
+        onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
+      >
+        ▼
+      </button>
     </div>
   );
 }
