@@ -6,10 +6,13 @@
 version: 2
 
 updates:
-  # Configuration for frontend npm dependencies (pnpm workspace package;
-  # dependabot reads pnpm-lock.yaml for the "npm" ecosystem)
+  # Frontend npm dependencies. This is a pnpm workspace: the single
+  # pnpm-lock.yaml lives at the repo root, so Dependabot must run from the
+  # workspace root — a subdirectory entry bumps only frontend/package.json
+  # and the PR then fails CI's `pnpm install --frozen-lockfile`
+  # (dependabot-core#11135).
   - package-ecosystem: "npm"
-    directory: "/frontend/" # pnpm workspace package
+    directory: "/" # workspace root; covers frontend/package.json + root pnpm-lock.yaml
     schedule:
       interval: "weekly"
 
