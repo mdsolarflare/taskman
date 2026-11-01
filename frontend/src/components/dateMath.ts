@@ -161,6 +161,18 @@ function zoneOffsetMs(instantMs: number, timeZone: string): number {
 }
 
 /**
+ * Minutes east of UTC for `timeZone` at `atMs` (default: now), for sorting
+ * zone lists west-to-east. Returns 0 for an invalid zone.
+ */
+export function zoneOffsetMinutes(timeZone: string, atMs?: number): number {
+  try {
+    return Math.round(zoneOffsetMs(atMs ?? Date.now(), timeZone) / 60000);
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Wall-clock components of an ISO instant, rendered in `timeZone`.
  * Returns null for an invalid instant or zone.
  */

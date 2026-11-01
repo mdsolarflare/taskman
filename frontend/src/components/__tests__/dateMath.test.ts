@@ -21,6 +21,7 @@ import {
   instantToWall,
   wallToInstant,
   sanitizeDigits,
+  zoneOffsetMinutes,
 } from "../dateMath.ts";
 
 // --- parseDateTimeLocal ------------------------------------------------------
@@ -278,4 +279,24 @@ test("sanitizeDigits clamps to the valid range", () => {
   assertEquals(sanitizeDigits("60", 59), "59");
   assertEquals(sanitizeDigits("9", 23), "9");
   assertEquals(sanitizeDigits("05", 59), "05");
+});
+
+// --- zoneOffsetMinutes ----------------------------------------------------------
+
+test("zoneOffsetMinutes reports east-positive offsets at a fixed instant", () => {
+  const jul = Date.UTC(2026, 6, 15, 12);
+  assertEquals(zoneOffsetMinutes("UTC", jul), 0);
+  assertEquals(zoneOffsetMinutes("America/New_York", jul), -240);
+  assertEquals(zoneOffsetMinutes("Asia/Kolkata", jul), 330);
+});
+
+test("zoneOffsetMinutes follows DST at the given instant", () => {
+  const winter = Date.UTC(2026, 0, 15, 12);
+  const summer = Date.UTC(2026, 6, 15, 12);
+  assertEquals(zoneOffsetMinutes("America/New_York", winter), -300);
+  assertEquals(zoneOffsetMinutes("America/New_York", summer), -240);
+});
+
+test("zoneOffsetMinutes tolerates invalid zones", () => {
+  assertEquals(zoneOffsetMinutes("Mars/Olympus"), 0);
 });

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { sanitizeDigits } from "./dateMath.ts";
-import { useAnchoredPopover } from "../hooks/useAnchoredPopover.ts";
+
 // ---------------------------------------------------------------------------
-// Theme colors - passed down from the modal (already re-read on theme switch)
+// Theme colors - passed down from the picker (already re-read on theme switch)
 // ---------------------------------------------------------------------------
 
 interface TimePickerColors {
@@ -20,7 +20,6 @@ interface TimePickerProps {
   value: string;
   onChange: (time: string) => void;
   colors: TimePickerColors;
-  disabled?: boolean;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -76,7 +75,7 @@ function WheelColumn({
   }, [listRef, values, selected, onSelect]);
 
   // One-time open nudge: a tiny oscillation that says "this scrolls".
-  // Skipped for users who prefer reduced motion. (WheelColumn remounts on
+  // Skipped for users who prefer reduced motion. (The section mounts on
   // every popover open, so this runs once per open.)
   useEffect(() => {
     const el = listRef.current;
@@ -229,27 +228,17 @@ function WheelColumn({
 // ---------------------------------------------------------------------------
 
 /**
- * Theme-matched time entry: a styled field opening a popover with typeable
+ * Theme-matched time-entry section for the merged deadline picker: typeable
  * HH/MM segments (digits only, clamped to valid ranges) above scroll-snap
  * wheel columns. Typed input and wheels stay in sync through the shared
  * "HH:mm" value. Speaks the time half of the datetime-local wire format; the
- * date side is untouched. Picking the minute completes the interaction and
- * closes the popover, mirroring how a day click completes the date picker.
+ * date side is owned by the picker that embeds this section.
  */
 export default function TimePicker({
   value,
   onChange,
   colors,
-  disabled = false,
 }: TimePickerProps) {
-  const {
-    open,
-    toggle: popToggle,
-    close: popClose,
-    setAnchorEl,
-    setPopoverEl,
-    anchor,
-  } = useAnchoredPopover();
   const m = /^(\d{2}):(\d{2})$/.exec(value);
   const hour = m ? Number(m[1]) : null;
   const minute = m ? Number(m[2]) : null;
@@ -283,7 +272,7 @@ export default function TimePicker({
       if (Math.abs(minuteEl.scrollTop - target) > 1)
         minuteEl.scrollTop = target;
     }
-  }, [value, open, hour, minute]);
+  }, [value, hour, minute]);
 
   const setHour = (h: number) =>
     onChange(pad(h) + ":" + (minute === null ? "00" : pad(minute)));
@@ -316,24 +305,6 @@ export default function TimePicker({
     set(text === "" ? fallback : pad(Number(text)));
   };
 
-  const fieldStyle: React.CSSProperties = {
-    width: 96,
-    padding: "8px 10px",
-    fontSize: 13,
-    fontFamily: "system-ui, -apple-system, sans-serif",
-    border: "1px solid " + colors.border,
-    borderRadius: 6,
-    outline: "none",
-    boxSizing: "border-box",
-    transition: "border-color 0.15s",
-    background: colors.bg,
-    color: colors.text,
-    textAlign: "center",
-    flexShrink: 0,
-    opacity: disabled ? 0.5 : 1,
-    cursor: disabled ? "default" : "pointer",
-  };
-
   const segmentStyle: React.CSSProperties = {
     width: 40,
     padding: "6px 2px",
@@ -349,195 +320,85 @@ export default function TimePicker({
     textAlign: "center",
   };
 
+  const wheelLabelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: 10,
+    fontWeight: 600,
+    color: colors.textMuted,
+    marginBottom: 4,
+    textAlign: "center",
+  };
+
   return (
-    <div
-      ref={setAnchorEl}
-      style={{ position: "relative", flexShrink: 0 }}
-      onKeyDown={(e) => {
-        // Close the popover without also closing the modal (the modal's
-        // own Escape handler listens on window).
-        if (e.key === "Escape" && open) {
-          e.stopPropagation();
-          popClose();
-        }
-      }}
-    >
-      {/* Field */}
+    <div>
+      {/* Typed segments */}
       <div
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-label="Deadline time"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-disabled={disabled}
-        onClick={() => {
-          if (!disabled) popToggle();
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          marginBottom: 8,
         }}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            popToggle();
-          }
-        }}
-        style={fieldStyle}
-        onFocus={(e) => (e.currentTarget.style.borderColor = colors.accent)}
-        onBlur={(e) => (e.currentTarget.style.borderColor = colors.border)}
       >
-        {value || "--:--"}
+        <input
+          ref={hourRef}
+          type="text"
+          inputMode="numeric"
+          aria-label="Deadline time hour"
+          value={hourText}
+          maxLength={2}
+          onChange={(e) => onHourChange(e.target.value)}
+          onBlur={() => onSegmentBlur(hourText, setHourText, value.slice(0, 2))}
+          style={segmentStyle}
+        />
+        <span
+          style={{ color: colors.textMuted, fontWeight: 600, fontSize: 14 }}
+        >
+          :
+        </span>
+        <input
+          ref={minuteRef}
+          type="text"
+          inputMode="numeric"
+          aria-label="Deadline time minute"
+          value={minuteText}
+          maxLength={2}
+          onChange={(e) => onMinuteChange(e.target.value)}
+          onBlur={() =>
+            onSegmentBlur(minuteText, setMinuteText, value.slice(3, 5))
+          }
+          style={segmentStyle}
+        />
       </div>
 
-      {/* Time entry popover - fixed-anchored to the field so the modal
-          card's scroll box can never clip it */}
-      {open && anchor && (
-        <div
-          ref={setPopoverEl}
-          role="dialog"
-          aria-label="Pick a deadline time"
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: "fixed",
-            top: anchor.top,
-            right: anchor.right,
-            maxHeight: anchor.maxBottom - anchor.top,
-            overflowY: "auto",
-            zIndex: 10,
-            width: 250,
-            padding: 12,
-            background: colors.surface,
-            border: "1px solid " + colors.border,
-            borderRadius: 8,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-            userSelect: "none",
-          }}
-        >
-          {/* Typed segments */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              marginBottom: 10,
-            }}
-          >
-            <input
-              ref={hourRef}
-              type="text"
-              inputMode="numeric"
-              aria-label="Deadline time hour"
-              value={hourText}
-              maxLength={2}
-              disabled={disabled}
-              onChange={(e) => onHourChange(e.target.value)}
-              onBlur={() =>
-                onSegmentBlur(hourText, setHourText, value.slice(0, 2))
-              }
-              style={segmentStyle}
-            />
-            <span
-              style={{ color: colors.textMuted, fontWeight: 600, fontSize: 14 }}
-            >
-              :
-            </span>
-            <input
-              ref={minuteRef}
-              type="text"
-              inputMode="numeric"
-              aria-label="Deadline time minute"
-              value={minuteText}
-              maxLength={2}
-              disabled={disabled}
-              onChange={(e) => onMinuteChange(e.target.value)}
-              onBlur={() =>
-                onSegmentBlur(minuteText, setMinuteText, value.slice(3, 5))
-              }
-              style={segmentStyle}
-            />
-          </div>
-
-          {/* Wheel columns */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: colors.textMuted,
-                  marginBottom: 4,
-                  textAlign: "center",
-                }}
-              >
-                Hours
-              </span>
-              <WheelColumn
-                values={HOURS}
-                selected={hour}
-                onSelect={setHour}
-                ariaLabel={(v) => "Hour " + v}
-                colors={colors}
-                listRef={hourListRef}
-                unit="hours"
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: colors.textMuted,
-                  marginBottom: 4,
-                  textAlign: "center",
-                }}
-              >
-                Minutes
-              </span>
-              <WheelColumn
-                values={MINUTES}
-                selected={minute}
-                onSelect={setMinute}
-                ariaLabel={(v) => "Minute " + v}
-                colors={colors}
-                listRef={minuteListRef}
-                unit="minutes"
-              />
-            </div>
-          </div>
-
-          {/* Wheels apply live; Done (or outside click / Esc) dismisses. */}
-          <div
-            style={{
-              marginTop: 8,
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <button
-              type="button"
-              onClick={popClose}
-              style={{
-                padding: "4px 12px",
-                fontSize: 12,
-                fontWeight: 500,
-                background: colors.accent,
-                color: "#ffffff",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-                fontFamily: "system-ui, -apple-system, sans-serif",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.filter = "brightness(0.85)")
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-            >
-              Done
-            </button>
-          </div>
+      {/* Wheel columns */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={wheelLabelStyle}>Hours</span>
+          <WheelColumn
+            values={HOURS}
+            selected={hour}
+            onSelect={setHour}
+            ariaLabel={(v) => "Hour " + v}
+            colors={colors}
+            listRef={hourListRef}
+            unit="hours"
+          />
         </div>
-      )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={wheelLabelStyle}>Minutes</span>
+          <WheelColumn
+            values={MINUTES}
+            selected={minute}
+            onSelect={setMinute}
+            ariaLabel={(v) => "Minute " + v}
+            colors={colors}
+            listRef={minuteListRef}
+            unit="minutes"
+          />
+        </div>
+      </div>
     </div>
   );
 }

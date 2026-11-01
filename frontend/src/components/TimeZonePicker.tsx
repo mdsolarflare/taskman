@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { browserTimeZone } from "../hooks/useDisplayTimeZone.ts";
 import { useAnchoredPopover } from "../hooks/useAnchoredPopover.ts";
+import { zoneOffsetMinutes } from "./dateMath.ts";
 
 // ---------------------------------------------------------------------------
 // Theme colors - passed down from the modal (already re-read on theme switch)
@@ -75,14 +76,24 @@ export default function TimeZonePicker({
   const [query, setQuery] = useState("");
 
   const zones = useMemo(() => supportedZones(), []);
+  // West-to-east by current UTC offset, then by id - the rows show their
+  // offset, so the sort order is visible without searching.
+  const sortedZones = useMemo(
+    () =>
+      [...zones].sort(
+        (a, b) =>
+          zoneOffsetMinutes(a) - zoneOffsetMinutes(b) || a.localeCompare(b),
+      ),
+    [zones],
+  );
   const q = query.trim().toLowerCase();
   const matches = useMemo(() => {
-    if (q === "") return zones;
-    return zones.filter(
+    if (q === "") return sortedZones;
+    return sortedZones.filter(
       (z) =>
         z.toLowerCase().includes(q) || cityLabel(z).toLowerCase().includes(q),
     );
-  }, [zones, q]);
+  }, [sortedZones, q]);
 
   const chipStyle: React.CSSProperties = {
     padding: "8px 10px",
@@ -101,7 +112,7 @@ export default function TimeZonePicker({
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    maxWidth: 110,
+    maxWidth: 150,
   };
 
   const rowStyle = (active: boolean): React.CSSProperties => ({
@@ -150,7 +161,7 @@ export default function TimeZonePicker({
             : colors.border)
         }
       >
-        {cityLabel(timeZone)}
+        {cityLabel(timeZone)} · {zoneOffsetLabel(timeZone)}
       </button>
 
       {/* Zone list popover */}

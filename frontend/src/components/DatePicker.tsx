@@ -133,7 +133,8 @@ export default function DatePicker({
         minute: selected?.minute ?? 0,
       }),
     );
-    popClose();
+    // The popover stays open: the user continues with the time section and
+    // dismisses via Done / outside click / Esc.
   };
 
   const goToday = () => {
@@ -148,7 +149,28 @@ export default function DatePicker({
         minute: selected?.minute ?? 0,
       }),
     );
-    popClose();
+  };
+
+  /**
+   * Apply a picked "HH:mm". With no date chosen yet, the time anchors to
+   * today in the display zone (the field then shows the full deadline).
+   */
+  const applyTime = (time: string) => {
+    if (selected) {
+      onChange(mergeTime(value, time));
+      return;
+    }
+    const [hh, mm] = time.split(":");
+    const t = todayInZone(timeZone);
+    onChange(
+      formatDateTimeLocal({
+        year: t.year,
+        month0: t.month0,
+        day: t.day,
+        hour: Number(hh),
+        minute: Number(mm),
+      }),
+    );
   };
 
   const today = todayInZone(timeZone);
@@ -204,7 +226,7 @@ export default function DatePicker({
         <div
           role="button"
           tabIndex={0}
-          aria-label="Deadline date"
+          aria-label="Deadline"
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={(e) => {
@@ -236,8 +258,7 @@ export default function DatePicker({
               textOverflow: "ellipsis",
             }}
           >
-            {/* Date only - the time lives in the time control beside it. */}
-            {selected ? value.slice(0, 10) : "Set deadline…"}
+            {selected ? value.replace("T", " ") : "Set deadline…"}
           </span>
           {selected && (
             <button
@@ -267,13 +288,13 @@ export default function DatePicker({
           )}
         </div>
 
-        {/* Month grid popover - fixed-anchored to the field so the modal
-            card's scroll box can never clip it */}
+        {/* Merged deadline popover - fixed-anchored to the field so the
+            modal card's scroll box can never clip it */}
         {open && anchor && (
           <div
             ref={setPopoverEl}
             role="dialog"
-            aria-label="Pick a deadline date"
+            aria-label="Pick a deadline"
             onClick={(e) => e.stopPropagation()}
             style={{
               position: "fixed",
@@ -282,7 +303,7 @@ export default function DatePicker({
               maxHeight: anchor.maxBottom - anchor.top,
               overflowY: "auto",
               zIndex: 10,
-              width: 7 * CELL_SIZE + 6 * CELL_GAP + 24,
+              width: 400,
               padding: 12,
               background: colors.surface,
               border: `1px solid ${colors.border}`,
@@ -291,141 +312,178 @@ export default function DatePicker({
               userSelect: "none",
             }}
           >
-            {/* Month navigation */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 8,
-              }}
-            >
-              <button
-                type="button"
-                title="Previous month"
-                aria-label="Previous month"
-                onClick={() => setView((v) => shiftMonth(v, -1))}
-                style={navButtonStyle}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = colors.hover)
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                ‹
-              </button>
-              <span
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              {/* Date column */}
+              <div style={{ flex: "0 0 auto" }}>
+                {/* Month navigation */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <button
+                    type="button"
+                    title="Previous month"
+                    aria-label="Previous month"
+                    onClick={() => setView((v) => shiftMonth(v, -1))}
+                    style={navButtonStyle}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = colors.hover)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    ‹
+                  </button>
+                  <span
+                    style={{
+                      flex: 1,
+                      textAlign: "center",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: colors.text,
+                    }}
+                  >
+                    {MONTH_NAMES[view.month0]} {view.year}
+                  </span>
+                  <button
+                    type="button"
+                    title="Next month"
+                    aria-label="Next month"
+                    onClick={() => setView((v) => shiftMonth(v, 1))}
+                    style={navButtonStyle}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = colors.hover)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    ›
+                  </button>
+                </div>
+
+                {/* Weekday header + day grid */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(7, ${CELL_SIZE}px)`,
+                    gap: CELL_GAP,
+                  }}
+                >
+                  {WEEKDAY_LABELS.map((w) => (
+                    <span
+                      key={w}
+                      style={{
+                        width: CELL_SIZE,
+                        textAlign: "center",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: colors.textMuted,
+                        lineHeight: "20px",
+                      }}
+                    >
+                      {w}
+                    </span>
+                  ))}
+                  {cells.map((cell) => {
+                    const isSelected =
+                      selected !== null &&
+                      cell.year === selected.year &&
+                      cell.month0 === selected.month0 &&
+                      cell.day === selected.day;
+                    const isToday =
+                      cell.year === todayY &&
+                      cell.month0 === todayM0 &&
+                      cell.day === todayD;
+                    return (
+                      <button
+                        type="button"
+                        key={`${cell.year}-${cell.month0}-${cell.day}`}
+                        aria-label={`${MONTH_NAMES[cell.month0]} ${cell.day}, ${cell.year}`}
+                        aria-pressed={isSelected}
+                        onClick={() => pickDay(cell)}
+                        style={{
+                          width: CELL_SIZE,
+                          height: CELL_SIZE,
+                          padding: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 12,
+                          fontFamily: "system-ui, -apple-system, sans-serif",
+                          borderRadius: 6,
+                          border: "none",
+                          cursor: "pointer",
+                          background: isSelected
+                            ? colors.accent
+                            : "transparent",
+                          color: isSelected
+                            ? "#ffffff"
+                            : cell.inMonth
+                              ? colors.text
+                              : colors.textMuted,
+                          boxShadow:
+                            isToday && !isSelected
+                              ? `inset 0 0 0 1px ${colors.accent}`
+                              : "none",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected)
+                            e.currentTarget.style.background = colors.hover;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected)
+                            e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        {cell.day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Time column: typed segments + wheels */}
+              <div
                 style={{
                   flex: 1,
-                  textAlign: "center",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: colors.text,
+                  minWidth: 0,
+                  borderLeft: `1px solid ${colors.border}`,
+                  paddingLeft: 12,
                 }}
               >
-                {MONTH_NAMES[view.month0]} {view.year}
-              </span>
-              <button
-                type="button"
-                title="Next month"
-                aria-label="Next month"
-                onClick={() => setView((v) => shiftMonth(v, 1))}
-                style={navButtonStyle}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = colors.hover)
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                ›
-              </button>
-            </div>
-
-            {/* Weekday header + day grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(7, ${CELL_SIZE}px)`,
-                gap: CELL_GAP,
-              }}
-            >
-              {WEEKDAY_LABELS.map((w) => (
                 <span
-                  key={w}
                   style={{
-                    width: CELL_SIZE,
-                    textAlign: "center",
+                    display: "block",
                     fontSize: 10,
                     fontWeight: 600,
                     color: colors.textMuted,
-                    lineHeight: "20px",
+                    marginBottom: 8,
+                    textAlign: "center",
                   }}
                 >
-                  {w}
+                  Time
                 </span>
-              ))}
-              {cells.map((cell) => {
-                const isSelected =
-                  selected !== null &&
-                  cell.year === selected.year &&
-                  cell.month0 === selected.month0 &&
-                  cell.day === selected.day;
-                const isToday =
-                  cell.year === todayY &&
-                  cell.month0 === todayM0 &&
-                  cell.day === todayD;
-                return (
-                  <button
-                    type="button"
-                    key={`${cell.year}-${cell.month0}-${cell.day}`}
-                    aria-label={`${MONTH_NAMES[cell.month0]} ${cell.day}, ${cell.year}`}
-                    aria-pressed={isSelected}
-                    onClick={() => pickDay(cell)}
-                    style={{
-                      width: CELL_SIZE,
-                      height: CELL_SIZE,
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      fontFamily: "system-ui, -apple-system, sans-serif",
-                      borderRadius: 6,
-                      border: "none",
-                      cursor: "pointer",
-                      background: isSelected ? colors.accent : "transparent",
-                      color: isSelected
-                        ? "#ffffff"
-                        : cell.inMonth
-                          ? colors.text
-                          : colors.textMuted,
-                      boxShadow:
-                        isToday && !isSelected
-                          ? `inset 0 0 0 1px ${colors.accent}`
-                          : "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected)
-                        e.currentTarget.style.background = colors.hover;
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected)
-                        e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    {cell.day}
-                  </button>
-                );
-              })}
+                <TimePicker
+                  value={selected ? value.slice(11) : ""}
+                  onChange={applyTime}
+                  colors={colors}
+                />
+              </div>
             </div>
 
-            {/* Today shortcut */}
+            {/* Footer */}
             <div
               style={{
-                marginTop: 8,
+                marginTop: 10,
                 display: "flex",
-                justifyContent: "center",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
               }}
             >
               <button
@@ -451,22 +509,31 @@ export default function DatePicker({
               >
                 Today
               </button>
+              <button
+                type="button"
+                onClick={popClose}
+                style={{
+                  padding: "4px 14px",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  background: colors.accent,
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.filter = "brightness(0.85)")
+                }
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+              >
+                Done
+              </button>
             </div>
           </div>
         )}
       </div>
-
-      {/* Time (enabled once a date is picked) */}
-      <TimePicker
-        value={selected ? value.slice(11) : ""}
-        onChange={(time) => {
-          const w = window as unknown as { __dpChange?: string[] };
-          w.__dpChange = [...(w.__dpChange ?? []), time];
-          onChange(mergeTime(value, time));
-        }}
-        colors={colors}
-        disabled={!selected}
-      />
     </div>
   );
 }

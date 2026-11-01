@@ -275,7 +275,7 @@ export default function EditNodeModal({
           background: colors.surface,
           borderRadius: 12,
           padding: "24px 28px",
-          maxWidth: 460,
+          maxWidth: 540,
           width: "92%",
           maxHeight: "85vh",
           overflowY: "auto",
