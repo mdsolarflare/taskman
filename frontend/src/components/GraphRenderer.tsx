@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Graph, GraphNode } from "../types/graph.ts";
 import { getLayoutBounds, LayoutEngine } from "../engine/layout.ts";
+import { instantToWall } from "./dateMath.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -90,6 +91,8 @@ interface GraphRendererProps {
   selectedNodeId?: number | null;
   onNodeSelect?: (nodeId: number | null) => void;
   centerTargetNodeId?: number | null;
+  /** Zone deadlines display in (stored data stays UTC). */
+  displayTimeZone: string;
 }
 
 interface Viewport {
@@ -132,18 +135,28 @@ function truncateText(
   return text.slice(0, maxChars - 1) + "…";
 }
 
-function formatDeadline(iso: string): string {
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    const month = d.toLocaleString("en", { month: "short" });
-    const day = d.getDate();
-    const hour = d.getHours().toString().padStart(2, "0");
-    const minute = d.getMinutes().toString().padStart(2, "0");
-    return `📅 ${month} ${day} ${hour}:${minute}`;
-  } catch {
-    return iso;
-  }
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function formatDeadline(iso: string, timeZone: string): string {
+  const wall = instantToWall(iso, timeZone);
+  if (!wall) return iso;
+  const time = `${wall.hour.toString().padStart(2, "0")}:${wall.minute
+    .toString()
+    .padStart(2, "0")}`;
+  return `📅 ${MONTHS_SHORT[wall.month0]} ${wall.day} ${time}`;
 }
 
 function computeLayout(graph: Graph): {
@@ -178,6 +191,7 @@ export default function GraphRenderer({
   selectedNodeId: externalSelectedNodeId,
   onNodeSelect,
   centerTargetNodeId,
+  displayTimeZone,
 }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
@@ -950,7 +964,7 @@ export default function GraphRenderer({
                       textDecoration: node.done ? "line-through" : "none",
                     }}
                   >
-                    {formatDeadline(node.deadline)}
+                    {formatDeadline(node.deadline, displayTimeZone)}
                   </text>
                 )}
 

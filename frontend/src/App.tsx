@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import GraphRenderer from "./components/GraphRenderer.tsx";
 import EditNodeModal from "./components/EditNodeModal.tsx";
+import { useDisplayTimeZone } from "./hooks/useDisplayTimeZone.ts";
 import DeleteNodeDialog from "./components/DeleteNodeDialog.tsx";
 import type { Graph, GraphNode } from "./types/graph.ts";
 import {
@@ -81,6 +82,7 @@ function App() {
 
   const theme = useTheme();
   const pwa = usePWA();
+  const displayTz = useDisplayTimeZone();
 
   // Load YAML into a graph via WASM.
   const loadYaml = useCallback(async (yaml: string, isSample?: boolean) => {
@@ -1030,6 +1032,7 @@ function App() {
               selectedNodeId={selectedNodeId}
               onNodeSelect={handleGraphNodeSelect}
               centerTargetNodeId={centerTargetNodeId}
+              displayTimeZone={displayTz.timeZone}
             />
           ) : (
             // Briefly shown during initial load before sample/workspace restores
@@ -1198,6 +1201,9 @@ function App() {
           onSave={handleNodeSave}
           onCancel={handleNodeCancelEdit}
           isCreate={isCreating}
+          displayTimeZone={displayTz.timeZone}
+          displayTimeZoneIsCustom={displayTz.isCustom}
+          onDisplayTimeZoneChange={displayTz.setTimeZone}
         />
       )}
 
