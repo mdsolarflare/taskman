@@ -209,7 +209,7 @@ export default function DatePicker({
   };
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <div style={{ display: "flex", gap: 8, flex: 1, minWidth: 0 }}>
       <div
         ref={setAnchorEl}
         style={{ position: "relative", flex: 1, minWidth: 0 }}

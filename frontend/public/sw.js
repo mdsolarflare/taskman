@@ -18,7 +18,7 @@
 
 // AUTO-STAMPED by gen-revision.ts - do not edit by hand.
 const BUILD_ID =
-  "3501826f4f960269a91dd423c436b9869daa8032b66263893f8f0029c96046f3";
+  "b5aa79849f9abc4455327f66b31f747d4f08862dbdf53f6504db5aed4441bb0f";
 
 importScripts("./dist/cache-manifest.js");
 

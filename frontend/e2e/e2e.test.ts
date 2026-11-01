@@ -870,6 +870,26 @@ test("display timezone: render shifts, stored data stays UTC", async () => {
       chip.includes("GMT"),
       `zone chip should show the UTC offset: "${chip}"`,
     );
+
+    // The deadline field + zone chip fill at least 90% of the modal's
+    // content width (the field grows; the chip keeps its content width).
+    const widths = (await conn.evaluate(`(() => {
+      const field = document.querySelector('[aria-label="Deadline"]');
+      const chip = document.querySelector('[aria-label="Display time zone"]');
+      const row = field.parentElement.parentElement.parentElement;
+      const card = row.parentElement.parentElement;
+      const cs = getComputedStyle(card);
+      const content = card.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      return {
+        field: field.getBoundingClientRect().width,
+        chip: chip.getBoundingClientRect().width,
+        content,
+      };
+    })()`)) as { field: number; chip: number; content: number };
+    assert(
+      widths.field + 8 + widths.chip >= 0.9 * widths.content,
+      `deadline row should fill >=90% of the modal width: ${JSON.stringify(widths)}`,
+    );
     await conn.evaluate(
       `document.querySelector('[aria-label="Display time zone"]').click()`,
     );
